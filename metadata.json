@@ -1,0 +1,6 @@
+{
+  "name": "Simulador de Ventilação Mecânica - VR Comam ICU",
+  "description": "Simulador avançado e interativo de ventilação mecânica para ensino e treinamento clínico em terapia intensiva e fisioterapia respiratória.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
