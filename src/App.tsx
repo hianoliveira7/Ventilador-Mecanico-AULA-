@@ -29,8 +29,10 @@ import { AudioSettingsModal } from './components/AudioSettingsModal';
 import { GasometryCard } from './components/GasometryCard';
 import { LungVisualizer } from './components/LungVisualizer';
 import { MenuModal } from './components/MenuModal';
+import { useTheme } from './context/ThemeContext';
 
 export default function App() {
+  const { isLight } = useTheme();
   // 1. Core Ventilator Settings
   const [settings, setSettings] = useState<VentilatorSettings>({
     mode: 'VCV',
@@ -131,6 +133,7 @@ export default function App() {
     peakPressure: 18.5,
     plateauPressure: 14.0,
     meanPressure: 8.2,
+    peep: 5.0,
     peepTotal: 5.0,
     autoPeep: 0,
     drivingPressure: 9.0,
@@ -526,7 +529,11 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#050505] text-zinc-100 overflow-hidden font-sans select-none">
+    <div
+      className={`flex flex-col h-screen w-screen overflow-hidden font-sans select-none transition-colors ${
+        isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#050505] text-zinc-100'
+      }`}
+    >
       {/* 1. Header Bar */}
       <TopBar
         mode={settings.mode}
@@ -549,14 +556,22 @@ export default function App() {
             }
             audioEngine.resumeAudio();
           }}
-          className="bg-[#0e1626] border-b border-cyan-500/40 px-3 py-1.5 flex items-center justify-between cursor-pointer hover:bg-[#131f36] transition-all text-xs z-30"
+          className={`border-b px-3 py-1.5 flex items-center justify-between cursor-pointer transition-all text-xs z-30 ${
+            isLight
+              ? 'bg-cyan-50 border-cyan-300 hover:bg-cyan-100 text-cyan-950'
+              : 'bg-[#0e1626] border-cyan-500/40 hover:bg-[#131f36] text-cyan-200'
+          }`}
         >
           <div className="flex items-center gap-2.5">
-            <div className="p-1 rounded-sm bg-cyan-950 border border-cyan-700/60 text-cyan-400 animate-pulse">
+            <div
+              className={`p-1 rounded-sm border animate-pulse ${
+                isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-700' : 'bg-cyan-950 border-cyan-700/60 text-cyan-400'
+              }`}
+            >
               <Volume2 className="w-3.5 h-3.5" />
             </div>
-            <span className="font-mono text-cyan-200 text-[11px]">
-              <strong className="text-white font-bold">
+            <span className="font-mono text-[11px]">
+              <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white font-bold'}>
                 {isAudioMuted ? 'ÁUDIO MUTADO:' : 'ATIVAR ÁUDIO DA UTI:'}
               </strong>{' '}
               {isAudioMuted
@@ -581,36 +596,13 @@ export default function App() {
         </div>
       )}
 
-      {/* Patient Clinical Status Banner */}
-      <div className="bg-[#0b0d14] border-b border-zinc-800/80 px-4 py-2 flex items-center justify-between shadow-sm z-20">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-700/50">
-            <User className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-widest">
-              Resposta Clínica / Status do Paciente
-            </span>
-            <span className="text-sm font-display text-zinc-200 mt-0.5">
-              {monitored.patientInteractionMessage || 'Analisando estado clínico...'}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] font-mono text-zinc-500 uppercase">SpO₂</span>
-            <span className={`text-base font-bold font-mono ${monitored.spo2 < 90 ? 'text-red-400' : 'text-cyan-400'}`}>{monitored.spo2}%</span>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] font-mono text-zinc-500 uppercase">EtCO₂</span>
-            <span className={`text-base font-bold font-mono ${monitored.etco2 > 50 || monitored.etco2 < 30 ? 'text-amber-400' : 'text-emerald-400'}`}>{monitored.etco2}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Main 3-Column Studio Layout (Clean & Uncluttered) */}
-      <main className="flex-1 grid grid-cols-12 gap-2 p-2 min-h-0 overflow-hidden bg-[#070709]">
-        {/* Left Column: Parameter Setting Controls & Lung Visualizer */}
+      {/* 2. Main 3-Column Studio Layout (Curves Maximized) */}
+      <main
+        className={`flex-1 grid grid-cols-12 gap-2 p-2 min-h-0 overflow-hidden transition-colors ${
+          isLight ? 'bg-slate-100' : 'bg-[#070709]'
+        }`}
+      >
+        {/* Left Column: Parameter Setting Controls & Patient SpO2 Oximeter */}
         <div className="col-span-12 lg:col-span-3 h-full min-h-0 flex flex-col gap-2">
           <div className="flex-[3] min-h-0 overflow-hidden flex flex-col">
             <ParameterControls
@@ -627,10 +619,10 @@ export default function App() {
           </div>
         </div>
 
-        {/* Center Column: Respiratory Curves & Gasometry Card */}
+        {/* Center Column: Respiratory Curves (Maximized) & Gasometry Card */}
         <div className="col-span-12 lg:col-span-6 h-full min-h-0 flex flex-col gap-2">
-          {/* Top Waveforms Area */}
-          <div className="flex-[3] min-h-0">
+          {/* Top Waveforms Area (Maximized Canvas Height) */}
+          <div className="flex-1 min-h-0">
             {viewMode === 'waveforms' && (
               <div className="h-full">
                 <WaveformDisplay
@@ -679,17 +671,18 @@ export default function App() {
             )}
           </div>
 
-          {/* Bottom Center Area: Gasometry Card */}
-          <div className="flex-[1] min-h-[140px]">
+          {/* Bottom Center Area: Gasometry Card with Color Grading */}
+          <div className="shrink-0">
             <GasometryCard
               monitored={monitored}
               patient={patient}
+              settings={settings}
               onOpenModal={() => setIsGasometryOpen(true)}
             />
           </div>
         </div>
 
-        {/* Right Column: Monitorization & Pulmonary Mechanics */}
+        {/* Right Column: Monitorization & Resized Pulmonary Mechanics */}
         <div className="col-span-12 lg:col-span-3 h-full min-h-0">
           <MonitorPanel
             monitored={monitored}
@@ -699,7 +692,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* 4. Bottom Diagnostic Maneuvers Toolbar */}
+      {/* 3. Bottom Diagnostic Maneuvers & Control Bar (with Dropdown) */}
       <ManeuverBar
         maneuverState={maneuverState}
         patient={patient}
@@ -714,9 +707,12 @@ export default function App() {
         onToggleFreeze={handleToggleFreeze}
         onChangeViewMode={setViewMode}
         onOpenPatientConfig={() => setIsPatientConfigOpen(true)}
-        onOpenSettings={() => setIsAlarmsModalOpen(true)}
+        onOpenClinicalCases={() => setIsClinicalCasesOpen(true)}
         onOpenReport={() => setIsGasometryOpen(true)}
+        onOpenSettings={() => setIsAlarmsModalOpen(true)}
+        onOpenCalculator={() => setIsCalculatorOpen(true)}
         onOpenHelp={() => setIsEducationalOpen(true)}
+        onOpenAudio={() => setIsAudioSettingsOpen(true)}
         onResetSimulation={() => physicsEngine.reset()}
       />
 

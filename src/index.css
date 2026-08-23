@@ -24,13 +24,25 @@
   background: #08090d;
 }
 
+.light-theme ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #1f2430;
   border-radius: 2px;
 }
 
+.light-theme ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #333d52;
+}
+
+.light-theme ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* Precise Range Slider Styling */

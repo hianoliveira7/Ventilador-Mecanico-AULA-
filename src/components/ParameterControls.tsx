@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { VentilatorSettings, VentilationMode } from '../types/ventilation';
 import { audioEngine } from '../services/audioEngine';
 import { Sliders, Plus, Minus, Check } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface ParameterControlsProps {
   settings: VentilatorSettings;
@@ -35,6 +36,7 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
   color = 'text-cyan-400',
   onUpdate,
 }) => {
+  const { isLight } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
   const [tempInputVal, setTempInputVal] = useState((value ?? min).toString());
 
@@ -58,9 +60,13 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
       const deltaY = startY.current - moveEvent.clientY;
       const range = max - min;
       const deltaVal = (deltaY / 150) * range;
-      let newVal = Math.round((startVal.current + deltaVal) / step) * step;
-      newVal = Math.max(min, Math.min(max, newVal));
-      onUpdate(field, Number(newVal.toFixed(2)));
+      const rawNewVal = startVal.current + deltaVal;
+
+      const steppedVal = Math.round(rawNewVal / step) * step;
+      const clampedVal = Math.max(min, Math.min(max, steppedVal));
+      const finalVal = Number(clampedVal.toFixed(2));
+
+      onUpdate(field, finalVal);
     };
 
     const handleMouseUp = () => {
@@ -75,15 +81,25 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
 
   const safeVal = value ?? min;
   const percentage = Math.max(0, Math.min(100, ((safeVal - min) / (max - min)) * 100));
-  const radius = 22;
+  const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="bg-[#0e0f14] hover:bg-[#151722] rounded-xl p-3 border border-zinc-800/80 transition-all flex items-center justify-between group shadow-sm select-none">
+    <div
+      className={`rounded-xl p-3 border transition-all flex items-center justify-between group shadow-sm select-none ${
+        isLight
+          ? 'bg-slate-50 hover:bg-slate-100/80 border-slate-200'
+          : 'bg-[#0e0f14] hover:bg-[#151722] border-zinc-800/80'
+      }`}
+    >
       <div className="flex flex-col">
-        <span className="text-[10px] font-display font-bold text-cyan-400 uppercase tracking-wider">
-          {label} <span className="text-zinc-500">{unit}</span>
+        <span
+          className={`text-[10px] font-display font-bold uppercase tracking-wider ${
+            isLight ? 'text-cyan-700' : 'text-cyan-400'
+          }`}
+        >
+          {label} <span className={isLight ? 'text-slate-500' : 'text-zinc-500'}>{unit}</span>
         </span>
         {isEditing ? (
           <div className="flex items-center gap-1 mt-1">
@@ -111,7 +127,11 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
                 }
                 setIsEditing(false);
               }}
-              className="w-20 bg-[#05060a] border border-cyan-500 text-white font-mono text-lg px-2 py-0.5 rounded outline-none"
+              className={`w-20 font-mono text-lg px-2 py-0.5 rounded outline-none border ${
+                isLight
+                  ? 'bg-white border-cyan-600 text-slate-900'
+                  : 'bg-[#05060a] border-cyan-500 text-white'
+              }`}
             />
           </div>
         ) : (
@@ -120,13 +140,17 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
               setTempInputVal((value ?? min).toString());
               setIsEditing(true);
             }}
-            className="text-2xl font-bold font-mono text-white mt-0.5 group-hover:text-cyan-300 transition-colors cursor-pointer"
+            className={`text-2xl font-bold font-mono mt-0.5 transition-colors cursor-pointer ${
+              isLight
+                ? 'text-slate-900 group-hover:text-cyan-600'
+                : 'text-white group-hover:text-cyan-300'
+            }`}
             title="Clique para digitar valor exato"
           >
             {typeof safeVal === 'number' ? (safeVal % 1 !== 0 ? safeVal.toFixed(1) : safeVal) : safeVal}
           </span>
         )}
-        <span className="text-[10px] font-mono text-zinc-500 mt-0.5">
+        <span className={`text-[10px] font-mono mt-0.5 ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
           {min} — {max} {unit}
         </span>
       </div>
@@ -140,7 +164,11 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
             const newVal = Math.max(min, Number((safeVal - step).toFixed(2)));
             onUpdate(field, newVal);
           }}
-          className="w-7 h-7 rounded-lg bg-[#161824] hover:bg-[#222536] text-zinc-300 flex items-center justify-center cursor-pointer border border-zinc-700/60 active:scale-95 transition-transform"
+          className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border active:scale-95 transition-transform ${
+            isLight
+              ? 'bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300'
+              : 'bg-[#161824] hover:bg-[#222536] text-zinc-300 border-zinc-700/60'
+          }`}
           title="Diminuir"
         >
           <Minus className="w-3.5 h-3.5 pointer-events-none" />
@@ -158,7 +186,7 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
               r={radius}
               stroke="currentColor"
               strokeWidth="3.5"
-              className="text-zinc-800"
+              className={isLight ? 'text-slate-200' : 'text-zinc-800'}
               fill="transparent"
             />
             <circle
@@ -175,8 +203,12 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-4 h-4 rounded-full bg-[#1c1f2e] border border-zinc-700 shadow-md flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]" />
+            <div
+              className={`w-4 h-4 rounded-full border shadow-md flex items-center justify-center ${
+                isLight ? 'bg-white border-slate-300' : 'bg-[#1c1f2e] border-zinc-700'
+              }`}
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_6px_#22d3ee]" />
             </div>
           </div>
         </div>
@@ -188,7 +220,11 @@ const RotaryKnobItem: React.FC<RotaryKnobItemProps> = ({
             const newVal = Math.min(max, Number((safeVal + step).toFixed(2)));
             onUpdate(field, newVal);
           }}
-          className="w-7 h-7 rounded-lg bg-[#161824] hover:bg-[#222536] text-zinc-300 flex items-center justify-center cursor-pointer border border-zinc-700/60 active:scale-95 transition-transform"
+          className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border active:scale-95 transition-transform ${
+            isLight
+              ? 'bg-slate-200 hover:bg-slate-300 text-slate-800 border-slate-300'
+              : 'bg-[#161824] hover:bg-[#222536] text-zinc-300 border-zinc-700/60'
+          }`}
           title="Aumentar"
         >
           <Plus className="w-3.5 h-3.5 pointer-events-none" />
@@ -206,6 +242,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
   onConfirm,
   onDiscard,
 }) => {
+  const { isLight } = useTheme();
+
   const updateField = (field: keyof VentilatorSettings, val: number) => {
     audioEngine.playClick(900);
     onUpdateDraft({ ...draftSettings, [field]: val });
@@ -241,23 +279,49 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
   const mode = draftSettings.mode;
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0e] rounded-2xl border border-zinc-800/90 shadow-2xl overflow-hidden select-none relative">
+    <div
+      className={`flex flex-col h-full rounded-2xl border shadow-2xl overflow-hidden select-none relative transition-colors ${
+        isLight ? 'bg-white border-slate-200' : 'bg-[#0a0a0e] border-zinc-800/90'
+      }`}
+    >
       {/* Header */}
-      <div className="p-3 bg-[#0e0f14] border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-display font-bold text-cyan-400 uppercase tracking-wider">
-          <Sliders className="w-4 h-4 text-cyan-400" />
+      <div
+        className={`p-3 border-b flex items-center justify-between ${
+          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e0f14] border-zinc-800'
+        }`}
+      >
+        <div
+          className={`flex items-center gap-1.5 text-xs font-display font-bold uppercase tracking-wider ${
+            isLight ? 'text-cyan-700' : 'text-cyan-400'
+          }`}
+        >
+          <Sliders className="w-4 h-4" />
           <span>CONTROLES E MODO ({mode})</span>
         </div>
         {hasChanges && (
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-600/60 animate-pulse font-bold">
+          <span
+            className={`text-[10px] font-mono px-2 py-0.5 rounded-full border animate-pulse font-bold ${
+              isLight
+                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                : 'bg-amber-950/80 text-amber-300 border-amber-600/60'
+            }`}
+          >
             Modificado
           </span>
         )}
       </div>
 
       {/* Mode Selector */}
-      <div className="p-3 bg-[#0c0d12] border-b border-zinc-800/80">
-        <span className="text-[10px] font-display font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
+      <div
+        className={`p-3 border-b ${
+          isLight ? 'bg-slate-100/70 border-slate-200' : 'bg-[#0c0d12] border-zinc-800/80'
+        }`}
+      >
+        <span
+          className={`text-[10px] font-display font-bold uppercase tracking-wider block mb-1.5 ${
+            isLight ? 'text-slate-600' : 'text-zinc-400'
+          }`}
+        >
           Modo Ventilatório
         </span>
         <div className="grid grid-cols-5 gap-1">
@@ -267,7 +331,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
               onClick={() => updateMode(m.value)}
               className={`py-1.5 px-1 rounded-lg text-[10px] font-mono font-bold tracking-wider transition-all cursor-pointer border ${
                 draftSettings.mode === m.value
-                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]'
+                  ? isLight
+                    ? 'bg-cyan-600 text-white border-cyan-700 shadow-sm'
+                    : 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]'
+                  : isLight
+                  ? 'bg-white text-slate-700 border-slate-300 hover:bg-slate-200'
                   : 'bg-[#151722] text-zinc-400 border-zinc-800 hover:bg-[#1f2333] hover:text-zinc-200'
               }`}
             >
@@ -280,17 +348,58 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
       {/* Controls List Dynamic per Mode */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
         {(mode === 'VCV' || mode === 'SIMV_VC') && (
-          <RotaryKnobItem
-            label="Volume Corrente (VT)"
-            field="tidalVolume"
-            value={draftSettings.tidalVolume}
-            min={100}
-            max={1000}
-            step={25}
-            unit="mL"
-            color="text-cyan-400"
-            onUpdate={updateField}
-          />
+          <>
+            <RotaryKnobItem
+              label="Volume Corrente (VT)"
+              field="tidalVolume"
+              value={draftSettings.tidalVolume}
+              min={100}
+              max={1000}
+              step={25}
+              unit="mL"
+              color="text-cyan-400"
+              onUpdate={updateField}
+            />
+
+            {/* Flow Waveform Selector */}
+            <div className={`p-2.5 rounded-xl border space-y-2 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#12141c] border-zinc-800'}`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-[10px] font-display font-bold uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  Onda de Fluxo (VCV)
+                </span>
+                <div className={`flex p-0.5 rounded-lg border ${isLight ? 'bg-slate-200 border-slate-300' : 'bg-[#0c0d12] border-zinc-800'}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioEngine.playClick(950);
+                      onUpdateDraft({ ...draftSettings, flowWaveform: 'square' });
+                    }}
+                    className={`px-2.5 py-1 text-[9px] font-mono font-bold rounded-md transition-all cursor-pointer ${
+                      draftSettings.flowWaveform === 'square'
+                        ? 'bg-cyan-500 text-black shadow-sm'
+                        : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    Quadrada (Retangular)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioEngine.playClick(950);
+                      onUpdateDraft({ ...draftSettings, flowWaveform: 'decelerating' });
+                    }}
+                    className={`px-2.5 py-1 text-[9px] font-mono font-bold rounded-md transition-all cursor-pointer ${
+                      draftSettings.flowWaveform === 'decelerating'
+                        ? 'bg-cyan-500 text-black shadow-sm'
+                        : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    Desacelerada (Rampa)
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         {mode === 'PCV' && (
@@ -416,12 +525,24 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
         )}
 
         {/* Trigger / Sensibilidade (Disparo do Paciente) */}
-        <div className="bg-[#12141c] p-2.5 rounded-xl border border-zinc-800 space-y-2">
+        <div
+          className={`p-2.5 rounded-xl border space-y-2 ${
+            isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#12141c] border-zinc-800'
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-display font-bold text-zinc-400 uppercase tracking-wider">
+            <span
+              className={`text-[10px] font-display font-bold uppercase tracking-wider ${
+                isLight ? 'text-slate-600' : 'text-zinc-400'
+              }`}
+            >
               Disparo (Trigger)
             </span>
-            <div className="flex bg-[#0c0d12] p-0.5 rounded-lg border border-zinc-800">
+            <div
+              className={`flex p-0.5 rounded-lg border ${
+                isLight ? 'bg-slate-200 border-slate-300' : 'bg-[#0c0d12] border-zinc-800'
+              }`}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -430,7 +551,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 }}
                 className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded-md transition-all cursor-pointer ${
                   draftSettings.triggerType === 'flow'
-                    ? 'bg-amber-500 text-black shadow-sm'
+                    ? isLight
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'bg-amber-500 text-black shadow-sm'
+                    : isLight
+                    ? 'text-slate-600 hover:text-slate-900'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
@@ -444,7 +569,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 }}
                 className={`px-2 py-0.5 text-[9px] font-mono font-bold rounded-md transition-all cursor-pointer ${
                   draftSettings.triggerType === 'pressure'
-                    ? 'bg-amber-500 text-black shadow-sm'
+                    ? isLight
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'bg-amber-500 text-black shadow-sm'
+                    : isLight
+                    ? 'text-slate-600 hover:text-slate-900'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
@@ -483,7 +612,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
 
       {/* Confirmation Footer when changes pending */}
       {hasChanges && (
-        <div className="p-3 bg-[#131118] border-t border-amber-500/50 flex items-center gap-2 animate-fadeIn">
+        <div
+          className={`p-3 border-t flex items-center gap-2 animate-fadeIn ${
+            isLight ? 'bg-amber-50 border-amber-300' : 'bg-[#131118] border-amber-500/50'
+          }`}
+        >
           <button
             onClick={onConfirm}
             className="flex-1 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
@@ -493,7 +626,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           </button>
           <button
             onClick={onDiscard}
-            className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-xs transition-all cursor-pointer"
+            className={`px-3 py-2 rounded-xl font-mono text-xs transition-all cursor-pointer ${
+              isLight
+                ? 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
+            }`}
           >
             Descartar
           </button>

@@ -54,6 +54,9 @@ export interface PatientParameters {
   compliance: number; // mL/cmH2O (static compliance, normal: 50-70, ARDS: 15-30)
   resistance: number; // cmH2O / (L/s) (normal: 4-8, COPD: 15-35, severe bronchospasm: >25)
   inertance?: number;
+  pathology?: 'normal' | 'sdra' | 'dpoc' | 'asma' | 'pneumotorax' | 'edema' | 'pos_op' | 'obeso' | 'neuro' | 'neuromuscular' | 'custom';
+  recruitmentPotential?: 'high' | 'moderate' | 'low' | 'none';
+  baselineBicarbonate?: number; // mEq/L (normal: 24, COPD chronic retainer: 30-34, metabolic acidosis: 16-20)
   
   // Spontaneous breathing
   spontaneousDrive: boolean; // Is patient attempting spontaneous breaths?
@@ -81,6 +84,7 @@ export interface MonitoredData {
   peakPressure: number; // PIP
   plateauPressure: number; // Pplat
   meanPressure: number; // Pmean
+  peep: number; // Set PEEP
   peepTotal: number; // PEEPt (PEEP + AutoPEEP)
   autoPeep: number; // PEEPi / intrinsic PEEP
   drivingPressure: number; // ΔP = Pplat - PEEP

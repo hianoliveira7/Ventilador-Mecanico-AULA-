@@ -55,8 +55,12 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
           name: 'Pulmão Normal',
           compliance: 60,
           resistance: 5,
-          spontaneousDrive: false,
-          shuntFraction: 5,
+          pathology: 'normal',
+          baselineBicarbonate: 24,
+          spontaneousDrive: true,
+          spontaneousRate: 14,
+          spontaneousEffortPressure: -4,
+          shuntFraction: 4,
           deadSpaceFraction: 0.28,
           secretionsSeverity: 'none',
           circuitLeakPercent: 0,
@@ -68,7 +72,12 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
           name: 'SDRA Grave (Baby Lung)',
           compliance: 20,
           resistance: 6,
+          pathology: 'sdra',
+          recruitmentPotential: 'high',
+          baselineBicarbonate: 22.4,
           spontaneousDrive: false,
+          spontaneousRate: 0,
+          spontaneousEffortPressure: 0,
           shuntFraction: 38,
           deadSpaceFraction: 0.55,
           secretionsSeverity: 'none',
@@ -78,9 +87,11 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
       case 'dpoc':
         updated = {
           ...updated,
-          name: 'DPOC (Hiperinsuflação)',
+          name: 'DPOC (Hiperinsuflação Dinâmica)',
           compliance: 75,
           resistance: 26,
+          pathology: 'dpoc',
+          baselineBicarbonate: 32,
           spontaneousDrive: true,
           spontaneousRate: 22,
           spontaneousEffortPressure: -6,
@@ -92,10 +103,14 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
       case 'asma':
         updated = {
           ...updated,
-          name: 'Asma Quase-Fatal',
+          name: 'Asma Quase-Fatal (Broncoespasmo)',
           compliance: 55,
           resistance: 35,
+          pathology: 'asma',
+          baselineBicarbonate: 27,
           spontaneousDrive: false,
+          spontaneousRate: 0,
+          spontaneousEffortPressure: 0,
           shuntFraction: 12,
           deadSpaceFraction: 0.50,
           secretionsSeverity: 'mild',
@@ -107,32 +122,86 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
           name: 'Pneumotórax Hipertensivo',
           compliance: 14,
           resistance: 9,
+          pathology: 'pneumotorax',
+          baselineBicarbonate: 21,
           shuntFraction: 45,
+          deadSpaceFraction: 0.60,
           spontaneousDrive: false,
         };
         break;
       case 'edema':
         updated = {
           ...updated,
-          name: 'Edema Agudo de Pulmão',
+          name: 'Edema Agudo de Pulmão (EAP)',
           compliance: 24,
           resistance: 13,
+          pathology: 'edema',
+          recruitmentPotential: 'high',
+          baselineBicarbonate: 21,
           shuntFraction: 32,
+          deadSpaceFraction: 0.45,
           spontaneousDrive: true,
           spontaneousRate: 24,
           spontaneousEffortPressure: -8,
         };
         break;
+      case 'pos_op':
+        updated = {
+          ...updated,
+          name: 'Pós-Operatório Abdominal',
+          compliance: 32,
+          resistance: 7,
+          pathology: 'pos_op',
+          recruitmentPotential: 'moderate',
+          baselineBicarbonate: 23.5,
+          shuntFraction: 20,
+          deadSpaceFraction: 0.38,
+          spontaneousDrive: true,
+          spontaneousRate: 18,
+          spontaneousEffortPressure: -5,
+        };
+        break;
       case 'obeso':
         updated = {
           ...updated,
-          name: 'Paciente Obeso (IMC > 40)',
+          name: 'Paciente Obeso Mórbido (IMC 44)',
           actualWeightKg: 135,
           compliance: 26,
           resistance: 10,
+          pathology: 'obeso',
+          recruitmentPotential: 'high',
+          baselineBicarbonate: 23,
           shuntFraction: 22,
           deadSpaceFraction: 0.42,
           spontaneousDrive: false,
+        };
+        break;
+      case 'neuro':
+        updated = {
+          ...updated,
+          name: 'TCE Grave / Neurocrítico',
+          compliance: 60,
+          resistance: 5,
+          pathology: 'neuro',
+          baselineBicarbonate: 24,
+          shuntFraction: 5,
+          deadSpaceFraction: 0.28,
+          spontaneousDrive: false,
+        };
+        break;
+      case 'neuromuscular':
+        updated = {
+          ...updated,
+          name: 'Doença Neuromuscular (Guillain-Barré)',
+          compliance: 52,
+          resistance: 6,
+          pathology: 'neuromuscular',
+          baselineBicarbonate: 24.2,
+          spontaneousDrive: true,
+          spontaneousRate: 28,
+          spontaneousEffortPressure: -3,
+          shuntFraction: 6,
+          deadSpaceFraction: 0.32,
         };
         break;
     }
@@ -150,10 +219,10 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-display font-bold text-zinc-100 flex items-center gap-2">
-                CONFIGURAÇÃO PULMONAR & FISIOLOGIA DO PACIENTE
+                CONFIGURAÇÃO PULMONAR & FISIOPATOLOGIA DO PACIENTE
               </h2>
               <p className="text-xs text-zinc-400 font-mono">
-                Ajuste direto da mecânica pulmonar, complacência, resistência de via aérea, drive e trocas gasosas.
+                Mecânica respiratória real, equações de movimento, resposta a PEEP, auto-PEEP e trocas gasosas.
               </p>
             </div>
           </div>
@@ -172,9 +241,9 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
           <div className="bg-[#0e0f14] p-3 rounded-sm border border-zinc-800/80 space-y-2">
             <span className="font-display font-bold text-zinc-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Modelos Fisiopatológicos Imediatos</span>
+              <span>10 Perfis Fisiopatológicos Realistas (UTI)</span>
             </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 font-mono text-[11px]">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 font-mono text-[11px]">
               <button
                 onClick={() => applyPreset('normal')}
                 className="p-2 bg-[#121824] hover:bg-[#1a2336] border border-cyan-800/60 text-cyan-300 rounded-sm text-left transition-all cursor-pointer font-bold"
@@ -193,14 +262,14 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
                 onClick={() => applyPreset('dpoc')}
                 className="p-2 bg-[#221c10] hover:bg-[#332714] border border-amber-800/60 text-amber-300 rounded-sm text-left transition-all cursor-pointer font-bold"
               >
-                3. DPOC Exacerbado
+                3. DPOC
                 <span className="block font-normal text-[9px] text-zinc-400">Raw: 26 • AutoPEEP</span>
               </button>
               <button
                 onClick={() => applyPreset('asma')}
                 className="p-2 bg-[#221422] hover:bg-[#331c33] border border-purple-800/60 text-purple-300 rounded-sm text-left transition-all cursor-pointer font-bold"
               >
-                4. Asma Quase-Fatal
+                4. Asma Grave
                 <span className="block font-normal text-[9px] text-zinc-400">Raw: 35 cmH2O/L/s</span>
               </button>
               <button
@@ -218,11 +287,32 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
                 <span className="block font-normal text-[9px] text-zinc-400">C: 24 • Shunt 32%</span>
               </button>
               <button
+                onClick={() => applyPreset('pos_op')}
+                className="p-2 bg-[#141a24] hover:bg-[#1c2636] border border-blue-800/60 text-blue-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+              >
+                7. Pós-Op Abdominal
+                <span className="block font-normal text-[9px] text-zinc-400">C: 32 • PEEP 8-10</span>
+              </button>
+              <button
                 onClick={() => applyPreset('obeso')}
                 className="p-2 bg-[#181622] hover:bg-[#242032] border border-indigo-800/60 text-indigo-300 rounded-sm text-left transition-all cursor-pointer font-bold"
               >
-                7. Paciente Obeso
-                <span className="block font-normal text-[9px] text-zinc-400">IMC 44 • C: 26</span>
+                8. Obeso (IMC 44)
+                <span className="block font-normal text-[9px] text-zinc-400">C: 26 • IBW 68kg</span>
+              </button>
+              <button
+                onClick={() => applyPreset('neuro')}
+                className="p-2 bg-[#1c1824] hover:bg-[#282236] border border-fuchsia-800/60 text-fuchsia-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+              >
+                9. TCE / Neuro
+                <span className="block font-normal text-[9px] text-zinc-400">PaCO2 35-38 alvo</span>
+              </button>
+              <button
+                onClick={() => applyPreset('neuromuscular')}
+                className="p-2 bg-[#16201c] hover:bg-[#202e28] border border-emerald-800/60 text-emerald-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+              >
+                10. Neuromuscular
+                <span className="block font-normal text-[9px] text-zinc-400">Pmus fraco • PSV</span>
               </button>
             </div>
           </div>

@@ -4,11 +4,11 @@ export const CLINICAL_CASES: ClinicalCase[] = [
   // 1. Pulmão Normal
   {
     id: 'pulmao-normal',
-    title: 'Pulmão normal',
+    title: '1. Pulmão Normal (Ventilação Protetora de Rotina)',
     category: 'Normal',
     difficulty: 'Iniciante',
     description:
-      'Paciente intubado para proteção de via aérea após rebaixamento do nível de consciência por TCE leve ou pós-anestésico. Parâmetros pulmonares normais, sem patologia parenquimatosa ou obstrutiva.',
+      'Paciente intubado para proteção de via aérea após cirurgia eletiva ou TCE leve sem lesão pulmonar. Parâmetros de mecânica preservados (Crs 60 mL/cmH₂O, Raw 5 cmH₂O/L/s). Alvo: ventilação protetora com Vt de 6-8 mL/kg de peso predito.',
     patientProfile: {
       name: 'Lucas Silveira (Normal)',
       age: 32,
@@ -16,8 +16,10 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       heightCm: 175,
       actualWeightKg: 72,
       idealBodyWeightKg: 70.5,
-      compliance: 60, // Normal: 50-70 mL/cmH2O
-      resistance: 5, // Normal: 4-8 cmH2O/L/s
+      compliance: 60,
+      resistance: 5,
+      pathology: 'normal',
+      baselineBicarbonate: 24.0,
       spontaneousDrive: true,
       spontaneousRate: 14,
       spontaneousEffortPressure: -4,
@@ -37,7 +39,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       peep: 5,
       triggerType: 'flow',
       triggerSensitivity: 2.0,
-      tidalVolume: 420, // 6 mL/kg
+      tidalVolume: 420,
       respiratoryRate: 14,
       flowWaveform: 'decelerating',
       inspiratoryFlow: 55,
@@ -56,9 +58,9 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       simvPs: 8,
     },
     clinicalHistory:
-      'Masculino, 32 anos, vítima de trauma cranioencefálico leve/moderado em Glasgow 8, intubado preventivamente. Sem antecedentes de asma, tabagismo ou cardiopatia. Radiografia de tórax limpa.',
+      'Masculino, 32 anos, sem comorbidades prévias, submetido a procedimento neurocirúrgico eletivo. Radiografia de tórax limpa sem opacidades.',
     physicalExam:
-      'IOT nº 8.0 fixado a 22 cm. Murmúrio vesicular universalmente audível sem ruídos adventícios. Tórax simétrico, expansibilidade preservada.',
+      'TOT nº 8.0 fixado a 22 cm. Murmúrio vesicular universalmente audível sem ruídos adventícios. Expansibilidade torácica simétrica.',
     initialABG: {
       ph: 7.41,
       paco2: 39,
@@ -98,14 +100,14 @@ export const CLINICAL_CASES: ClinicalCase[] = [
     ],
   },
 
-  // 2. SDRA (Baixa complacência severa)
+  // 2. SDRA Grave (Baby Lung)
   {
     id: 'sdra-grave',
-    title: 'SDRA moderado',
+    title: '2. SDRA Grave (Baby Lung & Baixa Complacência Alveolar)',
     category: 'SDRA',
     difficulty: 'Intermediário',
     description:
-      'Paciente em choque séptico de foco pulmonar com Síndrome do Desconforto Respiratório Agudo (SDRA grave). Pulmão de bebê ("baby lung") com complacência estática criticamente baixa (20 mL/cmH₂O) e elevado risco de volutrauma.',
+      'Paciente em choque séptico de foco pulmonar com Síndrome do Desconforto Respiratório Agudo (SDRA grave). Pulmão de bebê ("baby lung") com complacência estática criticamente baixa (20 mL/cmH₂O), shunt elevado (38%) e risco iminente de volutrauma.',
     patientProfile: {
       name: 'João Carlos Silva (SDRA)',
       age: 54,
@@ -113,8 +115,11 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       heightCm: 175,
       actualWeightKg: 85,
       idealBodyWeightKg: 70.5,
-      compliance: 20, // mL/cmH2O (muito baixa)
-      resistance: 6, // normal
+      compliance: 20,
+      resistance: 6,
+      pathology: 'sdra',
+      recruitmentPotential: 'high',
+      baselineBicarbonate: 22.4,
       spontaneousDrive: false,
       spontaneousRate: 0,
       spontaneousEffortPressure: 0,
@@ -134,7 +139,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       peep: 6,
       triggerType: 'flow',
       triggerSensitivity: 2.0,
-      tidalVolume: 560, // 8 mL/kg (INADEQUADO para SDRA!)
+      tidalVolume: 560, // 8 mL/kg (inadequado para SDRA)
       respiratoryRate: 24,
       flowWaveform: 'square',
       inspiratoryFlow: 50,
@@ -153,9 +158,9 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       simvPs: 10,
     },
     clinicalHistory:
-      'Masculino, 54 anos, admitido na UTI com pneumonia multilobar, febre alta, refratariedade e necessidade de IOT. Rx de tórax e TC demonstram infiltrados alveolares bilaterais difusos (PaO2/FiO2 = 110 mmHg).',
+      'Masculino, 54 anos, admitido na UTI com pneumonia bacteriana multilobar, febre alta e infiltrados alveolares bilaterais difusos (PaO2/FiO2 = 110 mmHg).',
     physicalExam:
-      'IOT com tubo orotraqueal nº 8.0 fixado a 22 cm na rima labial. Sedado em RASS -5 sob curarização. Ausculta com estertores crepitantes difusos bilaterais, extremidades mal perfundidas.',
+      'TOT nº 8.0 fixado a 22 cm. Sedado em RASS -5 sob curarização. Ausculta com estertores crepitantes difusos bilaterais, extremidades mal perfundidas.',
     initialABG: {
       ph: 7.22,
       paco2: 56,
@@ -181,7 +186,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
         id: 'driving-pressure',
         description: 'Manter Driving Pressure (ΔP = Pplat - PEEP) ≤ 14 cmH₂O',
         isMet: (monitored) => monitored.drivingPressure <= 14.5 && monitored.drivingPressure > 0,
-        targetFeedback: 'A Driving Pressure reflete a deformação cíclica alveolar (strain). Mantenha ≤ 14 cmH2O.',
+        targetFeedback: 'A Driving Pressure reflete o strain mecânico alveolar. Mantenha ≤ 14 cmH2O.',
       },
       {
         id: 'safe-pplat',
@@ -199,25 +204,25 @@ export const CLINICAL_CASES: ClinicalCase[] = [
         id: 'adequate-oxygenation',
         description: 'Atingir PaO₂ ≥ 65 mmHg e SpO₂ ≥ 92%',
         isMet: (monitored) => monitored.pao2 >= 65 && monitored.spo2 >= 91,
-        targetFeedback: 'Oxigenação adequada mantida com relação P/F em melhora.',
+        targetFeedback: 'Oxigenação adequada mantida com melhora expressiva da relação P/F.',
       },
     ],
     teachingPoints: [
       'Na SDRA, o cálculo do Vt deve ser SEMPRE baseado no PESO PREDITO (IBW), nunca no peso real.',
-      'A Driving Pressure (ΔP = Pplat - PEEP) é o marcador prognóstico de mecânica pulmonar mais fortemente correlacionado com a sobrevida.',
+      'A Driving Pressure (ΔP = Pplat - PEEP) é o marcador de mecânica pulmonar mais fortemente correlacionado à sobrevida.',
       'A hipercapnia permissiva (pH ≥ 7.20) é tolerada em prol da proteção pulmonar.',
-      'O uso de fluxo desacelerado na VCV ou modo PCV pode homogeneizar a distribuição do gás em alvéolos com diferentes constantes de tempo.',
+      'O uso de fluxo desacelerado na VCV ou modo PCV homogeneíza a distribuição do gás em alvéolos com diferentes constantes de tempo.',
     ],
   },
 
-  // 3. DPOC (Alta resistência + Auto-PEEP)
+  // 3. DPOC Exacerbado
   {
     id: 'dpoc-exacerbado',
-    title: 'DPOC estável',
+    title: '3. DPOC Exacerbado (Hiperinsuflação Dinâmica & Auto-PEEP)',
     category: 'DPOC',
     difficulty: 'Intermediário',
     description:
-      'Paciente portador de DPOC grave GOLD IV intubado por fadiga muscular respiratória. Apresenta severo broncoespasmo (Raw = 26 cmH₂O/L/s), tempo expiratório insuficiente e aprisionamento aéreo (Auto-PEEP).',
+      'Paciente portador de DPOC grave GOLD IV intubado por fadiga muscular respiratória. Apresenta severa obstrução ao fluxo aéreo (Raw = 26 cmH₂O/L/s), constante de tempo longa, retenção crônica de CO₂ (HCO3 = 32 mEq/L) e aprisionamento aéreo (Auto-PEEP).',
     patientProfile: {
       name: 'Maria Helena Antunes (DPOC)',
       age: 68,
@@ -225,8 +230,10 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       heightCm: 160,
       actualWeightKg: 58,
       idealBodyWeightKg: 52.4,
-      compliance: 75, // Alta complacência enfisematosa
-      resistance: 26, // cmH2O/L/s (Severa obstrução)
+      compliance: 75,
+      resistance: 26,
+      pathology: 'dpoc',
+      baselineBicarbonate: 32.0,
       spontaneousDrive: true,
       spontaneousRate: 22,
       spontaneousEffortPressure: -6,
@@ -247,9 +254,9 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       triggerType: 'flow',
       triggerSensitivity: 2.0,
       tidalVolume: 480,
-      respiratoryRate: 22, // Frequência muito alta -> Te curto!
+      respiratoryRate: 22,
       flowWaveform: 'square',
-      inspiratoryFlow: 45, // Baixo fluxo insp -> Ti longo!
+      inspiratoryFlow: 45,
       inspiratoryPausePercent: 10,
       inspiratoryPressure: 18,
       inspiratoryTimePCV: 1.2,
@@ -265,9 +272,9 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       simvPs: 10,
     },
     clinicalHistory:
-      'Feminina, 68 anos, tabagista 50 anos/maço, trazida ao PS por piora progressiva da dispneia e secreção purulenta. Evoluiu com sonolência e acidose hipercápnica grave.',
+      'Feminina, 68 anos, tabagista 50 anos/maço, admitida por exacerbação infecciosa e acidose hipercápnica grave refratária à VNI.',
     physicalExam:
-      'IOT com TOT 7.5. Ausculta pulmonar com sibilos expiratórios difusos, roncos e tempo expiratório acentuadamente prolongado. Curva de fluxo não retorna ao zero na expiração!',
+      'IOT com TOT 7.5. Ausculta com sibilos expiratórios difusos e tempo expiratório acentuadamente prolongado. A curva de fluxo expiratório não toca o zero antes do próximo ciclo!',
     initialABG: {
       ph: 7.18,
       paco2: 78,
@@ -316,11 +323,11 @@ export const CLINICAL_CASES: ClinicalCase[] = [
   // 4. Asma Grave (Broncoespasmo Extremo)
   {
     id: 'asma-grave',
-    title: 'Asma grave',
+    title: '4. Asma Quase-Fatal (Broncoespasmo Extremo & Gradiente PIP-Pplat)',
     category: 'Obstrutiva',
     difficulty: 'Avançado',
     description:
-      'Crise asmática refratária com broncoespasmo extremo (Raw = 35 cmH₂O/L/s). Pico de pressão alarmante com pressão de platô normal (gradiente PIP - Pplat elevado), alto risco de barotrauma e parada cardiorrespiratória por auto-PEEP.',
+      'Crise asmática refratária com broncoespasmo extremo (Raw = 35 cmH₂O/L/s). Pico de pressão alarmante com pressão de platô normal (gradiente PIP - Pplat elevado), alto risco de barotrauma e choque obstrutivo por auto-PEEP.',
     patientProfile: {
       name: 'Juliana Costa (Asma Grave)',
       age: 24,
@@ -328,9 +335,11 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       heightCm: 168,
       actualWeightKg: 60,
       idealBodyWeightKg: 59.6,
-      compliance: 55, // Complacência parenquimatosa normal
-      resistance: 35, // cmH2O/L/s (Broncoespasmo extremo!)
-      spontaneousDrive: false, // Sedada profundamente
+      compliance: 55,
+      resistance: 35,
+      pathology: 'asma',
+      baselineBicarbonate: 27.0,
+      spontaneousDrive: false,
       spontaneousRate: 0,
       spontaneousEffortPressure: 0,
       spontaneousDutyCycle: 0.33,
@@ -349,10 +358,10 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       peep: 4,
       triggerType: 'flow',
       triggerSensitivity: 2.0,
-      tidalVolume: 480, // Volume alto demais para asma grave
-      respiratoryRate: 20, // FR alta -> Te insuficiente!
+      tidalVolume: 480,
+      respiratoryRate: 20,
       flowWaveform: 'square',
-      inspiratoryFlow: 40, // Fluxo baixo -> Ti longo!
+      inspiratoryFlow: 40,
       inspiratoryPausePercent: 0,
       inspiratoryPressure: 24,
       inspiratoryTimePCV: 1.1,
@@ -368,9 +377,9 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       simvPs: 10,
     },
     clinicalHistory:
-      'Feminina, 24 anos, asmática grave, trazida ao pronto-socorro em parada respiratória iminente após crise súbita refratária a broncodilatadores e corticoterapia.',
+      'Feminina, 24 anos, asmática grave, intubada em parada respiratória iminente após broncoespasmo fulminante refratário a beta-2 agonistas e corticoides.',
     physicalExam:
-      'IOT nº 7.5. Tórax hiperinsuflado em barril com "tórax silencioso" e sibilos inspiratórios/expiratórios escassos devido ao fluxo crítico. Pressão de pico no ventilador = 45 cmH₂O!',
+      'IOT nº 7.5. Tórax hiperinsuflado em barril com "tórax silencioso". Pressão de pico no ventilador alarmando acima de 45 cmH₂O!',
     initialABG: {
       ph: 7.12,
       paco2: 84,
@@ -396,18 +405,18 @@ export const CLINICAL_CASES: ClinicalCase[] = [
         id: 'asma-pplat',
         description: 'Manter Pressão de Platô (Pplat) ≤ 30 cmH₂O através de pausa inspiratória',
         isMet: (monitored) => monitored.plateauPressure <= 30,
-        targetFeedback: 'Na asma, o PIP alto é resistivo; a Pplat baixa indica que os alvéolos não estão em risco imediato de ruptura.',
+        targetFeedback: 'Na asma, o PIP alto é resistivo; a Pplat normal indica que os alvéolos não estão em risco de ruptura.',
       },
       {
         id: 'asma-vt',
         description: 'Ajustar Volume Corrente em 6 mL/kg (360 mL) com hipercapnia permissiva',
         isMet: (_, settings) => settings.tidalVolume <= 380 && settings.tidalVolume >= 300,
-        targetFeedback: 'Tolere a hipercapnia enquanto o pH estiver ≥ 7.20.',
+        targetFeedback: 'Tolere a hipercapnia permissiva enquanto o pH estiver ≥ 7.20.',
       },
     ],
     teachingPoints: [
       'Na crise de asma grave intubada, o diferencial entre Pressão de Pico e Platô (PIP - Pplat = Raw × Fluxo) é gigantesco.',
-      'O principal perigo não é o PIP resistivo, mas o auto-PEEP silencioso que pode levar ao tamponamento cardíaco por choque obstrutivo.',
+      'O principal perigo não é o PIP resistivo, mas o auto-PEEP silencioso que pode levar ao choque obstrutivo.',
       'A hipoventilação controlada (FR baixa, Vt baixo, fluxo alto) é a pedra fundamental do manejo ventilatório.',
     ],
   },
@@ -415,11 +424,11 @@ export const CLINICAL_CASES: ClinicalCase[] = [
   // 5. Pneumotórax Hipertensivo
   {
     id: 'pneumotorax',
-    title: 'Pneumotórax',
+    title: '5. Pneumotórax Hipertensivo em VM (Emergência por Barotrauma)',
     category: 'Emergência',
     difficulty: 'Avançado',
     description:
-      'Paciente em ventilação mecânica que desenvolve pneumotórax sob tensão súbito. Queda catastrófica da complacência estática (14 mL/cmH₂O), pico súbito de pressão de vias aéreas, dessaturação e instabilidade hemodinâmica por compressão do retorno venoso.',
+      'Paciente que desenvolve pneumotórax sob tensão súbito durante ventilação com pressão positiva. Queda catastrófica da complacência estática (14 mL/cmH₂O), pico agudo de PIP e Pplat, dessaturação e instabilidade hemodinâmica por colapso do retorno venoso.',
     patientProfile: {
       name: 'Carlos Eduardo Ramos (Pneumotórax)',
       age: 48,
@@ -427,8 +436,10 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       heightCm: 180,
       actualWeightKg: 78,
       idealBodyWeightKg: 75.0,
-      compliance: 14, // Complacência cai subitamente para 14!
+      compliance: 14,
       resistance: 9,
+      pathology: 'pneumotorax',
+      baselineBicarbonate: 21.0,
       spontaneousDrive: false,
       spontaneousRate: 0,
       spontaneousEffortPressure: 0,
@@ -436,7 +447,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       metabolicRateVCO2: 240,
       metabolicRateVO2: 300,
       deadSpaceFraction: 0.60,
-      shuntFraction: 45, // Grande shunt e colapso
+      shuntFraction: 45,
       hemoglobin: 12.0,
       bodyTemperature: 37.0,
       secretionsSeverity: 'none',
@@ -467,9 +478,9 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       simvPs: 10,
     },
     clinicalHistory:
-      'Masculino, 48 anos, pós-punção de acesso venoso central subclávio direito, evolui subitamente durante a ventilação com alarme de Pressão Alta disparando continuamente e queda da SpO₂ de 98% para 82%.',
+      'Masculino, 48 anos, pós-punção de acesso subclávio direito, evolui subitamente com disparo contínuo do alarme de Pressão Alta e queda da SpO₂ de 98% para 82%.',
     physicalExam:
-      'Assimetria torácica, hemitórax direito hipertimpânico com abolição completa do murmúrio vesicular. Desvio de traqueia para a esquerda e estase jugular evidente. PA 80/40 mmHg.',
+      'Assimetria torácica, hemitórax direito hipertimpânico com ausência total de murmúrio vesicular. Desvio de traqueia e estase jugular. PA 80/40 mmHg.',
     initialABG: {
       ph: 7.15,
       paco2: 65,
@@ -481,7 +492,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
     goals: [
       {
         id: 'pntx-limit-p',
-        description: 'Reduzir PIP e Vt imediatamente (Vt ≤ 300-350 mL ou mudar para PCV com baixa pressão) para evitar expansão do barotrauma',
+        description: 'Reduzir PIP e Vt imediatamente (Vt ≤ 320-360 mL ou PCV com baixa pressão) para atenuar o barotrauma',
         isMet: (_, settings) => settings.tidalVolume <= 360 || (settings.mode === 'PCV' && settings.inspiratoryPressure <= 16),
         targetFeedback: 'Reduzir a pressão positiva nos pulmões enquanto a descompressão torácica de emergência é realizada.',
       },
@@ -489,7 +500,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
         id: 'pntx-peep-safe',
         description: 'Evitar PEEP excessiva (manter PEEP ≤ 5 cmH₂O) para minimizar a fuga aérea pleural',
         isMet: (_, settings) => settings.peep <= 6,
-        targetFeedback: 'PEEP elevada em pneumotórax não drenado agrava o colapso hemodinâmico e a fístula broncopleural.',
+        targetFeedback: 'PEEP elevada em pneumotórax agudo agrava o colapso hemodinâmico e a fístula broncopleural.',
       },
       {
         id: 'pntx-pplat-monitor',
@@ -501,14 +512,14 @@ export const CLINICAL_CASES: ClinicalCase[] = [
     teachingPoints: [
       'Pneumotórax hipertensivo em ventilação mecânica é uma emergência médica com risco iminente de PCR em AESP.',
       'Ocorre elevação abrupta tanto da Pressão de Pico (PIP) quanto da Pressão de Platô (Pplat), com redução drástica da complacência estática.',
-      'O diagnóstico é clínico e a descompressão com agulha (2º espaço intercostal na linha hemiclavicular ou 5º espaço na linha axilar anterior) deve preceder o Raio-X.',
+      'A descompressão por punção com agulha ou drenagem torácica em selo d\'água deve preceder exames radiológicos adicionais.',
     ],
   },
 
   // 6. Edema Agudo de Pulmão (EAP Cardiogênico)
   {
     id: 'edema-agudo-pulmao',
-    title: 'Edema agudo pulmonar',
+    title: '6. Edema Agudo de Pulmão (Inundação Alveolar & Resposta à PEEP)',
     category: 'Emergência',
     difficulty: 'Intermediário',
     description:
@@ -522,6 +533,9 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       idealBodyWeightKg: 66.0,
       compliance: 24,
       resistance: 13,
+      pathology: 'edema',
+      recruitmentPotential: 'high',
+      baselineBicarbonate: 21.0,
       spontaneousDrive: true,
       spontaneousRate: 26,
       spontaneousEffortPressure: -8,
@@ -562,12 +576,12 @@ export const CLINICAL_CASES: ClinicalCase[] = [
     clinicalHistory:
       'Masculino, 72 anos, hipertenso e coronariopata, intubado de emergência com estertores até ápices e expectoração rósea espumosa abundante.',
     physicalExam:
-      'IOT 8.0, secreção rósea no tubo, taquicárdico (FC 115 bpm), PA 170/100 mmHg, SpO2 84% com PEEP de 4 cmH2O.',
+      'IOT 8.0, secreção rósea no tubo, taquicárdico (FC 115 bpm), PA 170/100 mmHg, SpO2 84% com PEEP baixa de 4 cmH2O.',
     initialABG: {
       ph: 7.25,
       paco2: 52,
       pao2: 55,
-      hco3: 21,
+      hco3: 21.0,
       spo2: 84,
       fio2: 100,
     },
@@ -613,8 +627,11 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       heightCm: 172,
       actualWeightKg: 75,
       idealBodyWeightKg: 67.8,
-      compliance: 32, // Redução por restrição de parede/abdome
-      resistance: 7, // Resistência normal
+      compliance: 32,
+      resistance: 7,
+      pathology: 'pos_op',
+      recruitmentPotential: 'moderate',
+      baselineBicarbonate: 23.5,
       spontaneousDrive: true,
       spontaneousRate: 18,
       spontaneousEffortPressure: -5,
@@ -622,7 +639,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       metabolicRateVCO2: 210,
       metabolicRateVO2: 260,
       deadSpaceFraction: 0.38,
-      shuntFraction: 20, // Atelectasias basais
+      shuntFraction: 20,
       hemoglobin: 11.5,
       bodyTemperature: 37.3,
       secretionsSeverity: 'none',
@@ -634,7 +651,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       peep: 5,
       triggerType: 'flow',
       triggerSensitivity: 2.0,
-      tidalVolume: 520, // Volume excessivo para complacência reduzida
+      tidalVolume: 520,
       respiratoryRate: 16,
       flowWaveform: 'decelerating',
       inspiratoryFlow: 50,
@@ -653,7 +670,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       simvPs: 10,
     },
     clinicalHistory:
-      'Masculino, 52 anos, PO imediato de laparotomia mediana xifopúbica por apendicite perfurada com peritonite difusa. Curativo compressivo volumoso e dor à palpação abdominal.',
+      'Masculino, 52 anos, PO imediato de laparotomia mediana por apendicite perfurada com peritonite difusa. Curativo compressivo e dor à palpação abdominal.',
     physicalExam:
       'IOT nº 8.0 fixado a 22 cm. Ausculta com murmúrio diminuído em bases pulmonares bilateralmente. Abdome tenso e distendido.',
     initialABG: {
@@ -688,37 +705,40 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       },
     ],
     teachingPoints: [
-      'Incisões abdominais altas e distensão intra-abdominal reduzem a complacência da parede torácica ($C_w$), diminuindo a complacência do sistema respiratório ($C_{rs}$).',
+      'Incisões abdominais altas e distensão intra-abdominal reduzem a complacência da parede torácica (Cw), diminuindo a complacência total (Crs).',
       'A PEEP adequada (8-10 cmH2O) é essencial para combater o colapso alveolar precoce nas bases pulmonares dependentes.',
       'Analgesia efetiva pós-operatória melhora a complacência e viabiliza um desmame precoce da ventilação mecânica.',
     ],
   },
 
-  // 8. Paciente Obeso (Restrição de Parede Torácica & IMC > 40)
+  // 8. Paciente Obeso Mórbido (IMC > 40)
   {
     id: 'paciente-obeso',
-    title: '8. Paciente Obeso Mórbido (Restrição Torácica Extrínseca & Risco de Colapso)',
+    title: '8. Paciente Obeso Mórbido (Restrição Torácica Extrínseca & IMC 44)',
     category: 'Restritiva',
     difficulty: 'Intermediário',
     description:
-      'Paciente com obesidade grau III (IMC 44 kg/m²; Peso real = 135 kg vs Peso predito = 68 kg). Severa sobrecarga de peso sobre a caixa torácica e diafragma com complacência muito reduzida (26 mL/cmH₂O), fechamento precoce de vias aéreas e risco de hiperdistensão se o Vt for baseado no peso real.',
+      'Paciente com obesidade grau III (IMC 44 kg/m²; Peso real = 135 kg vs Peso predito = 68 kg). Severa sobrecarga ponderal sobre a caixa torácica e diafragma com complacência reduzida (26 mL/cmH₂O), fechamento precoce de vias aéreas e risco de hiperdistensão se o Vt for programado no peso real.',
     patientProfile: {
       name: 'Geraldo Fonseca (Obeso Mórbido IMC 44)',
       age: 46,
       gender: 'male',
       heightCm: 172,
-      actualWeightKg: 135, // Peso real elevado!
-      idealBodyWeightKg: 67.8, // Peso predito real!
-      compliance: 26, // Baixa complacência por sobrecarga torácica/abdominal
-      resistance: 10, // Aumento resistivo por colapso parcial de via aérea
+      actualWeightKg: 135,
+      idealBodyWeightKg: 67.8,
+      compliance: 26,
+      resistance: 10,
+      pathology: 'obeso',
+      recruitmentPotential: 'high',
+      baselineBicarbonate: 23.0,
       spontaneousDrive: false,
       spontaneousRate: 0,
       spontaneousEffortPressure: 0,
       spontaneousDutyCycle: 0.33,
-      metabolicRateVCO2: 280, // Metabolismo elevado por grande massa corporal
+      metabolicRateVCO2: 280,
       metabolicRateVO2: 340,
       deadSpaceFraction: 0.42,
-      shuntFraction: 22, // Microatelectasias compressivas
+      shuntFraction: 22,
       hemoglobin: 14.8,
       bodyTemperature: 36.9,
       secretionsSeverity: 'none',
@@ -730,7 +750,7 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       peep: 6,
       triggerType: 'flow',
       triggerSensitivity: 2.0,
-      tidalVolume: 800, // ERRO GRAVE: Vt ajustado no peso real de 135 kg!
+      tidalVolume: 800, // ERRO GRAVE: programado no peso real de 135 kg!
       respiratoryRate: 16,
       flowWaveform: 'decelerating',
       inspiratoryFlow: 55,
@@ -749,9 +769,9 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       simvPs: 10,
     },
     clinicalHistory:
-      'Masculino, 46 anos, IMC 44 kg/m² (135 kg, 172 cm), intubado por insuficiência respiratória aguda. O médico plantonista anterior programou o ventilador com Vt de 800 mL baseado no peso balança (real), gerando pressões de pico de 38 cmH₂O!',
+      'Masculino, 46 anos, IMC 44 kg/m² (135 kg, 172 cm), intubado por insuficiência respiratória. O plantonista anterior programou Vt de 800 mL baseado no peso de balança, gerando PIP de 38 cmH₂O!',
     physicalExam:
-      'IOT nº 8.5. Panículo adiposo exuberante na parede torácica e abdome volumoso em avental. Murmúrio vesicular diminuído difusamente pelo espessamento tecidual.',
+      'IOT nº 8.5. Panículo adiposo volumoso na parede torácica e abdome em avental. Murmúrio vesicular diminuído difusamente pelo espessamento tecidual.',
     initialABG: {
       ph: 7.28,
       paco2: 50,
@@ -787,6 +807,198 @@ export const CLINICAL_CASES: ClinicalCase[] = [
       'O peso predito (IBW) depende exclusivamente da ALTURA e do SEXO biológico, pois o parênquima pulmonar não hipertrofia com o tecido adiposo.',
       'Programar Vt pelo peso real em obesos acarreta volutrauma e barotrauma massivos.',
       'A pressão pleural basal no obeso é naturalmente positiva; por isso, níveis maiores de PEEP (10-14 cmH2O) e posicionamento em proclive (posição de rampa ou Fowler 30-45°) são essenciais.',
+    ],
+  },
+
+  // 9. TCE Grave / Hipertensão Intracraniana (Neurocrítico)
+  {
+    id: 'neurocritico-tce',
+    title: '9. TCE Grave / Neurocrítico (Alvo Estrito de Normocapnia e Oxigenação)',
+    category: 'Emergência',
+    difficulty: 'Avançado',
+    description:
+      'Paciente jovem vítima de acidente de moto com Traumatismo Cranioencefálico grave, hematoma subdural agudo drenado e Cateter de PIC instalado. Complacência normal (60 mL/cmH₂O). Requer rigorosa proteção cerebral: normocapnia estrita (PaCO₂ 35-38 mmHg) para evitar elevação da PIC ou isquemia por vasoconstrição, e PaO₂ > 90 mmHg.',
+    patientProfile: {
+      name: 'Gabriel Menezes (TCE / Neurocrítico)',
+      age: 26,
+      gender: 'male',
+      heightCm: 178,
+      actualWeightKg: 76,
+      idealBodyWeightKg: 73.2,
+      compliance: 60,
+      resistance: 5,
+      pathology: 'neuro',
+      baselineBicarbonate: 24.0,
+      spontaneousDrive: false,
+      spontaneousRate: 0,
+      spontaneousEffortPressure: 0,
+      spontaneousDutyCycle: 0.33,
+      metabolicRateVCO2: 210,
+      metabolicRateVO2: 260,
+      deadSpaceFraction: 0.28,
+      shuntFraction: 5,
+      hemoglobin: 13.8,
+      bodyTemperature: 36.5,
+      secretionsSeverity: 'none',
+      circuitLeakPercent: 0,
+    },
+    initialSettings: {
+      mode: 'VCV',
+      fio2: 50,
+      peep: 5,
+      triggerType: 'flow',
+      triggerSensitivity: 2.0,
+      tidalVolume: 440,
+      respiratoryRate: 12, // FR baixa gerando hipercapnia e pico de PIC!
+      flowWaveform: 'decelerating',
+      inspiratoryFlow: 60,
+      inspiratoryPausePercent: 10,
+      inspiratoryPressure: 15,
+      inspiratoryTimePCV: 0.9,
+      pressureRiseTime: 0.1,
+      pressureSupport: 10,
+      expiratorySensitivity: 25,
+      backupApneaTime: 20,
+      pHigh: 20,
+      pLow: 0,
+      tHigh: 3.5,
+      tLow: 0.6,
+      simvRate: 12,
+      simvPs: 10,
+    },
+    clinicalHistory:
+      'Masculino, 26 anos, politraumatizado, Glasgow 6 à admissão. PIC monitorizada em 22 mmHg (hipertensão intracraniana) devido à retenção inadvertida de CO₂ por ventilação minuto insuficiente.',
+    physicalExam:
+      'TOT nº 8.0, pupila direita discretamente midriática, sedado em RASS -5 com midazolam e fentanil. Ausculta pulmonar livre.',
+    initialABG: {
+      ph: 7.31,
+      paco2: 50,
+      pao2: 88,
+      hco3: 24.5,
+      spo2: 96,
+      fio2: 50,
+    },
+    goals: [
+      {
+        id: 'neuro-normocapnia',
+        description: 'Ajustar FR para 16-18 rpm para atingir Normocapnia Estrita (PaCO₂ 35 a 38 mmHg)',
+        isMet: (monitored) => monitored.paco2 >= 35 && monitored.paco2 <= 38,
+        targetFeedback: 'A normocapnia rigorosa normaliza o calibre vascular cerebral e reduz a Pressão Intracraniana (PIC).',
+      },
+      {
+        id: 'neuro-oxygenation',
+        description: 'Garantir PaO₂ ≥ 90 mmHg com FiO₂ segura (≤ 45%)',
+        isMet: (monitored, settings) => monitored.pao2 >= 90 && settings.fio2 <= 45,
+        targetFeedback: 'Excelente oxigenação tecidual cerebral sem hiperóxia excessiva.',
+      },
+      {
+        id: 'neuro-peep-safe',
+        description: 'Manter PEEP em 5 a 8 cmH₂O para não prejudicar o retorno venoso jugular',
+        isMet: (_, settings) => settings.peep >= 5 && settings.peep <= 8,
+        targetFeedback: 'PEEPs acima de 10-12 cmH2O podem elevar a pressão venosa central e dificultar a drenagem cerebral.',
+      },
+    ],
+    teachingPoints: [
+      'No paciente neurocrítico com TCE grave, o CO₂ é o mais potente regulador do fluxo sanguíneo cerebral.',
+      'A hipercapnia (PaCO₂ > 45 mmHg) causa vasodilatação cerebral intensa e aumento agudo da PIC.',
+      'A hipocapnia profunda (PaCO₂ < 30 mmHg) causa vasoconstrição excessiva com isquemia cerebral secundária.',
+      'O alvo padrão de ventilação no neurocrítico é a normocapnia estrita (PaCO₂ 35-38 mmHg) e normóxia (PaO₂ 90-110 mmHg).',
+    ],
+  },
+
+  // 10. Fraqueza Neuromuscular / Síndrome de Guillain-Barré
+  {
+    id: 'doenca-neuromuscular',
+    title: '10. Doença Neuromuscular (Fraqueza Diafragmática & Desmame)',
+    category: 'Desmame',
+    difficulty: 'Intermediário',
+    description:
+      'Paciente com Síndrome de Guillain-Barré em fase de recuperação motora com fraqueza da musculatura respiratória. Complacência normal (52 mL/cmH₂O), mas drive com esforço fraco (Pmus = -3 cmH₂O), taquipneia superficial e Tobin elevado (RSBI > 110) sob PSV insuficiente.',
+    patientProfile: {
+      name: 'Renata Albuquerque (Guillain-Barré)',
+      age: 41,
+      gender: 'female',
+      heightCm: 165,
+      actualWeightKg: 58,
+      idealBodyWeightKg: 56.9,
+      compliance: 52,
+      resistance: 6,
+      pathology: 'neuromuscular',
+      baselineBicarbonate: 24.2,
+      spontaneousDrive: true,
+      spontaneousRate: 28,
+      spontaneousEffortPressure: -3,
+      spontaneousDutyCycle: 0.30,
+      metabolicRateVCO2: 190,
+      metabolicRateVO2: 230,
+      deadSpaceFraction: 0.32,
+      shuntFraction: 6,
+      hemoglobin: 13.0,
+      bodyTemperature: 36.8,
+      secretionsSeverity: 'none',
+      circuitLeakPercent: 0,
+    },
+    initialSettings: {
+      mode: 'PSV',
+      fio2: 30,
+      peep: 5,
+      triggerType: 'flow',
+      triggerSensitivity: 2.0,
+      tidalVolume: 400,
+      respiratoryRate: 14,
+      flowWaveform: 'decelerating',
+      inspiratoryFlow: 50,
+      inspiratoryPausePercent: 0,
+      inspiratoryPressure: 14,
+      inspiratoryTimePCV: 0.8,
+      pressureRiseTime: 0.1,
+      pressureSupport: 4, // Pressão de suporte muito baixa para paciente fraco!
+      expiratorySensitivity: 25,
+      backupApneaTime: 20,
+      pHigh: 18,
+      pLow: 0,
+      tHigh: 3.5,
+      tLow: 0.6,
+      simvRate: 12,
+      simvPs: 8,
+    },
+    clinicalHistory:
+      'Feminina, 41 anos, diagnóstico de Guillain-Barré, em ventilação mecânica há 12 dias. Foi colocada em teste de respiração espontânea com PS de apenas 4 cmH₂O e evoluiu com respiração rápida e superficial (f/Vt = 125).',
+    physicalExam:
+      'Acordada, colaborativa, fraqueza em 4 membros (força grau 3/5 proximal). Utiliza musculatura acessória do pescoço, sudorese e taquipneia.',
+    initialABG: {
+      ph: 7.34,
+      paco2: 45,
+      pao2: 86,
+      hco3: 24.2,
+      spo2: 96,
+      fio2: 30,
+    },
+    goals: [
+      {
+        id: 'neuro-ps-opt',
+        description: 'Aumentar Pressão de Suporte (PS) para 10 a 14 cmH₂O para aliviar o trabalho respiratório',
+        isMet: (_, settings) => settings.pressureSupport >= 10 && settings.pressureSupport <= 14,
+        targetFeedback: 'Aumentar a PS fornece o volume corrente adequado e descansa a musculatura diafragmática fadigada.',
+      },
+      {
+        id: 'neuro-rsbi-target',
+        description: 'Reduzir o Índice de Tobin (RSBI = f/Vt) para < 80',
+        isMet: (monitored) => monitored.rapidShallowBreathingIndex < 80 && monitored.rapidShallowBreathingIndex > 0,
+        targetFeedback: 'Tobin < 80 indica padrão ventilatório confortável e sustentável.',
+      },
+      {
+        id: 'neuro-sens-trigger',
+        description: 'Ajustar sensibilidade do disparo a fluxo para 1.5 a 2.0 L/min para facilitar o trigger',
+        isMet: (_, settings) => settings.triggerSensitivity >= 1.0 && settings.triggerSensitivity <= 2.0,
+        targetFeedback: 'Trigger sensível diminui o trabalho de disparo para o paciente com fraqueza muscular.',
+      },
+    ],
+    teachingPoints: [
+      'Em doenças neuromusculares, o parênquima pulmonar é inicialmente são, mas a bomba ventilatória está enfraquecida.',
+      'O teste de respiração espontânea prematuro com PS muito baixa leva à fadiga diafragmática rápida e insucesso no desmame.',
+      'O Índice de Tobin (RSBI = f / Vt em Litros) é o preditor clássico: valores > 105 indicam falha iminente no desmame.',
+      'O treinamento muscular respiratório progressivo e desmame gradual são a chave do sucesso.',
     ],
   },
 ];

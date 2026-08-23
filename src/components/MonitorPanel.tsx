@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { MonitoredData, PatientParameters } from '../types/ventilation';
-import { audioEngine } from '../services/audioEngine';
-import { Activity, Volume2, VolumeX, Check, Gauge, Sparkles } from 'lucide-react';
+import { Activity, Gauge, FileText } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface MonitorPanelProps {
   monitored: MonitoredData;
@@ -14,227 +14,388 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
   patient,
   onOpenGasometry,
 }) => {
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-  const [volume, setVolume] = useState<number>(70);
-  const [activeSounds, setActiveSounds] = useState({
-    inspiratoryFlow: true,
-    exhalationValve: true,
-    expiratoryFlow: true,
-    alarmBeeps: true,
-  });
+  const { isLight } = useTheme();
 
-  const toggleSound = () => {
-    audioEngine.playClick(900);
-    setSoundEnabled(!soundEnabled);
-  };
+  const currentPeep = monitored.peep ?? monitored.peepTotal ?? 5;
+  const currentAutoPeep = monitored.autoPeep ?? 0;
+  const currentPeak = monitored.peakPressure ?? 18;
+  const currentMean = monitored.meanPressure ?? 8;
+  const currentVte = monitored.vte ?? 400;
+  const currentTotalRate = monitored.totalRate ?? 15;
+  const currentDp = monitored.drivingPressure ?? 9;
+
+  // Calculations for enhanced mechanics
+  const ibw = patient.gender === 'male'
+    ? 50 + 0.91 * (patient.height - 152.4)
+    : 45.5 + 0.91 * (patient.height - 152.4);
+  const vtPerKg = (currentVte / Math.max(1, ibw)).toFixed(1);
+
+  // Dynamic compliance: Cdyn = Vt / (Ppeak - PEEP)
+  const pDeltaPeak = Math.max(1, currentPeak - currentPeep);
+  const cdyn = Math.round((currentVte / pDeltaPeak) * 10) / 10;
+
+  // Time constant tau (seconds) = (Raw * Cst) / 1000
+  const cstVal = monitored.staticCompliance > 0 ? monitored.staticCompliance : 45;
+  const rawVal = monitored.airwayResistance > 0 ? monitored.airwayResistance : 10;
+  const tau = ((rawVal * cstVal) / 1000).toFixed(2);
+
+  // Mechanical Power estimate: MP = 0.098 * RR * Vt(L) * (Ppeak - 0.5 * DP)
+  const vtL = currentVte / 1000;
+  const dpVal = currentDp > 0 ? currentDp : 10;
+  const mechanicalPower = (0.098 * currentTotalRate * vtL * (currentPeak - 0.5 * dpVal)).toFixed(1);
+
+  // Driving pressure safety classification
+  const dpColor =
+    currentDp <= 14
+      ? isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400'
+      : currentDp <= 16
+      ? isLight ? 'text-amber-700 font-bold' : 'text-amber-400'
+      : isLight ? 'text-rose-700 font-bold' : 'text-rose-400 font-bold';
+
+  const dpBadge =
+    currentDp <= 14
+      ? isLight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-950/80 text-emerald-300 border-emerald-600/50'
+      : currentDp <= 16
+      ? isLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-950/80 text-amber-300 border-amber-600/50'
+      : isLight ? 'bg-rose-100 text-rose-800 border-rose-300 animate-pulse font-bold' : 'bg-rose-950/90 text-rose-200 border-rose-600/80 animate-pulse';
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0e] rounded-2xl border border-zinc-800/90 shadow-2xl overflow-hidden select-none">
+    <div
+      className={`flex flex-col h-full rounded-2xl border shadow-2xl overflow-hidden select-none transition-colors ${
+        isLight ? 'bg-white border-slate-200' : 'bg-[#0a0a0e] border-zinc-800/90'
+      }`}
+    >
       {/* Top Header */}
-      <div className="p-3 bg-[#0e0f14] border-b border-zinc-800 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs font-display font-bold text-zinc-200 uppercase tracking-wider">
-          <Activity className="w-4 h-4 text-cyan-400" />
-          <span>MONITORIZAÇÃO</span>
+      <div
+        className={`p-3 border-b flex items-center justify-between ${
+          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e0f14] border-zinc-800'
+        }`}
+      >
+        <div
+          className={`flex items-center gap-1.5 text-xs font-display font-black uppercase tracking-wider ${
+            isLight ? 'text-slate-800' : 'text-zinc-200'
+          }`}
+        >
+          <Activity className="w-4 h-4 text-cyan-500" />
+          <span>MONITORIZAÇÃO & MECÂNICA</span>
         </div>
+        <button
+          onClick={onOpenGasometry}
+          className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-lg font-mono cursor-pointer transition-all shadow-sm border ${
+            isLight
+              ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-300'
+              : 'bg-[#161824] hover:bg-[#202334] text-cyan-300 border-cyan-800/60'
+          }`}
+        >
+          <FileText className="w-3 h-3" />
+          <span>GASOMETRIA</span>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {/* ROW 1: PRIMARY PRESSURES */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
-            <span className="text-[10px] font-display font-bold text-cyan-400 uppercase">PICO</span>
-            <span className="text-[9px] text-zinc-500 font-mono">cmH₂O</span>
-            <span className="text-2xl font-bold font-mono text-cyan-300 mt-1">
+          {/* Peak Pressure */}
+          <div
+            className={`rounded-xl p-2.5 border flex flex-col justify-between ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e0f14] border-zinc-800/80'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`text-[10px] font-display font-bold uppercase ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`}>P. PICO</span>
+              <span className="text-[8px] text-zinc-500 font-mono">cmH₂O</span>
+            </div>
+            <span className={`text-2xl font-bold font-mono mt-1 ${isLight ? 'text-cyan-800' : 'text-cyan-300'}`}>
               {monitored.peakPressure.toFixed(0)}
             </span>
+            <span className="text-[8px] font-mono text-zinc-500">Limite: &le; 35-40</span>
           </div>
 
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
-            <span className="text-[10px] font-display font-bold text-cyan-400 uppercase">PLATÔ</span>
-            <span className="text-[9px] text-zinc-500 font-mono">cmH₂O</span>
-            <span className="text-2xl font-bold font-mono text-cyan-300 mt-1">
+          {/* Plateau Pressure */}
+          <div
+            className={`rounded-xl p-2.5 border flex flex-col justify-between ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e0f14] border-zinc-800/80'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`text-[10px] font-display font-bold uppercase ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`}>P. PLATÔ</span>
+              <span className="text-[8px] text-zinc-500 font-mono">cmH₂O</span>
+            </div>
+            <span className={`text-2xl font-bold font-mono mt-1 ${isLight ? 'text-cyan-800' : 'text-cyan-300'}`}>
               {monitored.isPlateauMeasured ? monitored.plateauPressure.toFixed(0) : '--'}
             </span>
+            <span className="text-[8px] font-mono text-zinc-500">Alvo: &le; 30</span>
           </div>
 
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
-            <span className="text-[10px] font-display font-bold text-cyan-400 uppercase">MÉDIA</span>
-            <span className="text-[9px] text-zinc-500 font-mono">cmH₂O</span>
-            <span className="text-xl font-bold font-mono text-zinc-200 mt-1">
-              {monitored.meanPressure.toFixed(1)}
+          {/* Mean Pressure */}
+          <div
+            className={`rounded-xl p-2.5 border flex flex-col justify-between ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e0f14] border-zinc-800/80'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className={`text-[10px] font-display font-bold uppercase ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`}>P. MÉDIA</span>
+              <span className="text-[8px] text-zinc-500 font-mono">cmH₂O</span>
+            </div>
+            <span className={`text-2xl font-bold font-mono mt-1 ${isLight ? 'text-slate-800' : 'text-zinc-200'}`}>
+              {currentMean.toFixed(1)}
             </span>
+            <span className="text-[8px] font-mono text-zinc-500">PEEP: {currentPeep.toFixed(0)}</span>
           </div>
         </div>
 
-        {/* ROW 2: VT EXP, VE, FR TOTAL */}
+        {/* ROW 2: VOLUMES & RATES */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
+          {/* Tidal Volume */}
+          <div
+            className={`rounded-xl p-2.5 border flex flex-col justify-between ${
+              isLight ? 'bg-amber-50/50 border-amber-200' : 'bg-[#0e0f14] border-zinc-800/80'
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-display font-bold text-orange-400 uppercase">Vᴛ EXP</span>
-              <span className="text-[8px] text-orange-400 font-mono">mL</span>
+              <span className={`text-[10px] font-display font-bold uppercase ${isLight ? 'text-amber-800' : 'text-amber-400'}`}>Vᴛ EXP</span>
+              <span className="text-[8px] text-amber-500 font-mono">mL</span>
             </div>
-            <span className="text-2xl font-bold font-mono text-orange-300 mt-1">
+            <span className={`text-2xl font-bold font-mono mt-1 ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
               {monitored.vte}
             </span>
+            <span className="text-[8px] font-mono text-zinc-500">{vtPerKg} mL/kg (IBW)</span>
           </div>
 
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
+          {/* Minute Volume */}
+          <div
+            className={`rounded-xl p-2.5 border flex flex-col justify-between ${
+              isLight ? 'bg-amber-50/50 border-amber-200' : 'bg-[#0e0f14] border-zinc-800/80'
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-display font-bold text-orange-400 uppercase">V̇E</span>
-              <span className="text-[8px] text-orange-400 font-mono">L/min</span>
+              <span className={`text-[10px] font-display font-bold uppercase ${isLight ? 'text-amber-800' : 'text-amber-400'}`}>V̇E TOTAL</span>
+              <span className="text-[8px] text-amber-500 font-mono">L/min</span>
             </div>
-            <span className="text-2xl font-bold font-mono text-orange-300 mt-1">
+            <span className={`text-2xl font-bold font-mono mt-1 ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
               {monitored.minuteVolume.toFixed(1)}
             </span>
+            <span className="text-[8px] font-mono text-zinc-500">I:E {monitored.ieRatioString}</span>
           </div>
 
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
+          {/* Total Respiratory Rate */}
+          <div
+            className={`rounded-xl p-2.5 border flex flex-col justify-between ${
+              isLight ? 'bg-emerald-50/50 border-emerald-200' : 'bg-[#0e0f14] border-zinc-800/80'
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-display font-bold text-emerald-400 uppercase">FR TOTAL</span>
-              <span className="text-[8px] text-emerald-400 font-mono">rpm</span>
+              <span className={`text-[10px] font-display font-bold uppercase ${isLight ? 'text-emerald-800' : 'text-emerald-400'}`}>FR TOTAL</span>
+              <span className="text-[8px] text-emerald-500 font-mono">rpm</span>
             </div>
-            <span className="text-2xl font-bold font-mono text-emerald-300 mt-1">
+            <span className={`text-2xl font-bold font-mono mt-1 ${isLight ? 'text-emerald-900' : 'text-emerald-300'}`}>
               {monitored.totalRate}
             </span>
+            <span className="text-[8px] font-mono text-zinc-500">{monitored.spontaneousRate > 0 ? `${monitored.spontaneousRate} esp.` : '0 esp.'}</span>
           </div>
         </div>
 
-        {/* ROW 3: COMPLIANCE, RESISTANCE, I:E */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
-            <span className="text-[10px] font-display font-bold text-zinc-400 uppercase">COMPLACÊNCIA</span>
-            <span className="text-[9px] text-zinc-500 font-mono">mL/cmH₂O</span>
-            <span className="text-xl font-bold font-mono text-white mt-1">
-              {monitored.isPlateauMeasured ? monitored.staticCompliance : '--'}
-            </span>
-          </div>
-
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
-            <span className="text-[10px] font-display font-bold text-zinc-400 uppercase">RESISTÊNCIA</span>
-            <span className="text-[9px] text-zinc-500 font-mono">cmH₂O/L/s</span>
-            <span className="text-xl font-bold font-mono text-white mt-1">
-              {monitored.isPlateauMeasured ? monitored.airwayResistance : '--'}
-            </span>
-          </div>
-
-          <div className="bg-[#0e0f14] rounded-xl p-2.5 border border-zinc-800/80 flex flex-col justify-between">
-            <span className="text-[10px] font-display font-bold text-zinc-400 uppercase">I:E</span>
-            <span className="text-[9px] text-zinc-500 font-mono">&nbsp;</span>
-            <span className="text-base font-bold font-mono text-white mt-1">
-              {monitored.ieRatioString}
-            </span>
-          </div>
-        </div>
-
-        {/* ROW 4: DRIVING PRESSURE & DP% */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-[#0e0f14] rounded-xl p-3 border border-zinc-800/80 flex flex-col justify-between">
-            <span className="text-[10px] font-display font-bold text-zinc-400 uppercase">DRIVING PRESSURE</span>
-            <span className="text-[9px] text-zinc-500 font-mono">cmH₂O</span>
-            <span className="text-2xl font-bold font-mono text-white mt-1">
-              {monitored.isPlateauMeasured ? monitored.drivingPressure.toFixed(0) : '--'}
-            </span>
-          </div>
-
-          <div className="bg-[#0e0f14] rounded-xl p-3 border border-zinc-800/80 flex flex-col justify-between">
-            <span className="text-[10px] font-display font-bold text-zinc-400 uppercase">DP%</span>
-            <span className="text-[9px] text-zinc-500 font-mono">%</span>
-            <span className="text-2xl font-bold font-mono text-cyan-300 mt-1">
-              {monitored.isPlateauMeasured ? 28 : '--'}
-            </span>
-          </div>
-        </div>
-
-        {/* SECTION: MECÂNICA PULMONAR */}
-        <div className="bg-[#0e0f14] rounded-xl p-3 border border-zinc-800/80 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-display font-bold text-purple-400 uppercase tracking-wider">MECÂNICA PULMONAR</span>
-            <button
-              onClick={onOpenGasometry}
-              className="text-[10px] px-2 py-0.5 rounded-lg bg-[#161824] hover:bg-[#202334] text-zinc-300 border border-zinc-700 font-mono cursor-pointer transition-all"
-            >
-              DETALHES
-            </button>
-          </div>
-          <div className="grid grid-cols-4 gap-1.5 text-center">
-            <div className="bg-[#07080d] p-1.5 rounded-lg border border-zinc-800">
-              <span className="text-[9px] text-zinc-500 block font-mono">CST</span>
-              <span className="text-xs font-bold font-mono text-purple-300">{monitored.isPlateauMeasured ? monitored.staticCompliance : '--'}</span>
-              <span className="text-[7px] text-zinc-600 block">mL/cmH₂O</span>
+        {/* SECTION: MECÂNICA PULMONAR AVANÇADA */}
+        <div
+          className={`rounded-xl p-3 border space-y-2.5 shadow-md ${
+            isLight ? 'bg-slate-50 border-purple-200' : 'bg-[#0e0f14] border-purple-900/40'
+          }`}
+        >
+          <div className={`flex items-center justify-between border-b pb-1.5 ${isLight ? 'border-purple-200' : 'border-zinc-800/80'}`}>
+            <div className="flex items-center gap-1.5">
+              <Gauge className="w-3.5 h-3.5 text-purple-600" />
+              <span className={`text-xs font-display font-bold uppercase tracking-wider ${isLight ? 'text-purple-900' : 'text-purple-300'}`}>
+                Mecânica do Sistema Respiratório
+              </span>
             </div>
-            <div className="bg-[#07080d] p-1.5 rounded-lg border border-zinc-800">
-              <span className="text-[9px] text-zinc-500 block font-mono">RAW</span>
-              <span className="text-xs font-bold font-mono text-purple-300">{monitored.isPlateauMeasured ? monitored.airwayResistance : '--'}</span>
-              <span className="text-[7px] text-zinc-600 block">cmH₂O/L/s</span>
-            </div>
-            <div className="bg-[#07080d] p-1.5 rounded-lg border border-zinc-800">
-              <span className="text-[9px] text-zinc-500 block font-mono">AUTO-PEEP</span>
-              <span className="text-xs font-bold font-mono text-amber-300">{monitored.autoPeep.toFixed(0)}</span>
-              <span className="text-[7px] text-zinc-600 block">cmH₂O</span>
-            </div>
-            <div className="bg-[#07080d] p-1.5 rounded-lg border border-zinc-800">
-              <span className="text-[9px] text-zinc-500 block font-mono">ÍND. TOBIN</span>
-              <span className="text-xs font-bold font-mono text-emerald-300">{monitored.rapidShallowBreathingIndex}</span>
-              <span className="text-[7px] text-zinc-600 block">mL/L</span>
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION: ÁUDIO DO VENTILADOR */}
-        <div className="bg-[#0e0f14] rounded-xl p-3 border border-zinc-800/80 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-display font-bold text-zinc-200 uppercase tracking-wider">ÁUDIO DO VENTILADOR</span>
-            <button
-              onClick={toggleSound}
-              className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${
-                soundEnabled ? 'bg-cyan-500' : 'bg-zinc-700'
+            <span
+              className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded border ${
+                isLight ? 'bg-purple-100 text-purple-800 border-purple-300' : 'text-purple-400/90 bg-purple-950/60 border-purple-800/40'
               }`}
             >
-              <div
-                className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-transform ${
-                  soundEnabled ? 'translate-x-4' : 'translate-x-0.5'
-                }`}
-              />
-            </button>
+              Pausa Insp / Exp
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-cyan-400 shrink-0" />
-            <div className="flex-1 flex flex-col">
-              <div className="flex justify-between text-[10px] font-mono text-zinc-400 mb-1">
-                <span>Volume</span>
-                <span>{volume}%</span>
+          {/* Mechanics Grid 1: Compliance & Resistance */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Static Compliance */}
+            <div
+              className={`p-2.5 rounded-lg border flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200' : 'bg-[#07080d] border-zinc-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-zinc-500 font-mono font-bold">COMPLACÊNCIA ESTÁTICA (Cst)</span>
+                <span className="text-[8px] text-zinc-400">mL/cmH₂O</span>
               </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full accent-cyan-400 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-              />
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span className={`text-xl font-bold font-mono ${isLight ? 'text-purple-800' : 'text-purple-300'}`}>
+                  {monitored.isPlateauMeasured ? monitored.staticCompliance : '--'}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-mono">mL/cmH₂O</span>
+              </div>
+              <span className="text-[8px] font-mono text-zinc-400">Normal: 50 – 80</span>
+            </div>
+
+            {/* Dynamic Compliance */}
+            <div
+              className={`p-2.5 rounded-lg border flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200' : 'bg-[#07080d] border-zinc-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-zinc-500 font-mono font-bold">COMPLACÊNCIA DINÂMICA (Cdyn)</span>
+                <span className="text-[8px] text-zinc-400">mL/cmH₂O</span>
+              </div>
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span className={`text-xl font-bold font-mono ${isLight ? 'text-purple-800' : 'text-purple-300'}`}>
+                  {cdyn}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-mono">mL/cmH₂O</span>
+              </div>
+              <span className="text-[8px] font-mono text-zinc-400">Ref: 30 – 50</span>
             </div>
           </div>
 
-          <div className="space-y-1.5 pt-1 border-t border-zinc-800/80">
-            <span className="text-[10px] font-mono text-zinc-400 block">Sons ativos:</span>
-            <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono text-zinc-300">
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3 h-3 text-emerald-400" />
-                <span>Fluxo inspiratório</span>
+          {/* Mechanics Grid 2: Raw & Time Constant */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Airway Resistance Raw */}
+            <div
+              className={`p-2.5 rounded-lg border flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200' : 'bg-[#07080d] border-zinc-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-zinc-500 font-mono font-bold">RESISTÊNCIA DAS VIAS (Raw)</span>
+                <span className="text-[8px] text-zinc-400">cmH₂O/L/s</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3 h-3 text-emerald-400" />
-                <span>Válvula expiratória</span>
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span className={`text-xl font-bold font-mono ${isLight ? 'text-purple-800' : 'text-purple-300'}`}>
+                  {monitored.isPlateauMeasured ? monitored.airwayResistance : '--'}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-mono">cmH₂O/L/s</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3 h-3 text-emerald-400" />
-                <span>Fluxo expiratório</span>
+              <span className="text-[8px] font-mono text-zinc-400">Normal com TOT: &le; 10-12</span>
+            </div>
+
+            {/* Time Constant Tau */}
+            <div
+              className={`p-2.5 rounded-lg border flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200' : 'bg-[#07080d] border-zinc-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-zinc-500 font-mono font-bold">CONSTANTE DE TEMPO (τ)</span>
+                <span className="text-[8px] text-zinc-400">segundos</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3 h-3 text-emerald-400" />
-                <span>Alarmes sonoros</span>
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span className={`text-xl font-bold font-mono ${isLight ? 'text-cyan-800' : 'text-cyan-300'}`}>
+                  {tau}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-mono">s (3τ = {(Number(tau) * 3).toFixed(2)}s)</span>
               </div>
+              <span className="text-[8px] font-mono text-zinc-400">Tempo exp. seguro &ge; 3τ</span>
+            </div>
+          </div>
+
+          {/* Mechanics Grid 3: Driving Pressure & DP% */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Driving Pressure */}
+            <div
+              className={`p-2.5 rounded-lg border flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200' : 'bg-[#07080d] border-zinc-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-zinc-500 font-mono font-bold">DRIVING PRESSURE (ΔP)</span>
+                <span className={`text-[8px] font-mono px-1.5 py-0.2 rounded border ${dpBadge}`}>
+                  {monitored.drivingPressure <= 15 ? 'PROTETORA' : 'ELEVADA'}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span className={`text-2xl font-bold font-mono ${dpColor}`}>
+                  {monitored.isPlateauMeasured ? monitored.drivingPressure.toFixed(0) : '--'}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-mono">cmH₂O</span>
+              </div>
+              <span className="text-[8px] font-mono text-zinc-400">Meta Segura: &le; 15 cmH₂O</span>
+            </div>
+
+            {/* Auto-PEEP */}
+            <div
+              className={`p-2.5 rounded-lg border flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200' : 'bg-[#07080d] border-zinc-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-zinc-500 font-mono font-bold">AUTO-PEEP (PEEPi)</span>
+                <span className="text-[8px] text-zinc-400">cmH₂O</span>
+              </div>
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span
+                  className={`text-2xl font-bold font-mono ${
+                    currentAutoPeep > 3
+                      ? isLight ? 'text-amber-700' : 'text-amber-400'
+                      : isLight ? 'text-emerald-700' : 'text-emerald-400'
+                  }`}
+                >
+                  {currentAutoPeep.toFixed(1)}
+                </span>
+                <span className="text-[9px] text-zinc-500 font-mono">cmH₂O</span>
+              </div>
+              <span className="text-[8px] font-mono text-zinc-400">Pausa Exp: PEEP Total {(currentPeep + currentAutoPeep).toFixed(1)}</span>
+            </div>
+          </div>
+
+          {/* Mechanics Grid 4: Tobin Index & Mechanical Power */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Tobin Index / RSBI */}
+            <div
+              className={`p-2 rounded-lg border flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200' : 'bg-[#07080d] border-zinc-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-zinc-500 font-mono font-bold">ÍNDICE DE TOBIN (IRRS)</span>
+              </div>
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span
+                  className={`text-lg font-bold font-mono ${
+                    monitored.rapidShallowBreathingIndex > 105
+                      ? isLight ? 'text-rose-700' : 'text-rose-400'
+                      : isLight ? 'text-emerald-700' : 'text-emerald-300'
+                  }`}
+                >
+                  {monitored.rapidShallowBreathingIndex}
+                </span>
+                <span className="text-[8px] text-zinc-400 font-mono">ciclos/min/L</span>
+              </div>
+              <span className="text-[8px] font-mono text-zinc-400">Desmame apto: &lt; 105</span>
+            </div>
+
+            {/* Mechanical Power */}
+            <div
+              className={`p-2 rounded-lg border flex flex-col justify-between ${
+                isLight ? 'bg-white border-slate-200' : 'bg-[#07080d] border-zinc-800'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] text-zinc-500 font-mono font-bold">POTÊNCIA MECÂNICA</span>
+              </div>
+              <div className="flex items-baseline gap-1 my-0.5">
+                <span
+                  className={`text-lg font-bold font-mono ${
+                    Number(mechanicalPower) > 17
+                      ? isLight ? 'text-amber-700' : 'text-amber-400'
+                      : isLight ? 'text-cyan-700' : 'text-cyan-300'
+                  }`}
+                >
+                  {mechanicalPower}
+                </span>
+                <span className="text-[8px] text-zinc-400 font-mono">J/min</span>
+              </div>
+              <span className="text-[8px] font-mono text-zinc-400">Meta VILI: &lt; 17 J/min</span>
             </div>
           </div>
         </div>

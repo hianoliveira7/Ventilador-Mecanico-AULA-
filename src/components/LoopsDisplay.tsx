@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { WaveformSample, LoopSample } from '../types/ventilation';
-import { RefreshCw, Bookmark, Sparkles, Activity, Layers } from 'lucide-react';
+import { Bookmark, Sparkles } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface LoopsDisplayProps {
   currentSample: WaveformSample | null;
@@ -15,8 +16,15 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
   viewMode = 'loops',
   onSelectViewMode,
 }) => {
-  const pvCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const fvCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { isLight } = useTheme();
+
+  // P-V Layered Canvases
+  const pvBgCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pvFgCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // F-V Layered Canvases
+  const fvBgCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fvFgCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const loopBufferRef = useRef<LoopSample[]>([]);
   const [referenceLoop, setReferenceLoop] = useState<LoopSample[] | null>(null);
@@ -55,7 +63,7 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     setReferenceLoop(null);
   };
 
-  // Helper to draw smooth spline through points
+  // Helper to draw smooth spline through points using continuous bezier
   const drawSmoothLoop = (
     pts: { x: number; y: number }[],
     ctx: CanvasRenderingContext2D,
@@ -71,8 +79,10 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     if (!isDashed) {
-      ctx.shadowColor = glowColor;
-      ctx.shadowBlur = 8;
+      if (!isLight) {
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = 8;
+      }
     } else {
       ctx.setLineDash([4, 4]);
     }
@@ -92,17 +102,19 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     ctx.restore();
   };
 
-  // Render P-V Loop Canvas (Pressure-Volume)
-  const renderPVLoop = () => {
-    const canvas = pvCanvasRef.current;
+  // ============================================================================
+  // P-V LOOP BACKGROUND CANVAS (Grid, Eixos, Título)
+  // ============================================================================
+  const renderPVBackground = useCallback(() => {
+    const canvas = pvBgCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const width = rect.width;
-    const height = rect.height;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const width = rect.width || 400;
+    const height = rect.height || 360;
 
     if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
       canvas.width = Math.floor(width * dpr);
@@ -112,22 +124,19 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     ctx.save();
     ctx.scale(dpr, dpr);
 
-    // Background
-    ctx.fillStyle = '#07080d';
+    ctx.fillStyle = isLight ? '#f8fafc' : '#07080d';
     ctx.fillRect(0, 0, width, height);
 
-    // Rounded inner container
     if (typeof ctx.roundRect === 'function') {
-      ctx.fillStyle = '#0a0c13';
+      ctx.fillStyle = isLight ? '#ffffff' : '#0a0c13';
       ctx.beginPath();
       ctx.roundRect(4, 4, width - 8, height - 8, 12);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.04)';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
 
-    // Coordinate space
     const padLeft = 46;
     const padBottom = 34;
     const padTop = 38;
@@ -139,8 +148,7 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     const pMax = 50;
     const vMax = 800;
 
-    // Grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1;
 
     // Vertical P grid
@@ -170,7 +178,7 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     }
 
     // Axes
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padLeft, padTop);
@@ -178,27 +186,75 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     ctx.lineTo(width - padRight, height - padBottom);
     ctx.stroke();
 
-    // Rounded Title Badge
+    // Axis Labels
+    ctx.font = 'bold 9px monospace';
+    ctx.fillStyle = isLight ? '#0284c7' : '#00e5ff';
+    ctx.fillText('Pressão (Paw - cmH₂O) →', width - padRight - 130, height - 10);
+    ctx.save();
+    ctx.translate(14, padTop + 70);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = isLight ? '#d97706' : '#f59e0b';
+    ctx.fillText('Volume (mL) →', 0, 0);
+    ctx.restore();
+
+    // Title Badge
     ctx.save();
     const badgeW = 180;
     const badgeH = 22;
     if (typeof ctx.roundRect === 'function') {
-      ctx.fillStyle = 'rgba(0, 229, 255, 0.12)';
+      ctx.fillStyle = isLight ? 'rgba(2, 132, 199, 0.12)' : 'rgba(0, 229, 255, 0.12)';
       ctx.beginPath();
       ctx.roundRect(padLeft, 8, badgeW, badgeH, 11);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+      ctx.strokeStyle = isLight ? 'rgba(2, 132, 199, 0.35)' : 'rgba(0, 229, 255, 0.35)';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
-    ctx.fillStyle = '#00e5ff';
+    ctx.fillStyle = isLight ? '#0284c7' : '#00e5ff';
     ctx.beginPath();
     ctx.arc(padLeft + 10, 8 + badgeH / 2, 3.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.font = 'bold 11px system-ui, sans-serif';
-    ctx.fillStyle = '#f1f5f9';
+    ctx.fillStyle = isLight ? '#0f172a' : '#f1f5f9';
     ctx.fillText('Volume x Pressão (P-V)', padLeft + 20, 8 + 15);
     ctx.restore();
+
+    ctx.restore();
+  }, [isLight]);
+
+  // ============================================================================
+  // P-V LOOP FOREGROUND CANVAS (Curva Ativa, Referência, Cursor)
+  // ============================================================================
+  const renderPVForeground = useCallback(() => {
+    const canvas = pvFgCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const width = rect.width || 400;
+    const height = rect.height || 360;
+
+    if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+    }
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+
+    const padLeft = 46;
+    const padBottom = 34;
+    const padTop = 38;
+    const padRight = 24;
+
+    const graphW = width - padLeft - padRight;
+    const graphH = height - padBottom - padTop;
+
+    const pMax = 50;
+    const vMax = 800;
 
     // Draw Reference Loop (if saved)
     if (referenceLoop && referenceLoop.length > 5) {
@@ -206,7 +262,13 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
         x: padLeft + (Math.max(0, pt.pressure) / pMax) * graphW,
         y: height - padBottom - (Math.max(0, pt.volume) / vMax) * graphH,
       }));
-      drawSmoothLoop(refPts, ctx, 'rgba(148, 163, 184, 0.6)', 'rgba(0,0,0,0)', true);
+      drawSmoothLoop(
+        refPts,
+        ctx,
+        isLight ? 'rgba(100, 116, 139, 0.7)' : 'rgba(148, 163, 184, 0.6)',
+        'rgba(0,0,0,0)',
+        true
+      );
     }
 
     // Draw Active P-V Loop with rounded continuous spline
@@ -216,14 +278,16 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
         x: padLeft + (Math.max(0, pt.pressure) / pMax) * graphW,
         y: height - padBottom - (Math.max(0, pt.volume) / vMax) * graphH,
       }));
-      drawSmoothLoop(activePts, ctx, '#00e5ff', 'rgba(0, 229, 255, 0.6)');
+      drawSmoothLoop(activePts, ctx, isLight ? '#0284c7' : '#00e5ff', 'rgba(0, 229, 255, 0.6)');
 
       // Head cursor beacon
       const latest = activePts[activePts.length - 1];
       ctx.save();
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = '#00e5ff';
-      ctx.shadowBlur = 8;
+      ctx.fillStyle = isLight ? '#0284c7' : '#ffffff';
+      if (!isLight) {
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 8;
+      }
       ctx.beginPath();
       ctx.arc(latest.x, latest.y, 4, 0, Math.PI * 2);
       ctx.fill();
@@ -231,19 +295,21 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     }
 
     ctx.restore();
-  };
+  }, [isLight, referenceLoop]);
 
-  // Render F-V Loop Canvas (Flow-Volume)
-  const renderFVLoop = () => {
-    const canvas = fvCanvasRef.current;
+  // ============================================================================
+  // F-V LOOP BACKGROUND CANVAS (Grid, Eixos, Título)
+  // ============================================================================
+  const renderFVBackground = useCallback(() => {
+    const canvas = fvBgCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const width = rect.width;
-    const height = rect.height;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const width = rect.width || 400;
+    const height = rect.height || 360;
 
     if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
       canvas.width = Math.floor(width * dpr);
@@ -253,17 +319,15 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     ctx.save();
     ctx.scale(dpr, dpr);
 
-    // Background
-    ctx.fillStyle = '#07080d';
+    ctx.fillStyle = isLight ? '#f8fafc' : '#07080d';
     ctx.fillRect(0, 0, width, height);
 
-    // Rounded inner container
     if (typeof ctx.roundRect === 'function') {
-      ctx.fillStyle = '#0a0c13';
+      ctx.fillStyle = isLight ? '#ffffff' : '#0a0c13';
       ctx.beginPath();
       ctx.roundRect(4, 4, width - 8, height - 8, 12);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.04)';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -280,8 +344,7 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     const fMax = 80;
     const zeroY = padTop + graphH / 2;
 
-    // Grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1;
 
     // Volume X grid
@@ -311,34 +374,83 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     });
 
     // Zero Flow Center Axis
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padLeft, zeroY);
     ctx.lineTo(width - padRight, zeroY);
     ctx.stroke();
 
-    // Rounded Title Badge
+    // Axis Labels
+    ctx.font = 'bold 9px monospace';
+    ctx.fillStyle = isLight ? '#d97706' : '#f59e0b';
+    ctx.fillText('Volume (mL) →', width - padRight - 85, height - 10);
+    ctx.save();
+    ctx.translate(14, padTop + 70);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = isLight ? '#059669' : '#10b981';
+    ctx.fillText('Fluxo (L/min) →', 0, 0);
+    ctx.restore();
+
+    // Title Badge
     ctx.save();
     const badgeW = 180;
     const badgeH = 22;
     if (typeof ctx.roundRect === 'function') {
-      ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
+      ctx.fillStyle = isLight ? 'rgba(5, 150, 105, 0.12)' : 'rgba(16, 185, 129, 0.12)';
       ctx.beginPath();
       ctx.roundRect(padLeft, 8, badgeW, badgeH, 11);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
+      ctx.strokeStyle = isLight ? 'rgba(5, 150, 105, 0.35)' : 'rgba(16, 185, 129, 0.35)';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
-    ctx.fillStyle = '#10b981';
+    ctx.fillStyle = isLight ? '#059669' : '#10b981';
     ctx.beginPath();
     ctx.arc(padLeft + 10, 8 + badgeH / 2, 3.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.font = 'bold 11px system-ui, sans-serif';
-    ctx.fillStyle = '#f1f5f9';
+    ctx.fillStyle = isLight ? '#0f172a' : '#f1f5f9';
     ctx.fillText('Fluxo x Volume (F-V)', padLeft + 20, 8 + 15);
     ctx.restore();
+
+    ctx.restore();
+  }, [isLight]);
+
+  // ============================================================================
+  // F-V LOOP FOREGROUND CANVAS (Curva Ativa, Referência, Cursor)
+  // ============================================================================
+  const renderFVForeground = useCallback(() => {
+    const canvas = fvFgCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const width = rect.width || 400;
+    const height = rect.height || 360;
+
+    if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+    }
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+
+    const padLeft = 46;
+    const padBottom = 30;
+    const padTop = 38;
+    const padRight = 24;
+
+    const graphW = width - padLeft - padRight;
+    const graphH = height - padBottom - padTop;
+
+    const vMax = 800;
+    const fMax = 80;
+    const zeroY = padTop + graphH / 2;
 
     // Reference loop
     if (referenceLoop && referenceLoop.length > 5) {
@@ -346,7 +458,13 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
         x: padLeft + (Math.max(0, pt.volume) / vMax) * graphW,
         y: zeroY - (pt.flow / fMax) * (graphH / 2),
       }));
-      drawSmoothLoop(refPts, ctx, 'rgba(148, 163, 184, 0.6)', 'rgba(0,0,0,0)', true);
+      drawSmoothLoop(
+        refPts,
+        ctx,
+        isLight ? 'rgba(100, 116, 139, 0.7)' : 'rgba(148, 163, 184, 0.6)',
+        'rgba(0,0,0,0)',
+        true
+      );
     }
 
     // Active F-V Loop with rounded continuous spline
@@ -356,14 +474,16 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
         x: padLeft + (Math.max(0, pt.volume) / vMax) * graphW,
         y: zeroY - (pt.flow / fMax) * (graphH / 2),
       }));
-      drawSmoothLoop(activePts, ctx, '#10b981', 'rgba(16, 185, 129, 0.6)');
+      drawSmoothLoop(activePts, ctx, isLight ? '#059669' : '#10b981', 'rgba(16, 185, 129, 0.6)');
 
       // Head cursor beacon
       const latest = activePts[activePts.length - 1];
       ctx.save();
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = '#10b981';
-      ctx.shadowBlur = 8;
+      ctx.fillStyle = isLight ? '#059669' : '#ffffff';
+      if (!isLight) {
+        ctx.shadowColor = '#10b981';
+        ctx.shadowBlur = 8;
+      }
       ctx.beginPath();
       ctx.arc(latest.x, latest.y, 4, 0, Math.PI * 2);
       ctx.fill();
@@ -371,26 +491,49 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     }
 
     ctx.restore();
-  };
+  }, [isLight, referenceLoop]);
 
+  // Background repaints on theme or tab change
+  useEffect(() => {
+    renderPVBackground();
+    renderFVBackground();
+  }, [renderPVBackground, renderFVBackground, activeTab]);
+
+  // Animation Loop for Foreground Canvases
   useEffect(() => {
     let animId: number;
     const loop = () => {
-      renderPVLoop();
-      renderFVLoop();
+      renderPVForeground();
+      renderFVForeground();
       animId = requestAnimationFrame(loop);
     };
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  });
+  }, [renderPVForeground, renderFVForeground]);
 
   return (
-    <div className="relative flex flex-col h-full bg-[#08090f] rounded-2xl border border-zinc-800/80 shadow-2xl overflow-hidden backdrop-blur-md">
+    <div
+      className={`relative flex flex-col h-full rounded-2xl border overflow-hidden transition-colors ${
+        isLight
+          ? 'bg-white border-slate-200 shadow-md'
+          : 'bg-[#08090f] border-zinc-800/80 shadow-2xl backdrop-blur-md'
+      }`}
+    >
       {/* Top Rounded Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 bg-[#0d0e17]/90 border-b border-zinc-800/80 select-none">
+      <div
+        className={`flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 border-b select-none ${
+          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0d0e17]/90 border-zinc-800/80'
+        }`}
+      >
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-950/60 border border-amber-500/30 text-amber-400">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${
+              isLight
+                ? 'bg-amber-50 border-amber-300 text-amber-800'
+                : 'bg-amber-950/60 border-amber-500/30 text-amber-400'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
             <span className="font-display font-bold tracking-wider text-xs uppercase">
               Alças e Loops Pulmonares
             </span>
@@ -398,12 +541,20 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
 
           {/* View Switcher if provided */}
           {onSelectViewMode && (
-            <div className="flex items-center bg-[#12141e] p-0.5 rounded-full border border-zinc-800">
+            <div
+              className={`flex items-center p-0.5 rounded-full border ${
+                isLight ? 'bg-slate-200 border-slate-300' : 'bg-[#12141e] border-zinc-800'
+              }`}
+            >
               <button
                 onClick={() => onSelectViewMode('waveforms')}
                 className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold transition-all cursor-pointer ${
                   viewMode === 'waveforms'
-                    ? 'bg-cyan-500 text-black shadow-sm'
+                    ? isLight
+                      ? 'bg-cyan-600 text-white shadow-sm'
+                      : 'bg-cyan-500 text-black shadow-sm'
+                    : isLight
+                    ? 'text-slate-600 hover:text-slate-900'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
@@ -413,7 +564,11 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
                 onClick={() => onSelectViewMode('loops')}
                 className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold transition-all cursor-pointer ${
                   viewMode === 'loops'
-                    ? 'bg-cyan-500 text-black shadow-sm'
+                    ? isLight
+                      ? 'bg-cyan-600 text-white shadow-sm'
+                      : 'bg-cyan-500 text-black shadow-sm'
+                    : isLight
+                    ? 'text-slate-600 hover:text-slate-900'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
@@ -423,7 +578,11 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
                 onClick={() => onSelectViewMode('split')}
                 className={`px-2.5 py-0.5 rounded-full font-mono text-[10px] font-bold transition-all cursor-pointer ${
                   viewMode === 'split'
-                    ? 'bg-cyan-500 text-black shadow-sm'
+                    ? isLight
+                      ? 'bg-cyan-600 text-white shadow-sm'
+                      : 'bg-cyan-500 text-black shadow-sm'
+                    : isLight
+                    ? 'text-slate-600 hover:text-slate-900'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
@@ -438,25 +597,43 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
           {referenceLoop ? (
             <button
               onClick={handleClearReference}
-              className="text-[11px] px-3 py-1 rounded-full bg-[#181a26] hover:bg-[#222536] text-zinc-300 font-mono border border-zinc-700/60 cursor-pointer shadow-sm transition-all"
+              className={`text-[11px] px-3 py-1 rounded-full font-mono border cursor-pointer shadow-sm transition-all ${
+                isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                  : 'bg-[#181a26] hover:bg-[#222536] text-zinc-300 border-zinc-700/60'
+              }`}
             >
               Limpar Referência
             </button>
           ) : (
             <button
               onClick={handleSaveReference}
-              className="flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border border-cyan-600/50 font-mono cursor-pointer shadow-sm transition-all"
+              className={`flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full border font-mono cursor-pointer shadow-sm transition-all ${
+                isLight
+                  ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-300'
+                  : 'bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border-cyan-600/50'
+              }`}
             >
               <Bookmark className="w-3 h-3" /> Salvar Loop Ref.
             </button>
           )}
 
           {/* View Tab selector pills */}
-          <div className="flex bg-[#12141e] p-0.5 rounded-full border border-zinc-800">
+          <div
+            className={`flex p-0.5 rounded-full border ${
+              isLight ? 'bg-slate-200 border-slate-300' : 'bg-[#12141e] border-zinc-800'
+            }`}
+          >
             <button
               onClick={() => setActiveTab('both')}
               className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full font-mono cursor-pointer transition-all ${
-                activeTab === 'both' ? 'bg-[#222738] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+                activeTab === 'both'
+                  ? isLight
+                    ? 'bg-white text-slate-900 shadow-sm'
+                    : 'bg-[#222738] text-white shadow-sm'
+                  : isLight
+                  ? 'text-slate-600 hover:text-slate-900'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
               Ambos
@@ -464,7 +641,13 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
             <button
               onClick={() => setActiveTab('pv')}
               className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full font-mono cursor-pointer transition-all ${
-                activeTab === 'pv' ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50' : 'text-zinc-400 hover:text-white'
+                activeTab === 'pv'
+                  ? isLight
+                    ? 'bg-cyan-600 text-white shadow-sm'
+                    : 'bg-cyan-950 text-cyan-300 border border-cyan-500/50'
+                  : isLight
+                  ? 'text-slate-600 hover:text-slate-900'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
               P x V
@@ -472,7 +655,13 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
             <button
               onClick={() => setActiveTab('fv')}
               className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full font-mono cursor-pointer transition-all ${
-                activeTab === 'fv' ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/50' : 'text-zinc-400 hover:text-white'
+                activeTab === 'fv'
+                  ? isLight
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-emerald-950 text-emerald-300 border border-emerald-500/50'
+                  : isLight
+                  ? 'text-slate-600 hover:text-slate-900'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
               F x V
@@ -482,16 +671,34 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
       </div>
 
       {/* Canvas Area with Rounded Cards */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2.5 p-2.5 min-h-[360px] bg-[#07080d]">
+      <div
+        className={`flex-1 grid grid-cols-1 md:grid-cols-2 gap-2.5 p-2.5 min-h-[360px] ${
+          isLight ? 'bg-slate-100' : 'bg-[#07080d]'
+        }`}
+      >
         {(activeTab === 'both' || activeTab === 'pv') && (
-          <div className="relative w-full h-full bg-[#0a0c13] rounded-xl border border-zinc-800/80 overflow-hidden flex flex-col shadow-inner">
-            <canvas ref={pvCanvasRef} className="w-full h-full block cursor-crosshair" />
+          <div
+            className={`relative w-full h-full rounded-xl border overflow-hidden flex flex-col shadow-inner ${
+              isLight ? 'bg-white border-slate-200' : 'bg-[#0a0c13] border-zinc-800/80'
+            }`}
+          >
+            {/* P-V Background Canvas Layer */}
+            <canvas ref={pvBgCanvasRef} className="absolute inset-0 w-full h-full block pointer-events-none" />
+            {/* P-V Dynamic Foreground Canvas Layer */}
+            <canvas ref={pvFgCanvasRef} className="absolute inset-0 w-full h-full block cursor-crosshair z-10" />
           </div>
         )}
 
         {(activeTab === 'both' || activeTab === 'fv') && (
-          <div className="relative w-full h-full bg-[#0a0c13] rounded-xl border border-zinc-800/80 overflow-hidden flex flex-col shadow-inner">
-            <canvas ref={fvCanvasRef} className="w-full h-full block cursor-crosshair" />
+          <div
+            className={`relative w-full h-full rounded-xl border overflow-hidden flex flex-col shadow-inner ${
+              isLight ? 'bg-white border-slate-200' : 'bg-[#0a0c13] border-zinc-800/80'
+            }`}
+          >
+            {/* F-V Background Canvas Layer */}
+            <canvas ref={fvBgCanvasRef} className="absolute inset-0 w-full h-full block pointer-events-none" />
+            {/* F-V Dynamic Foreground Canvas Layer */}
+            <canvas ref={fvFgCanvasRef} className="absolute inset-0 w-full h-full block cursor-crosshair z-10" />
           </div>
         )}
       </div>
