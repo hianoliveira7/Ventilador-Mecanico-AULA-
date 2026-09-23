@@ -74,7 +74,7 @@ export interface PatientParameters {
   
   // Asynchrony triggers
   asynchronyType?: 'none' | 'ineffective_effort' | 'double_trigger' | 'flow_starvation' | 'auto_trigger';
-  secretionsSeverity?: 'none' | 'mild' | 'severe'; // Causes sawtooth waveform in flow
+  secretionsSeverity?: 'none' | 'mild' | 'moderate' | 'severe'; // Causes sawtooth waveform in flow
   circuitLeakPercent?: number; // 0 - 50% leak
   endotrachealTubeSize?: number; // mm ID (6.5 - 9.0)
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target } from 'lucide-react';
+import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 
@@ -19,6 +19,7 @@ interface MenuModalProps {
   onOpenRolePortal?: () => void;
   onOpenTutorial?: () => void;
   onOpenTeacherAdmin?: () => void;
+  onOpenAsynchronies?: () => void;
 }
 
 export const MenuModal: React.FC<MenuModalProps> = ({
@@ -37,6 +38,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
   onOpenRolePortal,
   onOpenTutorial,
   onOpenTeacherAdmin,
+  onOpenAsynchronies,
 }) => {
   const { theme, toggleTheme, isLight } = useTheme();
 
@@ -210,6 +212,34 @@ export const MenuModal: React.FC<MenuModalProps> = ({
               {isLight ? 'Claro Ativo' : 'Escuro Ativo'}
             </span>
           </button>
+
+          {onOpenAsynchronies && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenAsynchronies();
+              }}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
+                isLight
+                  ? 'bg-amber-50/70 hover:bg-amber-100/90 border-amber-300 text-amber-950'
+                  : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-800/80 text-amber-200'
+              }`}
+            >
+              <div
+                className={`p-2.5 rounded-lg ${
+                  isLight ? 'bg-amber-200 text-amber-800' : 'bg-amber-500/20 text-amber-300 group-hover:bg-amber-500/30'
+                }`}
+              >
+                <Zap className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <span className="block text-sm font-display font-bold">Banco de Dados de Assincronias</span>
+                <span className={`text-xs ${isLight ? 'text-amber-800/80' : 'text-amber-300/80'}`}>
+                  Catálogo interativo com 7 tipos de assincronias para simular e resolver
+                </span>
+              </div>
+            </button>
+          )}
 
           {onOpenGasometry && (
             <button

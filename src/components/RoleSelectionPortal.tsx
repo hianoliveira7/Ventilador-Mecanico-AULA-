@@ -15,6 +15,7 @@ import {
   Lock,
   ShieldCheck,
   KeyRound,
+  Zap,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -32,6 +33,7 @@ interface RoleSelectionPortalProps {
   onOpenEducational?: () => void;
   onOpenTeacherAdmin?: () => void;
   onEnterSimulatorDirectly?: () => void;
+  onOpenAsynchronies?: () => void;
 }
 
 export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
@@ -46,6 +48,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
   onOpenEducational,
   onOpenTeacherAdmin,
   onEnterSimulatorDirectly,
+  onOpenAsynchronies,
 }) => {
   const { isLight } = useTheme();
   const [isTeacherAuthOpen, setIsTeacherAuthOpen] = useState(false);
@@ -254,6 +257,27 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                       <span>4. Quiz de Avaliação Teórico-Prática</span>
                     </div>
                     <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
+                )}
+
+                {onOpenAsynchronies && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseStudent();
+                      onOpenAsynchronies();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-amber-50/80 hover:bg-amber-100/80 text-amber-950 border-amber-300 shadow-sm'
+                        : 'bg-amber-950/40 hover:bg-amber-900/50 text-amber-200 border-amber-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+                      <span>5. Banco de Dados de Assincronias (Simular & Resolver)</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-amber-400" />
                   </button>
                 )}
               </div>

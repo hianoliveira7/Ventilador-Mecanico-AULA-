@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { VentilationMode, PatientParameters, AlarmItem } from '../types/ventilation';
 import {
   Bell,
@@ -16,6 +16,9 @@ import {
   SlidersHorizontal,
   FolderOpen,
   BookOpenCheck,
+  Maximize,
+  Minimize,
+  Zap,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -38,6 +41,7 @@ interface TopBarProps {
   onOpenEducational?: () => void;
   onOpenGasometry?: () => void;
   onOpenMissions?: () => void;
+  onOpenAsynchronies?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -53,9 +57,33 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenTutorial,
   onOpenTeacherAdmin,
   onOpenClinicalCases,
+  onOpenAsynchronies,
 }) => {
   const { toggleTheme, isLight } = useTheme();
   const topAlarm = activeAlarms.length > 0 ? activeAlarms[0] : null;
+
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    audioEngine.playClick(1000);
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.warn('Erro ao ativar Tela Cheia:', err);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
 
   const handleToggleTheme = () => {
     audioEngine.playClick(1100);
@@ -215,6 +243,47 @@ export const TopBar: React.FC<TopBarProps> = ({
             <span className="font-display font-black">Casos & Quiz</span>
           </button>
         )}
+
+        {/* Asynchronies Database Button */}
+        {onOpenAsynchronies && (
+          <button
+            onClick={onOpenAsynchronies}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-sm ${
+              isLight
+                ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-300'
+                : 'bg-amber-950/60 hover:bg-amber-900/70 text-amber-300 border-amber-700/60'
+            }`}
+            title="Abrir Banco de Dados de Assincronias Paciente-Ventilador"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span className="font-display font-black hidden sm:inline">Assincronias</span>
+          </button>
+        )}
+
+        {/* Fullscreen Toggle Button */}
+        <button
+          onClick={toggleFullscreen}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-sm ${
+            isFullscreen
+              ? 'bg-cyan-600 text-white border-cyan-500'
+              : isLight
+              ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+              : 'bg-[#10121c] hover:bg-[#181b2a] text-zinc-300 border-zinc-800'
+          }`}
+          title={isFullscreen ? 'Sair do Modo Tela Cheia' : 'Ativar Modo Tela Cheia (Fisiossimulador)'}
+        >
+          {isFullscreen ? (
+            <>
+              <Minimize className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Sair Tela Cheia</span>
+            </>
+          ) : (
+            <>
+              <Maximize className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden md:inline">Tela Cheia</span>
+            </>
+          )}
+        </button>
 
         {/* Context Button based on Role (Strict Separation: Teacher Admin only for Teacher; Tour only for Student) */}
         {userRole === 'teacher' ? (

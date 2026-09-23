@@ -77,7 +77,7 @@ export const TeacherAuthModal: React.FC<TeacherAuthModalProps> = ({
       }, 400);
     } else {
       setAttempts((prev) => prev + 1);
-      setError('Senha incorreta. Verifique a senha ou utilize a senha padrão inicial (docente123).');
+      setError('Senha incorreta. Verifique a senha ou utilize a senha padrão inicial (14253697).');
       triggerShake();
       audioEngine.playErrorBeep();
     }
@@ -210,7 +210,7 @@ export const TeacherAuthModal: React.FC<TeacherAuthModalProps> = ({
               <p className="font-mono text-[11px]">
                 A senha padrão inicial do sistema é{' '}
                 <strong className="underline underline-offset-2 px-1 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">
-                  docente123
+                  14253697
                 </strong>
                 . Você pode alterar para uma senha personalizada dentro do painel a qualquer momento.
               </p>

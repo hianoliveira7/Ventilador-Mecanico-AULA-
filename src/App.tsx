@@ -31,6 +31,7 @@ import { AudioSettingsModal } from './components/AudioSettingsModal';
 import { MenuModal } from './components/MenuModal';
 import { QuizModal } from './components/QuizModal';
 import { RoleSelectionPortal } from './components/RoleSelectionPortal';
+import { AsynchronyDatabaseModal } from './components/AsynchronyDatabaseModal';
 import { StudentTutorialModal } from './components/StudentTutorialModal';
 import { TeacherAdminModal } from './components/TeacherAdminModal';
 import { TeacherAuthModal } from './components/TeacherAuthModal';
@@ -183,7 +184,8 @@ export default function App() {
 
   // 7. View & Modals
   const [userRole, setUserRole] = useState<UserRole | null>(() => educationalStorage.getUserRole());
-  const [isRolePortalOpen, setIsRolePortalOpen] = useState<boolean>(() => !educationalStorage.getUserRole());
+  const [isRolePortalOpen, setIsRolePortalOpen] = useState<boolean>(true);
+  const [isAsynchroniesOpen, setIsAsynchroniesOpen] = useState<boolean>(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
   const [isInteractiveTourOpen, setIsInteractiveTourOpen] = useState<boolean>(false);
   const [isTeacherAdminOpen, setIsTeacherAdminOpen] = useState<boolean>(false);
@@ -199,6 +201,13 @@ export default function App() {
     educationalStorage.setUserRole('student');
     setIsRolePortalOpen(false);
     setIsInteractiveTourOpen(true);
+  };
+
+  const handleLoadAsynchronyScenario = (newPatient: PatientParameters, newSettings: VentilatorSettings, _title: string) => {
+    setPatient(newPatient);
+    setSettings(newSettings);
+    setDraftSettings(newSettings);
+    audioEngine.playConfirmBeep();
   };
 
   const handleOpenTeacherAdmin = () => {
@@ -683,6 +692,7 @@ export default function App() {
             onOpenEducational={() => setIsEducationalOpen(true)}
             onOpenGasometry={() => setIsGasometryOpen(true)}
             onOpenMissions={() => setIsMissionsOpen(true)}
+            onOpenAsynchronies={() => setIsAsynchroniesOpen(true)}
           />
 
       {/* Audio Unlock Banner (Minimal & Dismissible if browser suspended AudioContext) */}
@@ -990,7 +1000,17 @@ export default function App() {
           setIsRolePortalOpen(false);
           setIsTeacherAdminOpen(true);
         }}
+        onOpenAsynchronies={() => {
+          setIsRolePortalOpen(false);
+          setIsAsynchroniesOpen(true);
+        }}
         onEnterSimulatorDirectly={() => setIsRolePortalOpen(false)}
+      />
+
+      <AsynchronyDatabaseModal
+        isOpen={isAsynchroniesOpen}
+        onClose={() => setIsAsynchroniesOpen(false)}
+        onLoadAsynchronyScenario={handleLoadAsynchronyScenario}
       />
 
       <StudentTutorialModal
@@ -1035,6 +1055,7 @@ export default function App() {
         onOpenRolePortal={() => setIsRolePortalOpen(true)}
         onOpenTutorial={() => setIsTutorialOpen(true)}
         onOpenTeacherAdmin={handleOpenTeacherAdmin}
+        onOpenAsynchronies={() => setIsAsynchroniesOpen(true)}
       />
 
       <QuizModal
