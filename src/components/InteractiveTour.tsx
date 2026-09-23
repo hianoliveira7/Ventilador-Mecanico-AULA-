@@ -48,7 +48,7 @@ const TOUR_STEPS: TourStep[] = [
     description:
       'Acompanhe as curvas contínuas de Pressão x Tempo, Fluxo x Tempo e Volume x Tempo, além dos Loops P-V e F-V com física pulmonar realista e detecção de assincronias paciente-ventilador.',
     icon: Activity,
-    position: 'right',
+    position: 'bottom',
     badge: 'Gráficos',
   },
   {
@@ -163,51 +163,89 @@ export const InteractiveTour: React.FC<InteractiveTourProps> = ({
 
   // Calculate tooltip placement styles
   const getTooltipStyle = (): React.CSSProperties => {
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const screenH = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const margin = 16;
+    const tooltipWidth = Math.min(430, screenW - margin * 2);
+
     if (!targetRect || step.position === 'center') {
       return {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        maxWidth: '460px',
+        width: `${tooltipWidth}px`,
+        maxWidth: '94vw',
+        maxHeight: '90vh',
       };
     }
 
-    const margin = 16;
-    const tooltipWidth = 420;
+    // Specific optimization for waveforms: center nicely inside the waveforms viewport with comfortable margins
+    if (step.targetId === 'tour-waveforms') {
+      const topPos = Math.max(margin + 40, Math.min(screenH - 300, targetRect.top + 35));
+      const leftPos = Math.max(
+        margin,
+        Math.min(screenW - tooltipWidth - margin, targetRect.left + targetRect.width / 2 - tooltipWidth / 2)
+      );
+      return {
+        top: `${topPos}px`,
+        left: `${leftPos}px`,
+        width: `${tooltipWidth}px`,
+        maxWidth: '94vw',
+        maxHeight: '90vh',
+      };
+    }
+
+    let top: number;
+    let left: number;
 
     switch (step.position) {
-      case 'bottom':
-        return {
-          top: `${Math.min(window.innerHeight - 300, targetRect.bottom + margin)}px`,
-          left: `${Math.max(margin, Math.min(window.innerWidth - tooltipWidth - margin, targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2)))}px`,
-          width: `${tooltipWidth}px`,
-        };
-      case 'top':
-        return {
-          bottom: `${Math.min(window.innerHeight - 20, window.innerHeight - targetRect.top + margin)}px`,
-          left: `${Math.max(margin, Math.min(window.innerWidth - tooltipWidth - margin, targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2)))}px`,
-          width: `${tooltipWidth}px`,
-        };
-      case 'left':
-        return {
-          top: `${Math.max(margin, Math.min(window.innerHeight - 320, targetRect.top + 20))}px`,
-          right: `${Math.max(margin, window.innerWidth - targetRect.left + margin)}px`,
-          width: `${tooltipWidth}px`,
-        };
-      case 'right':
-        return {
-          top: `${Math.max(margin, Math.min(window.innerHeight - 320, targetRect.top + 20))}px`,
-          left: `${Math.max(margin, targetRect.right + margin)}px`,
-          width: `${tooltipWidth}px`,
-        };
-      default:
+      case 'bottom': {
+        const preferredTop = targetRect.bottom + margin;
+        top = preferredTop + 240 > screenH ? Math.max(margin, targetRect.top - 240 - margin) : preferredTop;
+        left = targetRect.left + targetRect.width / 2 - tooltipWidth / 2;
+        break;
+      }
+      case 'top': {
+        const preferredTop = targetRect.top - 260 - margin;
+        top = preferredTop < margin ? targetRect.bottom + margin : preferredTop;
+        left = targetRect.left + targetRect.width / 2 - tooltipWidth / 2;
+        break;
+      }
+      case 'left': {
+        const preferredLeft = targetRect.left - tooltipWidth - margin;
+        left = preferredLeft < margin ? targetRect.right + margin : preferredLeft;
+        top = targetRect.top + 20;
+        break;
+      }
+      case 'right': {
+        const preferredLeft = targetRect.right + margin;
+        left = preferredLeft + tooltipWidth > screenW - margin ? targetRect.left - tooltipWidth - margin : preferredLeft;
+        top = targetRect.top + 20;
+        break;
+      }
+      default: {
         return {
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          maxWidth: '460px',
+          width: `${tooltipWidth}px`,
+          maxWidth: '94vw',
+          maxHeight: '90vh',
         };
+      }
     }
+
+    // Strict boundary clamping so tooltip NEVER exceeds screen bounds
+    const clampedLeft = Math.max(margin, Math.min(screenW - tooltipWidth - margin, left));
+    const clampedTop = Math.max(margin, Math.min(screenH - 280, top));
+
+    return {
+      top: `${clampedTop}px`,
+      left: `${clampedLeft}px`,
+      width: `${tooltipWidth}px`,
+      maxWidth: '94vw',
+      maxHeight: '90vh',
+    };
   };
 
   return (

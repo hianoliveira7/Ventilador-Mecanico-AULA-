@@ -261,7 +261,7 @@ export default function App() {
   };
 
   // 8b. Resizable Clinical Panel & Splitter State
-  const [rightPanelWidth, setRightPanelWidth] = useState<number>(265);
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(330);
   const [isDraggingSplitter, setIsDraggingSplitter] = useState<boolean>(false);
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState<boolean>(false);
 
@@ -273,7 +273,7 @@ export default function App() {
 
     const onPointerMove = (moveEvent: PointerEvent) => {
       const delta = startX - moveEvent.clientX; // Dragging left increases right panel width
-      const newWidth = Math.min(500, Math.max(200, startWidth + delta));
+      const newWidth = Math.min(560, Math.max(220, startWidth + delta));
       setRightPanelWidth(newWidth);
     };
 
@@ -868,8 +868,8 @@ export default function App() {
         {/* Draggable Resizer Splitter between Graph Area and Clinical Data Panel */}
         <div
           onPointerDown={handleSplitterPointerDown}
-          onDoubleClick={() => setRightPanelWidth(265)}
-          title="Arraste para ajustar a largura do painel de dados clínicos (duplo clique para restaurar 265px)"
+          onDoubleClick={() => setRightPanelWidth(330)}
+          title="Arraste para ajustar a largura do painel de dados clínicos (duplo clique para restaurar 330px)"
           className={`group relative w-3.5 mx-0.5 h-full cursor-col-resize flex items-center justify-center shrink-0 select-none z-20 transition-colors ${
             isDraggingSplitter ? 'bg-cyan-500/20' : ''
           }`}
