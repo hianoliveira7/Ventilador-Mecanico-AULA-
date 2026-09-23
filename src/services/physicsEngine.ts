@@ -594,7 +594,19 @@ export class VentilationPhysicsEngine {
     }
 
     // 7. Compute Flow, Volume, and Airway Pressure Paw(t) according to the Equation of Motion
-    let pAlveolar = (this.currentVolume / (C_L * 1000)); // cmH2O above PEEP
+    // Continuous non-linear compliance adjustment (Upper Inflection Point / Overdistension Beak at high volume)
+    const overdistensionThreshold = 460; // mL
+    let volumeNonLinearity = 1.0;
+    if (this.currentVolume > overdistensionThreshold) {
+      const overVol = (this.currentVolume - overdistensionThreshold) / 250;
+      volumeNonLinearity = 1.0 + 0.45 * overVol * overVol; // Non-linear stiffness increase
+    }
+
+    let pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity; // cmH2O above PEEP
+
+    // Analog micro-turbulence transducer signal noise (<0.08 cmH2O, <0.15 L/min)
+    const microNoiseP = (Math.sin(this.totalSimulationTime * 70) * 0.04) + ((Math.random() - 0.5) * 0.05);
+    const microNoiseFlow = (Math.cos(this.totalSimulationTime * 85) * 0.08) + ((Math.random() - 0.5) * 0.1);
 
     if (this.isInspPhase && !this.isPausePhase) {
       // INSPIRATION
@@ -609,7 +621,7 @@ export class VentilationPhysicsEngine {
           if (currentActiveSettings.flowWaveform === 'decelerating') {
             const peakFlowLsec = (2 * vtL) / setInspTime;
             const progress = Math.min(1.0, this.cycleTime / setInspTime);
-            flowLsec = peakFlowLsec * (1 - progress * 0.9);
+            flowLsec = peakFlowLsec * (1 - progress * 0.88);
           } else {
             flowLsec = vtL / setInspTime;
           }
@@ -623,15 +635,16 @@ export class VentilationPhysicsEngine {
             }
           }
 
-          this.currentFlow = flowLsec * 60 + secretionNoise;
+          this.currentFlow = flowLsec * 60 + secretionNoise + microNoiseFlow;
           this.currentVolume += (flowLsec * 1000) * dt;
-          pAlveolar = this.currentVolume / (C_L * 1000);
+          pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity;
 
           const pResistive = Raw * flowLsec;
-          let calculatedPaw = setPeep + pAlveolar + pResistive + flowStarvationEffect;
+          let calculatedPaw = setPeep + pAlveolar + pResistive + flowStarvationEffect + microNoiseP;
 
           if (this.triggerDeflectionTimer > 0) {
-            calculatedPaw -= this.triggerDeflectionDepth * (this.triggerDeflectionTimer / 0.08);
+            const trigRatio = this.triggerDeflectionTimer / 0.08;
+            calculatedPaw -= this.triggerDeflectionDepth * Math.sin(trigRatio * Math.PI);
           }
 
           this.currentPressure = calculatedPaw;
@@ -641,21 +654,24 @@ export class VentilationPhysicsEngine {
         }
 
         case 'PCV': {
-          const targetPinsp = setPeep + currentActiveSettings.inspiratoryPressure;
-          const rampTime = currentActiveSettings.pressureRiseTime || 0.1;
-          const rampProgress = Math.min(1.0, this.cycleTime / rampTime);
-          const currentTargetP = setPeep + (currentActiveSettings.inspiratoryPressure * rampProgress);
+          const targetDeltaP = currentActiveSettings.inspiratoryPressure;
+          const rampTime = Math.max(0.02, currentActiveSettings.pressureRiseTime || 0.1);
+          // High-fidelity Exponential Pressurization Ramp: P_target(t) = PEEP + DeltaP * (1 - e^(-t / tau_rise))
+          const tauRise = rampTime / 2.3;
+          const exponentialRampFactor = 1 - Math.exp(-this.cycleTime / tauRise);
+          const currentTargetP = setPeep + (targetDeltaP * exponentialRampFactor);
 
           const drivingP = Math.max(0, currentTargetP - (setPeep + pAlveolar));
           const flowLsec = Math.max(0, (drivingP - pmus * 0.6) / Raw);
 
-          this.currentFlow = flowLsec * 60 + secretionNoise;
+          this.currentFlow = flowLsec * 60 + secretionNoise + microNoiseFlow;
           this.currentVolume += (flowLsec * 1000) * dt;
-          pAlveolar = this.currentVolume / (C_L * 1000);
+          pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity;
 
-          let calculatedPaw = currentTargetP + pmus * 0.35;
+          let calculatedPaw = currentTargetP + pmus * 0.35 + microNoiseP;
           if (this.triggerDeflectionTimer > 0) {
-            calculatedPaw -= this.triggerDeflectionDepth * (this.triggerDeflectionTimer / 0.08);
+            const trigRatio = this.triggerDeflectionTimer / 0.08;
+            calculatedPaw -= this.triggerDeflectionDepth * Math.sin(trigRatio * Math.PI);
           }
 
           this.currentPressure = calculatedPaw;
@@ -665,17 +681,23 @@ export class VentilationPhysicsEngine {
         }
 
         case 'PSV': {
-          const targetPinsp = setPeep + (currentActiveSettings.pressureSupport || 10);
+          const targetDeltaP = currentActiveSettings.pressureSupport || 10;
+          const rampTime = Math.max(0.02, currentActiveSettings.pressureRiseTime || 0.1);
+          const tauRise = rampTime / 2.3;
+          const exponentialRampFactor = 1 - Math.exp(-this.cycleTime / tauRise);
+          const targetPinsp = setPeep + (targetDeltaP * exponentialRampFactor);
+
           const drivingP = Math.max(0, targetPinsp - (setPeep + pAlveolar));
           const flowLsec = Math.max(0, (drivingP - pmus * 0.75) / Raw);
 
-          this.currentFlow = flowLsec * 60 + secretionNoise;
+          this.currentFlow = flowLsec * 60 + secretionNoise + microNoiseFlow;
           this.currentVolume += (flowLsec * 1000) * dt;
-          pAlveolar = this.currentVolume / (C_L * 1000);
+          pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity;
 
-          let calculatedPaw = targetPinsp + pmus * 0.3;
+          let calculatedPaw = targetPinsp + pmus * 0.3 + microNoiseP;
           if (this.triggerDeflectionTimer > 0) {
-            calculatedPaw -= this.triggerDeflectionDepth * (this.triggerDeflectionTimer / 0.08);
+            const trigRatio = this.triggerDeflectionTimer / 0.08;
+            calculatedPaw -= this.triggerDeflectionDepth * Math.sin(trigRatio * Math.PI);
           }
 
           this.currentPressure = calculatedPaw;
@@ -695,10 +717,10 @@ export class VentilationPhysicsEngine {
         case 'CPAP': {
           const drivingP = -pmus;
           const flowLsec = Math.max(0, drivingP / Raw);
-          this.currentFlow = flowLsec * 60 + secretionNoise;
+          this.currentFlow = flowLsec * 60 + secretionNoise + microNoiseFlow;
           this.currentVolume += (flowLsec * 1000) * dt;
-          pAlveolar = this.currentVolume / (C_L * 1000);
-          this.currentPressure = setPeep + pmus;
+          pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity;
+          this.currentPressure = setPeep + pmus + microNoiseP;
           this.cyclePeakInspFlow = Math.max(this.cyclePeakInspFlow, this.currentFlow);
           break;
         }
@@ -707,10 +729,10 @@ export class VentilationPhysicsEngine {
           const targetPinsp = currentActiveSettings.pHigh;
           const drivingP = Math.max(0, targetPinsp - (currentActiveSettings.pLow + pAlveolar));
           const flowLsec = Math.max(0, (drivingP - pmus) / Raw);
-          this.currentFlow = flowLsec * 60 + secretionNoise;
+          this.currentFlow = flowLsec * 60 + secretionNoise + microNoiseFlow;
           this.currentVolume += (flowLsec * 1000) * dt;
-          pAlveolar = this.currentVolume / (C_L * 1000);
-          this.currentPressure = currentActiveSettings.pHigh + pmus;
+          pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity;
+          this.currentPressure = currentActiveSettings.pHigh + pmus + microNoiseP;
           this.cyclePeakInspFlow = Math.max(this.cyclePeakInspFlow, this.currentFlow);
           break;
         }
@@ -720,27 +742,32 @@ export class VentilationPhysicsEngine {
           const setInspTime = currentActiveSettings.inspiratoryTimePCV || 1.0;
           const flowLsec = vtL / setInspTime;
 
-          this.currentFlow = flowLsec * 60 + secretionNoise;
+          this.currentFlow = flowLsec * 60 + secretionNoise + microNoiseFlow;
           this.currentVolume += (flowLsec * 1000) * dt;
-          pAlveolar = this.currentVolume / (C_L * 1000);
+          pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity;
 
           const pResistive = Raw * flowLsec;
-          this.currentPressure = setPeep + pAlveolar + pResistive + pmus;
+          this.currentPressure = setPeep + pAlveolar + pResistive + pmus + microNoiseP;
           this.lastPeakFlow = this.currentFlow;
           this.cyclePeakInspFlow = Math.max(this.cyclePeakInspFlow, this.currentFlow);
           break;
         }
 
         case 'SIMV_PC': {
-          const targetPinsp = setPeep + currentActiveSettings.inspiratoryPressure;
+          const targetDeltaP = currentActiveSettings.inspiratoryPressure;
+          const rampTime = Math.max(0.02, currentActiveSettings.pressureRiseTime || 0.1);
+          const tauRise = rampTime / 2.3;
+          const exponentialRampFactor = 1 - Math.exp(-this.cycleTime / tauRise);
+          const targetPinsp = setPeep + (targetDeltaP * exponentialRampFactor);
+
           const drivingP = Math.max(0, targetPinsp - (setPeep + pAlveolar));
           const flowLsec = Math.max(0, (drivingP - pmus) / Raw);
 
-          this.currentFlow = flowLsec * 60 + secretionNoise;
+          this.currentFlow = flowLsec * 60 + secretionNoise + microNoiseFlow;
           this.currentVolume += (flowLsec * 1000) * dt;
-          pAlveolar = this.currentVolume / (C_L * 1000);
+          pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity;
 
-          this.currentPressure = targetPinsp + pmus;
+          this.currentPressure = targetPinsp + pmus + microNoiseP;
           this.lastPeakFlow = Math.max(this.lastPeakFlow, this.currentFlow);
           this.cyclePeakInspFlow = Math.max(this.cyclePeakInspFlow, this.currentFlow);
           break;
@@ -751,8 +778,8 @@ export class VentilationPhysicsEngine {
 
     } else if (this.isPausePhase) {
       // INSPIRATORY PAUSE (True zero-flow static plateau equilibrium)
-      this.currentFlow = 0;
-      pAlveolar = this.currentVolume / (C_L * 1000);
+      this.currentFlow = microNoiseFlow;
+      pAlveolar = (this.currentVolume / (C_L * 1000)) * volumeNonLinearity;
       
       let staticEquilibriumP = setPeep + pAlveolar + pmus * 0.5;
       if (currentActiveSettings.mode === 'PCV') {
@@ -762,20 +789,31 @@ export class VentilationPhysicsEngine {
       }
 
       const minGap = isVcvMode ? Math.max(2.0, Raw * 0.25) : 0.8;
-      this.currentPressure = Math.min(this.cyclePeakPressure - minGap, staticEquilibriumP);
+      this.currentPressure = Math.min(this.cyclePeakPressure - minGap, staticEquilibriumP) + microNoiseP;
       this.cyclePlateauPressure = this.currentPressure;
       this.displayedPlat = Math.round(this.cyclePlateauPressure * 10) / 10;
       this.plateauMeasuredThisCycle = true;
 
     } else {
-      // EXPIRATION (Governed by exact cycle time constant tau = Raw * C_L)
+      // EXPIRATION (Governed by exact cycle time constant tau = R_exp * C_L)
       if (isExpiratoryHold) {
-        this.currentFlow = 0;
+        this.currentFlow = microNoiseFlow;
         const autoPeepPressure = this.currentVolume / (C_L * 1000);
-        this.currentPressure = setPeep + autoPeepPressure;
+        this.currentPressure = setPeep + autoPeepPressure + microNoiseP;
       } else {
-        const decayFactor = Math.exp(-dt / Math.max(0.04, tau));
-        let expFlowLsec = -(this.currentVolume / (Math.max(0.04, tau) * 1000));
+        // Expiratory Resistance is ~1.2x inspiratory due to exhalation valve and tubing compression
+        // In obstructive patients (DPOC), small airway collapse increases resistance as volume empties (scooping effect)
+        let rExpFactor = 1.22;
+        if (Raw >= 10 && this.cycleVti > 0) {
+          const volumeEmptiedRatio = 1 - (this.currentVolume / Math.max(1, this.cycleVti));
+          rExpFactor += 0.55 * Math.pow(volumeEmptiedRatio, 1.8); // Obstructive flow-volume scooping
+        }
+
+        const effectiveRexp = Raw * rExpFactor;
+        const effectiveExpTau = Math.max(0.04, effectiveRexp * C_L);
+        const decayFactor = Math.exp(-dt / effectiveExpTau);
+
+        let expFlowLsec = -(this.currentVolume / (effectiveExpTau * 1000));
 
         let expPmusDeflection = 0;
         if (isIneffectiveEffort) {
@@ -783,12 +821,20 @@ export class VentilationPhysicsEngine {
           expPmusDeflection = Math.max(-2.5, pmus * 0.6);
         }
 
-        this.currentFlow = expFlowLsec * 60 + secretionNoise;
+        this.currentFlow = expFlowLsec * 60 + secretionNoise + microNoiseFlow;
         this.currentVolume = Math.max(0, this.currentVolume * decayFactor);
 
-        pAlveolar = this.currentVolume / (C_L * 1000);
-        const pResistive = Raw * Math.abs(expFlowLsec);
-        this.currentPressure = Math.max(setPeep - 2.5, setPeep + pAlveolar - pResistive * 0.45) + expPmusDeflection;
+        pAlveolar = (this.currentVolume / (C_L * 1000));
+        
+        // Rapid exponential decay of airway pressure down to PEEP when exhalation valve opens
+        const expTimeElapsed = Math.max(0, this.cycleTime - inspTime);
+        const valveDecayTau = Math.max(0.03, effectiveExpTau / 4);
+        const valveDecayFactor = Math.exp(-expTimeElapsed / valveDecayTau);
+        const endInspP = Math.max(setPeep + pAlveolar, this.cyclePlateauPressure || setPeep + 10);
+        
+        const expPressureCurve = setPeep + this.dynamicAutoPeep + (pAlveolar * (1 - valveDecayFactor)) + ((endInspP - setPeep) * valveDecayFactor * 0.35);
+
+        this.currentPressure = Math.max(setPeep - 2.5, expPressureCurve) + expPmusDeflection + microNoiseP;
       }
     }
 

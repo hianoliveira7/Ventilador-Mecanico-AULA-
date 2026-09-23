@@ -242,12 +242,18 @@ export default function App() {
   const [isAudioBannerDismissed, setIsAudioBannerDismissed] = useState<boolean>(false);
 
   // 8a. Resizable Parameter Controls Splitter (Vertical height between graphs and parameters)
-  const [paramPanelHeight, setParamPanelHeight] = useState<number>(200);
+  const [paramPanelHeight, setParamPanelHeight] = useState<number>(165);
   const [isDraggingParamSplitter, setIsDraggingParamSplitter] = useState<boolean>(false);
   const [isParamPanelCollapsed, setIsParamPanelCollapsed] = useState<boolean>(false);
 
-  const handleParamSplitterPointerDown = (e: React.PointerEvent) => {
+  const handleParamSplitterPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
+    const target = e.currentTarget;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {}
+
     setIsDraggingParamSplitter(true);
     const startY = e.clientY;
     const startHeight = paramPanelHeight;
@@ -255,18 +261,25 @@ export default function App() {
     const onPointerMove = (moveEvent: PointerEvent) => {
       // Dragging upward increases parameter controls height; dragging downward gives more space to graphs
       const delta = startY - moveEvent.clientY;
-      const newHeight = Math.min(320, Math.max(90, startHeight + delta));
+      const newHeight = Math.min(360, Math.max(80, startHeight + delta));
       setParamPanelHeight(newHeight);
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (upEvent: PointerEvent) => {
       setIsDraggingParamSplitter(false);
+      try {
+        if (target.hasPointerCapture(upEvent.pointerId)) {
+          target.releasePointerCapture(upEvent.pointerId);
+        }
+      } catch {}
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
     };
 
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   };
 
   // 8b. Resizable Clinical Panel & Splitter State
@@ -274,26 +287,39 @@ export default function App() {
   const [isDraggingSplitter, setIsDraggingSplitter] = useState<boolean>(false);
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState<boolean>(false);
 
-  const handleSplitterPointerDown = (e: React.PointerEvent) => {
+  const handleSplitterPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
+    const target = e.currentTarget;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {}
+
     setIsDraggingSplitter(true);
     const startX = e.clientX;
     const startWidth = rightPanelWidth;
 
     const onPointerMove = (moveEvent: PointerEvent) => {
       const delta = startX - moveEvent.clientX; // Dragging left increases right panel width
-      const newWidth = Math.min(560, Math.max(220, startWidth + delta));
+      const newWidth = Math.min(560, Math.max(200, startWidth + delta));
       setRightPanelWidth(newWidth);
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (upEvent: PointerEvent) => {
       setIsDraggingSplitter(false);
+      try {
+        if (target.hasPointerCapture(upEvent.pointerId)) {
+          target.releasePointerCapture(upEvent.pointerId);
+        }
+      } catch {}
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
     };
 
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   };
 
   // Listen to audio engine context state changes
@@ -810,9 +836,9 @@ export default function App() {
           {/* Draggable Resizer Splitter between Graph Area and Parameter Controls */}
           <div
             onPointerDown={handleParamSplitterPointerDown}
-            onDoubleClick={() => setParamPanelHeight(200)}
-            title="Arraste verticalmente para ajustar o espaço entre os gráficos e os parâmetros (duplo clique para restaurar 200px)"
-            className={`group relative h-3.5 my-0.5 w-full cursor-row-resize flex items-center justify-center shrink-0 select-none z-20 transition-colors ${
+            onDoubleClick={() => setParamPanelHeight(165)}
+            title="Arraste verticalmente para ajustar o espaço entre os gráficos e os parâmetros (duplo clique para restaurar 165px)"
+            className={`group relative h-4 my-0.5 w-full cursor-row-resize flex items-center justify-center shrink-0 select-none touch-none z-20 transition-colors ${
               isDraggingParamSplitter ? 'bg-cyan-500/20' : ''
             }`}
           >
@@ -861,7 +887,7 @@ export default function App() {
             <div
               id="tour-parameters"
               style={{
-                height: `${Math.max(200, paramPanelHeight)}px`,
+                height: `${Math.max(165, paramPanelHeight)}px`,
               }}
               className="shrink-0 overflow-y-auto lg:overflow-hidden transition-all"
             >
@@ -882,7 +908,7 @@ export default function App() {
           onPointerDown={handleSplitterPointerDown}
           onDoubleClick={() => setRightPanelWidth(330)}
           title="Arraste para ajustar a largura do painel de dados clínicos (duplo clique para restaurar 330px)"
-          className={`group relative w-3.5 mx-0.5 h-full cursor-col-resize flex items-center justify-center shrink-0 select-none z-20 transition-colors ${
+          className={`group relative w-3.5 mx-0.5 h-full cursor-col-resize flex items-center justify-center shrink-0 select-none touch-none z-20 transition-colors ${
             isDraggingSplitter ? 'bg-cyan-500/20' : ''
           }`}
         >

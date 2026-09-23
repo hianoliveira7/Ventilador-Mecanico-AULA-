@@ -157,20 +157,20 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
   return (
     <div
       ref={popoverRef}
-      className={`relative flex-1 min-w-[170px] sm:min-w-[185px] md:min-w-[200px] shrink-0 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between select-none transition-all duration-150 border snap-start ${
+      className={`relative flex-1 min-w-[160px] sm:min-w-[170px] md:min-w-[180px] shrink-0 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between gap-1.5 min-h-[115px] select-none transition-all duration-150 border snap-start ${
         isChanged
           ? isLight
-            ? 'bg-amber-50/90 border-amber-500 shadow-lg ring-2 ring-amber-400/60'
-            : 'bg-[#1b150b] border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.35)] ring-1 ring-amber-500/70'
+            ? 'bg-amber-50/90 border-amber-500 shadow-md ring-1 ring-amber-400/60'
+            : 'bg-[#1b150b] border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-500/70'
           : isLight
-          ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-sm'
+          ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-xs'
           : 'bg-[#0b0e1a] hover:bg-[#111527] border-zinc-800 shadow-inner'
       }`}
     >
       {/* 1. Header Row: Acronym Badge + Title */}
-      <div className="flex items-center justify-between gap-1 leading-none">
+      <div className="flex items-center justify-between gap-1.5 leading-none">
         <span
-          className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-black border uppercase tracking-wider shadow-xs ${scheme.badgeBg}`}
+          className={`px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-black border uppercase tracking-wider shadow-xs ${scheme.badgeBg}`}
         >
           {acronym}
         </span>
@@ -184,8 +184,8 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
         </span>
       </div>
 
-      {/* 2. Value Readout with - and + Steppers (Optimized for Tablet Touch Targets) */}
-      <div className="flex items-center justify-between gap-1.5 my-1.5">
+      {/* 2. Value Readout with - and + Steppers */}
+      <div className="flex items-center justify-between gap-1.5 my-0.5">
         {/* Minus Button */}
         <button
           type="button"
@@ -193,21 +193,21 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
           onPointerUp={stopHolding}
           onPointerLeave={stopHolding}
           disabled={safeVal <= min}
-          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
+          className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
             safeVal <= min
               ? isLight
                 ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
                 : 'bg-zinc-900 text-zinc-700 border-zinc-800 cursor-not-allowed'
               : isLight
-              ? 'bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border-slate-300 shadow-sm font-black'
-              : 'bg-[#181d30] hover:bg-[#232a45] active:bg-[#2c3558] text-white border-zinc-700/90 shadow-sm font-black'
+              ? 'bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border-slate-300 shadow-xs font-black'
+              : 'bg-[#181d30] hover:bg-[#232a45] active:bg-[#2c3558] text-white border-zinc-700/90 shadow-xs font-black'
           }`}
-          title="Diminuir (mantenha pressionado para aceleração)"
+          title="Diminuir"
         >
-          <Minus className="w-5 h-5 stroke-[3]" />
+          <Minus className="w-4 h-4 stroke-[2.5]" />
         </button>
 
-        {/* Value Display (Click to open presets) */}
+        {/* Value Display */}
         <div
           onClick={() => {
             if (presets.length > 0) {
@@ -215,17 +215,17 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
               setShowPresets((p) => !p);
             }
           }}
-          className={`flex-1 flex items-baseline justify-center gap-1 cursor-pointer rounded-xl py-1 px-1 border transition-all ${
+          className={`flex-1 min-w-0 flex items-baseline justify-center gap-1 cursor-pointer rounded-lg py-0.5 px-1 border transition-all ${
             isLight
               ? 'hover:bg-slate-100 border-transparent hover:border-slate-300'
               : 'hover:bg-[#15192c] border-transparent hover:border-zinc-700'
           }`}
           title="Clique para abrir atalhos rápidos de valores"
         >
-          <span className={`text-2xl sm:text-3xl font-mono tabular-nums tracking-tight ${scheme.valueText}`}>
+          <span className={`text-xl sm:text-2xl font-mono font-black tabular-nums tracking-tight ${scheme.valueText}`}>
             {step < 1 ? safeVal.toFixed(1) : Math.round(safeVal)}
           </span>
-          <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+          <span className={`text-[10px] sm:text-xs font-mono font-bold shrink-0 ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
             {unit}
           </span>
         </div>
@@ -237,18 +237,18 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
           onPointerUp={stopHolding}
           onPointerLeave={stopHolding}
           disabled={safeVal >= max}
-          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
+          className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
             safeVal >= max
               ? isLight
                 ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
                 : 'bg-zinc-900 text-zinc-700 border-zinc-800 cursor-not-allowed'
               : isLight
-              ? 'bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border-slate-300 shadow-sm font-black'
-              : 'bg-[#181d30] hover:bg-[#232a45] active:bg-[#2c3558] text-white border-zinc-700/90 shadow-sm font-black'
+              ? 'bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border-slate-300 shadow-xs font-black'
+              : 'bg-[#181d30] hover:bg-[#232a45] active:bg-[#2c3558] text-white border-zinc-700/90 shadow-xs font-black'
           }`}
-          title="Aumentar (mantenha pressionado para aceleração)"
+          title="Aumentar"
         >
-          <Plus className="w-5 h-5 stroke-[3]" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
         </button>
 
         {/* Quick Presets Popover */}
@@ -379,18 +379,18 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
         isLight ? 'bg-white border-slate-200' : 'bg-[#070912] border-zinc-800'
       }`}
     >
-      {/* 1. TOP HEADER: High-Visibility Mode Selector Tabs + Master Actions */}
+      {/* 1. TOP HEADER: High-Visibility Compact Mode Selector Tabs + Master Actions */}
       <div
-        className={`px-3.5 py-2 border-b flex flex-wrap items-center justify-between gap-2 shrink-0 ${
+        className={`px-2.5 py-1.5 border-b flex items-center justify-between gap-2 shrink-0 overflow-x-auto scrollbar-none ${
           isLight ? 'bg-slate-100/90 border-slate-200' : 'bg-[#0d101d] border-zinc-800'
         }`}
       >
-        {/* Left: Mode Buttons Bar (Scrollable / Swipeable on Tablet) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none snap-x">
-          <div className="flex items-center gap-1.5 mr-1 shrink-0">
-            <SlidersHorizontal className="w-4 h-4 text-cyan-500" />
+        {/* Left: Mode Buttons Bar (Compact pill buttons) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+          <div className="flex items-center gap-1 mr-0.5 shrink-0">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-500" />
             <span
-              className={`text-xs font-display font-black uppercase tracking-wider shrink-0 ${
+              className={`text-[10px] sm:text-xs font-display font-black uppercase tracking-wider shrink-0 ${
                 isLight ? 'text-slate-800' : 'text-zinc-200'
               }`}
             >
@@ -399,7 +399,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           </div>
 
           <div
-            className={`flex items-center p-1 rounded-2xl border gap-1 shrink-0 ${
+            className={`flex items-center p-0.5 sm:p-1 rounded-xl border gap-0.5 sm:gap-1 shrink-0 ${
               isLight ? 'bg-slate-200/90 border-slate-300' : 'bg-[#141829] border-zinc-700/70'
             }`}
           >
@@ -410,36 +410,27 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                   key={m.id}
                   type="button"
                   onClick={() => handleModeChange(m.id)}
-                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex flex-col items-start gap-0 shrink-0 snap-start relative ${
+                  className={`px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 shrink-0 relative ${
                     isActive
                       ? isLight
-                        ? 'bg-white text-slate-900 border border-slate-300 shadow-md font-black ring-2 ring-cyan-500/30'
-                        : 'bg-gradient-to-r from-cyan-500 to-sky-500 text-black border border-cyan-300 font-black shadow-[0_0_16px_rgba(6,182,212,0.5)]'
+                        ? 'bg-white text-slate-900 border border-slate-300 shadow-xs font-black ring-1 ring-cyan-500/40'
+                        : 'bg-gradient-to-r from-cyan-500 to-sky-500 text-black border border-cyan-300 font-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
                       : isLight
                       ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
                       : 'text-zinc-300 hover:text-white hover:bg-[#1f253e] font-bold'
                   }`}
                   title={`${m.label} - ${m.sub}`}
                 >
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isActive
-                          ? isLight
-                            ? 'bg-cyan-600 shadow-[0_0_6px_#0891b2]'
-                            : 'bg-black'
-                          : 'bg-zinc-500/50'
-                      }`}
-                    />
-                    <span className="text-xs font-mono font-black">{m.label}</span>
-                  </div>
                   <span
-                    className={`text-[9.5px] font-sans font-semibold line-clamp-1 ${
-                      isActive ? (isLight ? 'text-cyan-800 font-bold' : 'text-slate-950 font-bold') : 'text-zinc-400'
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isActive
+                        ? isLight
+                          ? 'bg-cyan-600'
+                          : 'bg-black'
+                        : 'bg-zinc-500/50'
                     }`}
-                  >
-                    {m.sub}
-                  </span>
+                  />
+                  <span className="text-[11px] sm:text-xs font-mono font-black">{m.label}</span>
                 </button>
               );
             })}
@@ -447,7 +438,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
         </div>
 
         {/* Right: Advanced Toggle & Confirmation / Discard Dock */}
-        <div className="flex items-center gap-2 ml-auto shrink-0">
+        <div className="flex items-center gap-1.5 ml-auto shrink-0">
           {/* Advanced Parameters Expander Toggle */}
           <button
             type="button"
@@ -455,7 +446,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
               audioEngine.playClick(900);
               setShowAdvanced((prev) => !prev);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
+            className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
               showAdvanced
                 ? isLight
                   ? 'bg-cyan-50 text-cyan-900 border-cyan-400 ring-1 ring-cyan-400'
@@ -464,13 +455,13 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 ? 'bg-white hover:bg-slate-200 text-slate-800 border-slate-300'
                 : 'bg-[#15192b] hover:bg-[#1f253d] text-zinc-300 border-zinc-700'
             }`}
-            title="Exibir ou ocultar parâmetros avançados (Forma de onda, Pausa, Esens)"
+            title="Exibir ou ocultar parâmetros avançados"
           >
-            <Settings2 className="w-4 h-4 text-cyan-400" />
+            <Settings2 className="w-3.5 h-3.5 text-cyan-400" />
             <span className="hidden sm:inline">Avançados</span>
           </button>
 
-          {/* Master Confirm Button (Transforms from PARÂMETROS ATIVOS into CONFIRMAR PARÂMETROS when modified) */}
+          {/* Master Confirm Button */}
           <button
             type="button"
             disabled={!hasChanges}
@@ -480,18 +471,18 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 onConfirm();
               }
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-mono font-bold transition-all flex items-center gap-1 border cursor-pointer ${
               hasChanges
                 ? isLight
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-lg animate-pulse font-black'
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_22px_rgba(16,185,129,0.7)] animate-pulse font-black'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-sm animate-pulse font-black'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.7)] animate-pulse font-black'
                 : isLight
                 ? 'bg-slate-100 text-slate-500 border-slate-300 cursor-default font-semibold'
                 : 'bg-[#121422] text-zinc-500 border-zinc-800 cursor-default opacity-70'
             }`}
           >
-            <Check className={`w-4 h-4 stroke-[3] ${hasChanges ? 'animate-bounce' : ''}`} />
-            <span>{hasChanges ? 'CONFIRMAR PARÂMETROS' : 'PARÂMETROS ATIVOS'}</span>
+            <Check className={`w-3.5 h-3.5 stroke-[3] ${hasChanges ? 'animate-bounce' : ''}`} />
+            <span>{hasChanges ? 'CONFIRMAR' : 'ATIVOS'}</span>
           </button>
         </div>
       </div>
@@ -629,24 +620,24 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
 
         {/* 6. Disparo & Sensibilidade Card */}
         <div
-          className={`flex-1 min-w-[175px] sm:min-w-[190px] md:min-w-[210px] shrink-0 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between select-none transition-all duration-150 border snap-start ${
+          className={`flex-1 min-w-[160px] sm:min-w-[170px] md:min-w-[180px] shrink-0 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between gap-1.5 min-h-[115px] select-none transition-all duration-150 border snap-start ${
             isLight
-              ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-sm'
+              ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-xs'
               : 'bg-[#0b0e1a] hover:bg-[#111527] border-zinc-800 shadow-inner'
           }`}
         >
-          <div className="flex items-center justify-between gap-1 leading-none mb-1">
-            <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-black border uppercase tracking-wider bg-amber-500/20 text-amber-300 border-amber-500/40">
+          <div className="flex items-center justify-between gap-1.5 leading-none">
+            <span className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-black border uppercase tracking-wider bg-amber-500/20 text-amber-300 border-amber-500/40">
               DISPARO
             </span>
-            <span className={`text-xs font-display font-bold ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
+            <span className={`text-xs font-display font-bold truncate ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
               Sensibilidade
             </span>
           </div>
 
           {/* Trigger Type Toggle */}
           <div
-            className={`flex p-0.5 rounded-xl border my-1 ${
+            className={`flex p-0.5 rounded-lg border my-0.5 ${
               isLight ? 'bg-slate-100 border-slate-300' : 'bg-[#060812] border-zinc-800'
             }`}
           >
@@ -656,11 +647,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 audioEngine.playClick(950);
                 onUpdateDraft({ ...draftSettings, triggerType: 'flow', triggerSensitivity: 2.0 });
               }}
-              className={`flex-1 py-1 text-[9.5px] font-mono font-bold rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-all ${
+              className={`flex-1 py-1 text-[9.5px] sm:text-[10px] font-mono font-bold rounded-md flex items-center justify-center gap-1 cursor-pointer transition-all ${
                 draftSettings.triggerType === 'flow'
                   ? isLight
-                    ? 'bg-cyan-700 text-white shadow font-black'
-                    : 'bg-cyan-500 text-black shadow font-black'
+                    ? 'bg-cyan-700 text-white shadow-xs font-black'
+                    : 'bg-cyan-500 text-black shadow-xs font-black'
                   : isLight
                   ? 'text-slate-700 hover:text-slate-900 font-semibold'
                   : 'text-zinc-400 hover:text-zinc-200'
@@ -675,11 +666,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 audioEngine.playClick(950);
                 onUpdateDraft({ ...draftSettings, triggerType: 'pressure', triggerSensitivity: 2.0 });
               }}
-              className={`flex-1 py-1 text-[9.5px] font-mono font-bold rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-all ${
+              className={`flex-1 py-1 text-[9.5px] sm:text-[10px] font-mono font-bold rounded-md flex items-center justify-center gap-1 cursor-pointer transition-all ${
                 draftSettings.triggerType === 'pressure'
                   ? isLight
-                    ? 'bg-cyan-700 text-white shadow font-black'
-                    : 'bg-cyan-500 text-black shadow font-black'
+                    ? 'bg-cyan-700 text-white shadow-xs font-black'
+                    : 'bg-cyan-500 text-black shadow-xs font-black'
                   : isLight
                   ? 'text-slate-700 hover:text-slate-900 font-semibold'
                   : 'text-zinc-400 hover:text-zinc-200'
@@ -700,20 +691,20 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 const nextVal = Math.max(0.5, Number(((draftSettings.triggerSensitivity ?? 2.0) - stepVal).toFixed(1)));
                 updateField('triggerSensitivity', nextVal);
               }}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center border cursor-pointer active:scale-90 transition-all shrink-0 ${
+              className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl flex items-center justify-center border cursor-pointer active:scale-90 transition-all shrink-0 ${
                 isLight
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300 shadow-sm font-black'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300 shadow-xs font-black'
                   : 'bg-[#181d30] hover:bg-[#232a45] text-white border-zinc-700 font-black'
               }`}
             >
-              <Minus className="w-4 h-4 stroke-[3]" />
+              <Minus className="w-4 h-4 stroke-[2.5]" />
             </button>
 
-            <div className="flex items-baseline justify-center gap-0.5">
-              <span className={`text-2xl font-mono font-black tabular-nums ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
+            <div className="flex items-baseline justify-center gap-1">
+              <span className={`text-xl sm:text-2xl font-mono font-black tabular-nums ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
                 {(draftSettings.triggerSensitivity ?? 2.0).toFixed(1)}
               </span>
-              <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+              <span className={`text-[10px] sm:text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
                 {draftSettings.triggerType === 'flow' ? 'L/min' : 'cmH₂O'}
               </span>
             </div>
@@ -727,13 +718,13 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 const nextVal = Math.min(maxVal, Number(((draftSettings.triggerSensitivity ?? 2.0) + stepVal).toFixed(1)));
                 updateField('triggerSensitivity', nextVal);
               }}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center border cursor-pointer active:scale-90 transition-all shrink-0 ${
+              className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl flex items-center justify-center border cursor-pointer active:scale-90 transition-all shrink-0 ${
                 isLight
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300 shadow-sm font-black'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300 shadow-xs font-black'
                   : 'bg-[#181d30] hover:bg-[#232a45] text-white border-zinc-700 font-black'
               }`}
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>
         </div>
@@ -744,8 +735,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             {/* Waveform Selector */}
             {(mode === 'VCV' || mode === 'SIMV_VC') && (
               <div
-                className={`flex-1 min-w-[165px] sm:min-w-[180px] shrink-0 rounded-2xl p-3 flex flex-col justify-between border animate-fadeIn ${
-                  isLight ? 'bg-white border-slate-300 shadow-sm' : 'bg-[#0b0e1a] border-zinc-800 shadow-inner'
+                className={`flex-1 min-w-[160px] sm:min-w-[170px] shrink-0 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between gap-1.5 min-h-[115px] border animate-fadeIn ${
+                  isLight ? 'bg-white border-slate-300 shadow-xs' : 'bg-[#0b0e1a] border-zinc-800 shadow-inner'
                 }`}
               >
                 <div className="flex items-center justify-between leading-none mb-1">
