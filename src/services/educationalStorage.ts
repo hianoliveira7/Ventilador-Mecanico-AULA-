@@ -109,12 +109,53 @@ export const DEFAULT_QUIZ_QUESTIONS: QuizQuestionItem[] = [
 
 const STORAGE_KEYS = {
   USER_ROLE: 'vm_sim_user_role', // 'student' | 'teacher' | null
+  ACTIVE_QUIZ_QUESTIONS: 'vm_sim_active_quiz_questions',
   CUSTOM_QUIZ_QUESTIONS: 'vm_sim_custom_quiz_questions',
   CUSTOM_CLINICAL_CASES: 'vm_sim_custom_clinical_cases',
   TUTORIAL_SEEN: 'vm_sim_tutorial_completed',
+  TEACHER_PASSWORD: 'vm_sim_teacher_password',
 };
 
+const DEFAULT_TEACHER_PASSWORD = 'docente123';
+
 export const educationalStorage = {
+  // Teacher Authentication & Password Management
+  getTeacherPassword: (): string => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.TEACHER_PASSWORD);
+      return stored && stored.trim() ? stored : DEFAULT_TEACHER_PASSWORD;
+    } catch {
+      return DEFAULT_TEACHER_PASSWORD;
+    }
+  },
+
+  verifyTeacherPassword: (attempt: string): boolean => {
+    try {
+      const current = educationalStorage.getTeacherPassword();
+      return attempt.trim() === current.trim();
+    } catch {
+      return attempt.trim() === DEFAULT_TEACHER_PASSWORD;
+    }
+  },
+
+  setTeacherPassword: (newPassword: string): boolean => {
+    try {
+      if (!newPassword || newPassword.trim().length < 3) return false;
+      localStorage.setItem(STORAGE_KEYS.TEACHER_PASSWORD, newPassword.trim());
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  resetTeacherPassword: (): void => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.TEACHER_PASSWORD, DEFAULT_TEACHER_PASSWORD);
+    } catch {
+      // Ignore
+    }
+  },
+
   getUserRole: (): 'student' | 'teacher' | null => {
     try {
       const role = localStorage.getItem(STORAGE_KEYS.USER_ROLE);
@@ -157,12 +198,22 @@ export const educationalStorage = {
     }
   },
 
-  // Quiz Questions management
+  // Quiz Questions management (Supports deleting ANY question, system or custom)
   getAllQuizQuestions: (): QuizQuestionItem[] => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS);
-      const custom: QuizQuestionItem[] = raw ? JSON.parse(raw) : [];
-      return [...DEFAULT_QUIZ_QUESTIONS, ...custom];
+      const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      // Migrate from old custom questions format if present
+      const oldCustomRaw = localStorage.getItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS);
+      const oldCustom: QuizQuestionItem[] = oldCustomRaw ? JSON.parse(oldCustomRaw) : [];
+      const initialList = [...DEFAULT_QUIZ_QUESTIONS, ...oldCustom];
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(initialList));
+      return initialList;
     } catch {
       return DEFAULT_QUIZ_QUESTIONS;
     }
@@ -175,26 +226,33 @@ export const educationalStorage = {
       createdBy: 'teacher',
     };
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS);
-      const custom: QuizQuestionItem[] = raw ? JSON.parse(raw) : [];
-      custom.push(newItem);
-      localStorage.setItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS, JSON.stringify(custom));
+      const currentList = educationalStorage.getAllQuizQuestions();
+      const updatedList = [newItem, ...currentList];
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(updatedList));
     } catch (e) {
-      console.error('Failed to save custom question', e);
+      console.error('Failed to save quiz question', e);
     }
     return newItem;
   },
 
   deleteQuizQuestion: (id: string): boolean => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS);
-      if (!raw) return false;
-      const custom: QuizQuestionItem[] = JSON.parse(raw);
-      const filtered = custom.filter((q) => q.id !== id);
-      localStorage.setItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS, JSON.stringify(filtered));
+      const currentList = educationalStorage.getAllQuizQuestions();
+      const filtered = currentList.filter((q) => q.id !== id);
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(filtered));
       return true;
-    } catch {
+    } catch (e) {
+      console.error('Failed to delete quiz question', e);
       return false;
+    }
+  },
+
+  resetQuizQuestionsToDefault: (): QuizQuestionItem[] => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(DEFAULT_QUIZ_QUESTIONS));
+      return DEFAULT_QUIZ_QUESTIONS;
+    } catch {
+      return DEFAULT_QUIZ_QUESTIONS;
     }
   },
 
@@ -231,6 +289,23 @@ export const educationalStorage = {
       return true;
     } catch {
       return false;
+    }
+  },
+
+  // Interactive Tour completion flag
+  hasCompletedTour: (): boolean => {
+    try {
+      return localStorage.getItem('vm_fisio_tour_completed') === 'true';
+    } catch {
+      return false;
+    }
+  },
+
+  setTourCompleted: (completed = true): void => {
+    try {
+      localStorage.setItem('vm_fisio_tour_completed', completed ? 'true' : 'false');
+    } catch (e) {
+      console.error('Failed to set tour completion flag', e);
     }
   },
 };

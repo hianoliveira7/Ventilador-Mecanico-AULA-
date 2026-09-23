@@ -43,6 +43,8 @@ interface TouchParamTileProps {
   themeColor: 'cyan' | 'emerald' | 'amber' | 'purple' | 'blue' | 'teal';
   activeVal?: number;
   onUpdate: (field: keyof VentilatorSettings, val: number) => void;
+  onConfirm?: () => void;
+  onDiscardParam?: () => void;
 }
 
 const TouchParamTile: React.FC<TouchParamTileProps> = ({
@@ -57,6 +59,8 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
   themeColor,
   activeVal,
   onUpdate,
+  onConfirm,
+  onDiscardParam,
 }) => {
   const { isLight } = useTheme();
   const [isEditing, setIsEditing] = useState(false);
@@ -172,9 +176,6 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
   const scheme = colorMap[themeColor];
   const valueColor = isLight ? scheme.lightValue : scheme.darkValue;
 
-  // Percentage for medical range gauge
-  const rangePercent = Math.max(0, Math.min(100, ((safeVal - min) / (max - min)) * 100));
-
   const presets = PARAM_PRESETS[field as string] || [];
 
   return (
@@ -183,20 +184,53 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
       className={`relative flex-1 min-w-[135px] max-w-[185px] shrink-0 rounded-xl p-2 flex flex-col justify-between select-none transition-all duration-150 border ${
         isChanged
           ? isLight
-            ? 'bg-amber-50/80 border-amber-500 shadow-md ring-2 ring-amber-400/40'
-            : 'bg-[#15120e] border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.25)] ring-1 ring-amber-500/60'
+            ? 'bg-amber-50/90 border-amber-500 shadow-lg ring-2 ring-amber-400/60'
+            : 'bg-[#18130e] border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.35)] ring-1 ring-amber-500/80'
           : isLight
           ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-sm'
           : 'bg-[#0c0e17] hover:bg-[#111422] border-zinc-800/90 shadow-inner'
       }`}
     >
+      {/* 0. Floating Confirmation Button (Appears directly on top of the modified parameter button) */}
+      {isChanged && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 shadow-2xl animate-bounce">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              audioEngine.playConfirmBeep();
+              if (onConfirm) onConfirm();
+            }}
+            className="px-2 py-0.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-black text-[9.5px] flex items-center gap-1 shadow-lg ring-1 ring-white cursor-pointer"
+            title="Confirmar ajuste para entrar no próximo ciclo"
+          >
+            <Check className="w-3 h-3 stroke-[3]" />
+            <span>CONFIRMAR</span>
+          </button>
+          {onDiscardParam && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                audioEngine.playClick(750);
+                onDiscardParam();
+              }}
+              className="p-0.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-600 shadow-md cursor-pointer"
+              title="Cancelar e restaurar valor anterior"
+            >
+              <X className="w-2.5 h-2.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 1. Header: Acronym, Title & Unit */}
       <div className="flex items-center justify-between gap-1 leading-none">
         <div className="flex items-baseline gap-1 truncate">
           <span
             className={`font-mono font-black text-xs tracking-tight ${
               isChanged
-                ? isLight ? 'text-amber-900' : 'text-amber-300 font-extrabold'
+                ? isLight ? 'text-amber-900 font-extrabold' : 'text-amber-300 font-extrabold'
                 : isLight ? 'text-slate-900' : 'text-white'
             }`}
           >
@@ -220,7 +254,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
                   ? 'bg-amber-100 text-amber-900 border-amber-300'
                   : 'bg-amber-950 text-amber-300 border-amber-600/70'
               }`}
-              title={`Valor ativo anterior: ${activeVal}`}
+              title={`Valor ativo: ${activeVal}`}
             >
               Proposto
             </span>
@@ -595,6 +629,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="mL"
             themeColor="cyan"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('tidalVolume', settings.tidalVolume)}
           />
         )}
 
@@ -611,6 +647,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="cmH₂O"
             themeColor="cyan"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('inspiratoryPressure', settings.inspiratoryPressure ?? 15)}
           />
         )}
 
@@ -627,6 +665,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="cmH₂O"
             themeColor="cyan"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('pressureSupport', settings.pressureSupport ?? 10)}
           />
         )}
 
@@ -644,6 +684,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="rpm"
             themeColor="emerald"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('simvRate', settings.simvRate ?? 8)}
           />
         )}
 
@@ -660,6 +702,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="rpm"
             themeColor="emerald"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('respiratoryRate', settings.respiratoryRate)}
           />
         )}
 
@@ -677,6 +721,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="s"
             themeColor="purple"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('inspiratoryTimePCV', settings.inspiratoryTimePCV)}
           />
         )}
 
@@ -693,6 +739,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           unit="cmH₂O"
           themeColor="blue"
           onUpdate={updateField}
+          onConfirm={onConfirm}
+          onDiscardParam={() => updateField('peep', settings.peep)}
         />
 
         {/* 5. FiO2 */}
@@ -708,6 +756,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           unit="%"
           themeColor="amber"
           onUpdate={updateField}
+          onConfirm={onConfirm}
+          onDiscardParam={() => updateField('fio2', settings.fio2)}
         />
 
         {/* 6. Ergonomic Trigger / Disparo Tile */}
@@ -947,6 +997,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="%"
             themeColor="purple"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('inspiratoryPausePercent', settings.inspiratoryPausePercent ?? 10)}
           />
         )}
 
@@ -964,6 +1016,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="%"
             themeColor="teal"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('expiratorySensitivity', settings.expiratorySensitivity ?? 25)}
           />
         )}
 
@@ -981,6 +1035,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="cmH₂O"
             themeColor="blue"
             onUpdate={updateField}
+            onConfirm={onConfirm}
+            onDiscardParam={() => updateField('simvPs', settings.simvPs ?? 10)}
           />
         )}
       </div>

@@ -138,8 +138,8 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
 
       {/* Scrollable Clinical Content */}
       <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        {/* Asynchrony or Adjustment Processing Alert Card */}
-        {monitored.activeAsynchrony && monitored.activeAsynchrony !== 'none' ? (
+        {/* Asynchrony Alert Card */}
+        {monitored.activeAsynchrony && monitored.activeAsynchrony !== 'none' && (
           <div
             className={`p-2.5 rounded-xl border animate-pulse ${
               isLight
@@ -162,32 +162,7 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
               {monitored.asynchronyDescription}
             </p>
           </div>
-        ) : monitored.isEquilibrating ? (
-          <div
-            className={`p-2 rounded-xl border ${
-              isLight
-                ? 'bg-amber-50 border-amber-300 text-amber-950'
-                : 'bg-amber-950/50 border-amber-600/50 text-amber-200'
-            }`}
-          >
-            <div className="flex items-center justify-between text-[10px] font-mono font-bold mb-1">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                <span>Processando Cinética de Trocas Gasosas</span>
-              </span>
-              <span>{monitored.equilibrationProgressPercent ?? 50}%</span>
-            </div>
-            <div className="w-full h-1.5 bg-black/20 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-amber-500 transition-all duration-300 rounded-full"
-                style={{ width: `${monitored.equilibrationProgressPercent ?? 50}%` }}
-              />
-            </div>
-            <p className="text-[9.5px] font-mono mt-1 opacity-80">
-              Aguarde o equilíbrio alveolar de PaCO₂/PaO₂ e a acomodação gradual do drive respiratório do paciente.
-            </p>
-          </div>
-        ) : null}
+        )}
 
         {activeTab === 'vital' ? (
           <>

@@ -14,6 +14,8 @@ import {
   UserCheck,
   Sparkles,
   SlidersHorizontal,
+  FolderOpen,
+  BookOpenCheck,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -50,6 +52,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenRolePortal,
   onOpenTutorial,
   onOpenTeacherAdmin,
+  onOpenClinicalCases,
 }) => {
   const { toggleTheme, isLight } = useTheme();
   const topAlarm = activeAlarms.length > 0 ? activeAlarms[0] : null;
@@ -61,6 +64,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <header
+      id="tour-topbar"
       className={`px-3 py-1.5 flex items-center justify-between select-none shrink-0 shadow-sm border-b transition-colors ${
         isLight
           ? 'bg-white border-slate-200 text-slate-900'
@@ -195,7 +199,24 @@ export const TopBar: React.FC<TopBarProps> = ({
 
       {/* Right: Essential Action Controls (Tutorial / Admin, Theme, Audio, Alarms, Menu) */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Context Button based on Role */}
+        {/* Clinical Cases & Quiz Page Button */}
+        {onOpenClinicalCases && (
+          <button
+            id="tour-cases-quiz"
+            onClick={onOpenClinicalCases}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-sm ${
+              isLight
+                ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-900 border-cyan-300'
+                : 'bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border-cyan-700/60'
+            }`}
+            title="Abrir Página de Casos Clínicos & Quiz de Avaliação"
+          >
+            <BookOpenCheck className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-display font-black">Casos & Quiz</span>
+          </button>
+        )}
+
+        {/* Context Button based on Role (Strict Separation: Teacher Admin only for Teacher; Tour only for Student) */}
         {userRole === 'teacher' ? (
           onOpenTeacherAdmin && (
             <button
@@ -205,7 +226,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600'
                   : 'bg-indigo-600/80 hover:bg-indigo-500 text-white border-indigo-500'
               }`}
-              title="Painel Administrativo do Professor"
+              title="Painel Administrativo do Docente"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Admin Docente</span>
@@ -217,13 +238,13 @@ export const TopBar: React.FC<TopBarProps> = ({
               onClick={onOpenTutorial}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-sm ${
                 isLight
-                  ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border-cyan-300'
-                  : 'bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 border-cyan-700/50'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                  : 'bg-[#10121c] hover:bg-[#181b2a] text-zinc-300 border-zinc-800'
               }`}
-              title="Guia & Tutorial do Estudante"
+              title="Guia Passo a Passo & Tutorial do Aluno"
             >
               <Sparkles className="w-3.5 h-3.5 text-cyan-500" />
-              <span className="hidden sm:inline">Tutorial</span>
+              <span className="hidden sm:inline">Guia / Tour</span>
             </button>
           )
         )}

@@ -28,7 +28,9 @@ interface ManeuverBarProps {
   maneuverState: ManeuverState;
   patient: PatientParameters;
   viewMode: 'waveforms' | 'loops' | 'split';
-  onToggleInspHold: () => void;
+  onToggleInspHold?: () => void;
+  onStartInspHold?: () => void;
+  onEndInspHold?: () => void;
   onToggleExpHold: () => void;
   onToggleO2Suction: () => void;
   onToggleNebulizer: () => void;
@@ -53,6 +55,8 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
   maneuverState,
   patient,
   onToggleInspHold,
+  onStartInspHold,
+  onEndInspHold,
   onToggleExpHold,
   onToggleO2Suction,
   onToggleRecruitment,
@@ -74,6 +78,24 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
+  const handleInspHoldDown = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    audioEngine.playClick(1000);
+    if (onStartInspHold) {
+      onStartInspHold();
+    } else if (onToggleInspHold) {
+      onToggleInspHold();
+    }
+  };
+
+  const handleInspHoldUp = () => {
+    if (onEndInspHold) {
+      onEndInspHold();
+    } else if (onToggleInspHold && maneuverState.inspiratoryHoldActive) {
+      onToggleInspHold();
+    }
+  };
+
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -91,6 +113,7 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
 
   return (
     <div
+      id="tour-maneuvers"
       className={`border-t px-3 py-2 flex flex-wrap items-center justify-between gap-3 select-none shadow-2xl relative z-40 transition-colors ${
         isLight
           ? 'bg-white border-slate-200 text-slate-900'
@@ -103,14 +126,18 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
           MANOBRAS:
         </span>
 
-        {/* Inspiratory Pause */}
+        {/* Inspiratory Pause (Hold to Pause) */}
         <button
           id="insp-hold-btn"
-          onClick={() => {
-            audioEngine.playClick(1000);
-            onToggleInspHold();
-          }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono font-bold text-xs transition-all cursor-pointer shadow-sm ${
+          type="button"
+          onPointerDown={handleInspHoldDown}
+          onPointerUp={handleInspHoldUp}
+          onPointerLeave={handleInspHoldUp}
+          onPointerCancel={handleInspHoldUp}
+          onTouchStart={handleInspHoldDown}
+          onTouchEnd={handleInspHoldUp}
+          onContextMenu={(e) => e.preventDefault()}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono font-bold text-xs transition-all cursor-pointer shadow-sm active:scale-95 ${
             maneuverState.inspiratoryHoldActive
               ? isLight
                 ? 'bg-cyan-600 text-white shadow-md ring-2 ring-cyan-400 animate-pulse'
@@ -119,10 +146,12 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
               ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300'
               : 'bg-[#12141e] hover:bg-[#1a1d2d] text-cyan-300 border border-cyan-800/50'
           }`}
-          title="Manter para medir Pplat e Cst"
+          title="Mantenha pressionado durante a inspiração para pausar e medir Pplat e Cst"
         >
           <Pause className="w-3.5 h-3.5" />
-          <span>Pausa Insp. (Pplat)</span>
+          <span>
+            {maneuverState.inspiratoryHoldActive ? '⏸️ Pausa Insp. ATIVA' : 'Pausa Insp. (Manter)'}
+          </span>
         </button>
 
         {/* Expiratory Pause */}

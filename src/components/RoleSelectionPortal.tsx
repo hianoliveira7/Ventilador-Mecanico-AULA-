@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   GraduationCap,
   UserCheck,
@@ -12,9 +12,13 @@ import {
   PlusCircle,
   FileSpreadsheet,
   X,
+  Lock,
+  ShieldCheck,
+  KeyRound,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
+import { TeacherAuthModal } from './TeacherAuthModal';
 
 interface RoleSelectionPortalProps {
   isOpen?: boolean;
@@ -44,12 +48,25 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
   onEnterSimulatorDirectly,
 }) => {
   const { isLight } = useTheme();
+  const [isTeacherAuthOpen, setIsTeacherAuthOpen] = useState(false);
+  const [pendingTeacherAction, setPendingTeacherAction] = useState<(() => void) | null>(null);
 
   if (isOpen === false) return null;
 
-  const handleChooseRole = (role: 'student' | 'teacher') => {
+  const handleChooseStudent = () => {
     audioEngine.playConfirmBeep();
-    onSelectRole(role);
+    onSelectRole('student');
+  };
+
+  const handleRequestTeacher = (action?: () => void) => {
+    audioEngine.playClick(850);
+    if (currentRole === 'teacher') {
+      onSelectRole('teacher');
+      if (action) action();
+    } else {
+      setPendingTeacherAction(() => action || null);
+      setIsTeacherAuthOpen(true);
+    }
   };
 
   const handleEnterDirectly = () => {
@@ -160,7 +177,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      handleChooseRole('student');
+                      handleChooseStudent();
                       onOpenTutorial();
                     }}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
@@ -181,7 +198,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      handleChooseRole('student');
+                      handleChooseStudent();
                       onOpenMissions();
                     }}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
@@ -202,7 +219,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      handleChooseRole('student');
+                      handleChooseStudent();
                       onOpenCases();
                     }}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
@@ -223,7 +240,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      handleChooseRole('student');
+                      handleChooseStudent();
                       onOpenQuiz();
                     }}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
@@ -245,7 +262,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
             <button
               type="button"
               onClick={() => {
-                handleChooseRole('student');
+                handleChooseStudent();
                 handleEnterDirectly();
               }}
               className="mt-5 w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 cursor-pointer transition-all"
@@ -257,7 +274,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
 
           {/* PROFILE 2: PROFESSOR / DOCENTE */}
           <div
-            className={`rounded-2xl border p-5 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl ${
+            className={`rounded-2xl border p-5 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl relative ${
               isLight
                 ? 'bg-white border-indigo-300 shadow-md ring-2 ring-indigo-500/20'
                 : 'bg-[#101526] border-indigo-800/80 hover:border-indigo-600'
@@ -274,9 +291,14 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                     <UserCheck className="w-6 h-6" />
                   </div>
                   <div>
-                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-indigo-500 block">
-                      Perfil Docente
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-indigo-500 block">
+                        Perfil Docente
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                        <Lock className="w-2.5 h-2.5" /> Requer Senha
+                      </span>
+                    </div>
                     <h2 className="text-lg font-display font-black">Ambiente do Professor</h2>
                   </div>
                 </div>
@@ -291,7 +313,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                       : 'bg-indigo-950/60 text-indigo-300 border-indigo-800'
                   }`}
                 >
-                  {currentRole === 'teacher' ? 'Perfil Ativo' : 'Painel Admin'}
+                  {currentRole === 'teacher' ? 'Perfil Ativo' : 'Painel Protegido'}
                 </span>
               </div>
 
@@ -304,10 +326,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                 {onOpenTeacherAdmin && (
                   <button
                     type="button"
-                    onClick={() => {
-                      handleChooseRole('teacher');
-                      onOpenTeacherAdmin();
-                    }}
+                    onClick={() => handleRequestTeacher(onOpenTeacherAdmin)}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
                       isLight
                         ? 'bg-indigo-50/80 hover:bg-indigo-100/80 text-indigo-900 border-indigo-300 shadow-sm'
@@ -325,10 +344,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                 {onOpenTeacherAdmin && (
                   <button
                     type="button"
-                    onClick={() => {
-                      handleChooseRole('teacher');
-                      onOpenTeacherAdmin();
-                    }}
+                    onClick={() => handleRequestTeacher(onOpenTeacherAdmin)}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
                       isLight
                         ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
@@ -346,10 +362,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                 {onOpenTeacherAdmin && (
                   <button
                     type="button"
-                    onClick={() => {
-                      handleChooseRole('teacher');
-                      onOpenTeacherAdmin();
-                    }}
+                    onClick={() => handleRequestTeacher(onOpenTeacherAdmin)}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
                       isLight
                         ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
@@ -367,10 +380,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                 {onOpenEducational && (
                   <button
                     type="button"
-                    onClick={() => {
-                      handleChooseRole('teacher');
-                      onOpenEducational();
-                    }}
+                    onClick={() => handleRequestTeacher(onOpenEducational)}
                     className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
                       isLight
                         ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
@@ -389,12 +399,10 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
 
             <button
               type="button"
-              onClick={() => {
-                handleChooseRole('teacher');
-                handleEnterDirectly();
-              }}
+              onClick={() => handleRequestTeacher(handleEnterDirectly)}
               className="mt-5 w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all"
             >
+              <KeyRound className="w-4 h-4" />
               <span>Entrar como Professor no Simulador</span>
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -417,6 +425,25 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Teacher Password Validation Modal */}
+      <TeacherAuthModal
+        isOpen={isTeacherAuthOpen}
+        onClose={() => {
+          setIsTeacherAuthOpen(false);
+          setPendingTeacherAction(null);
+        }}
+        onSuccess={() => {
+          setIsTeacherAuthOpen(false);
+          onSelectRole('teacher');
+          if (pendingTeacherAction) {
+            pendingTeacherAction();
+            setPendingTeacherAction(null);
+          } else {
+            handleEnterDirectly();
+          }
+        }}
+      />
     </div>
   );
 };

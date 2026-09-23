@@ -21,6 +21,9 @@ interface StudentTutorialModalProps {
   isOpen: boolean;
   onClose: () => void;
   onStartMissions?: () => void;
+  onOpenMissions?: () => void;
+  onOpenCases?: () => void;
+  onStartTour?: () => void;
 }
 
 interface TutorialStep {
@@ -37,6 +40,9 @@ export const StudentTutorialModal: React.FC<StudentTutorialModalProps> = ({
   isOpen,
   onClose,
   onStartMissions,
+  onOpenMissions,
+  onOpenCases,
+  onStartTour,
 }) => {
   const { isLight } = useTheme();
   const [currentStep, setCurrentStep] = useState(0);
@@ -174,7 +180,13 @@ export const StudentTutorialModal: React.FC<StudentTutorialModalProps> = ({
       setCurrentStep((prev) => prev + 1);
     } else {
       onClose();
-      if (onStartMissions) onStartMissions();
+      if (onStartTour) {
+        onStartTour();
+      } else if (onStartMissions) {
+        onStartMissions();
+      } else if (onOpenCases) {
+        onOpenCases();
+      }
     }
   };
 

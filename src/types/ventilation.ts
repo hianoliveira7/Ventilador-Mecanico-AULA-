@@ -110,6 +110,8 @@ export interface MonitoredData {
   asynchronyDescription?: string;
   isEquilibrating?: boolean;
   equilibrationProgressPercent?: number;
+  mechanicsEquilibrationProgress?: number;
+  physiologicalTransitionMessage?: string;
   
   // Mechanics
   staticCompliance: number; // mL/cmH2O (Cstat)

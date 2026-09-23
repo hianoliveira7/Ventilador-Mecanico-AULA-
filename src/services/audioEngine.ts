@@ -896,6 +896,33 @@ class VentilatorAudioEngine {
       // Guard
     }
   }
+
+  public playErrorBeep() {
+    if (!this.settings.soundEnabled || this.isMuted) return;
+    try {
+      const ctx = this.getOrCreateContext();
+      if (!ctx || ctx.state !== 'running' || !this.masterGain) return;
+
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.setValueAtTime(220, now + 0.09);
+
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } catch {
+      // Guard
+    }
+  }
 }
 
 export const audioEngine = new VentilatorAudioEngine();

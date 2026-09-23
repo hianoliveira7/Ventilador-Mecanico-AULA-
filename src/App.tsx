@@ -20,6 +20,7 @@ import { LoopsDisplay } from './components/LoopsDisplay';
 import { MonitorPanel } from './components/MonitorPanel';
 import { ManeuverBar } from './components/ManeuverBar';
 import { ClinicalCaseModal } from './components/ClinicalCaseModal';
+import { ClinicalCasesPage } from './components/ClinicalCasesPage';
 import { EducationalModal } from './components/EducationalModal';
 import { DraggableGasometryModal } from './components/DraggableGasometryModal';
 import { DraggableMissionsModal } from './components/DraggableMissionsModal';
@@ -32,6 +33,8 @@ import { QuizModal } from './components/QuizModal';
 import { RoleSelectionPortal } from './components/RoleSelectionPortal';
 import { StudentTutorialModal } from './components/StudentTutorialModal';
 import { TeacherAdminModal } from './components/TeacherAdminModal';
+import { TeacherAuthModal } from './components/TeacherAuthModal';
+import { InteractiveTour } from './components/InteractiveTour';
 import { educationalStorage, UserRole } from './services/educationalStorage';
 import { useTheme } from './context/ThemeContext';
 
@@ -67,17 +70,17 @@ export default function App() {
 
   const handleUpdateDraft = (updater: VentilatorSettings | ((prev: VentilatorSettings) => VentilatorSettings)) => {
     setDraftSettings(updater);
-    setSettings(updater);
   };
 
-  const hasChanges = false; // Always false since we apply in real-time now
+  const hasChanges = JSON.stringify(draftSettings) !== JSON.stringify(settings);
 
   const handleConfirmSettings = () => {
-    audioEngine.playClick(1000);
+    audioEngine.playConfirmBeep();
     setSettings(draftSettings);
   };
 
   const handleDiscardSettings = () => {
+    audioEngine.playClick(750);
     setDraftSettings(settings);
   };
 
@@ -182,18 +185,39 @@ export default function App() {
   const [userRole, setUserRole] = useState<UserRole | null>(() => educationalStorage.getUserRole());
   const [isRolePortalOpen, setIsRolePortalOpen] = useState<boolean>(() => !educationalStorage.getUserRole());
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
+  const [isInteractiveTourOpen, setIsInteractiveTourOpen] = useState<boolean>(false);
   const [isTeacherAdminOpen, setIsTeacherAdminOpen] = useState<boolean>(false);
+  const [isTeacherAuthOpen, setIsTeacherAuthOpen] = useState<boolean>(false);
 
   const handleSelectRole = (role: UserRole) => {
-    setUserRole(role);
-    educationalStorage.setUserRole(role);
+    if (role === 'teacher') {
+      setIsTeacherAuthOpen(true);
+      setIsRolePortalOpen(false);
+      return;
+    }
+    setUserRole('student');
+    educationalStorage.setUserRole('student');
     setIsRolePortalOpen(false);
-    if (role === 'student') {
-      setIsTutorialOpen(true);
+    setIsInteractiveTourOpen(true);
+  };
+
+  const handleOpenTeacherAdmin = () => {
+    if (userRole === 'teacher') {
+      setIsTeacherAdminOpen(true);
+    } else {
+      setIsTeacherAuthOpen(true);
     }
   };
 
+  const handleTeacherAuthSuccess = () => {
+    setUserRole('teacher');
+    educationalStorage.setUserRole('teacher');
+    setIsTeacherAuthOpen(false);
+    setIsTeacherAdminOpen(true);
+  };
+
   const [viewMode, setViewMode] = useState<'waveforms' | 'loops' | 'split'>('waveforms');
+  const [currentPage, setCurrentPage] = useState<'simulator' | 'clinical_cases'>('simulator');
   const [isClinicalCasesOpen, setIsClinicalCasesOpen] = useState<boolean>(false);
   const [isEducationalOpen, setIsEducationalOpen] = useState<boolean>(false);
   const [isQuizOpen, setIsQuizOpen] = useState<boolean>(false);
@@ -546,6 +570,21 @@ export default function App() {
     }));
   };
 
+  const handleStartInspHold = () => {
+    setManeuverState((prev) => ({
+      ...prev,
+      inspiratoryHoldActive: true,
+      expiratoryHoldActive: false,
+    }));
+  };
+
+  const handleEndInspHold = () => {
+    setManeuverState((prev) => ({
+      ...prev,
+      inspiratoryHoldActive: false,
+    }));
+  };
+
   const handleToggleExpHold = () => {
     setManeuverState((prev) => ({
       ...prev,
@@ -612,26 +651,39 @@ export default function App() {
         isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#050505] text-zinc-100'
       }`}
     >
-      {/* 1. Header Bar */}
-      <TopBar
-        mode={settings.mode}
-        patient={patient}
-        activeAlarms={activeAlarms}
-        userRole={userRole}
-        simulationTimeSeconds={0}
-        onOpenPatientConfig={() => setIsPatientConfigOpen(true)}
-        onOpenAlarmsModal={() => setIsAlarmsModalOpen(true)}
-        onOpenAudioSettings={() => setIsAudioSettingsOpen(true)}
-        onOpenMenu={() => setIsMenuOpen(true)}
-        onOpenRolePortal={() => setIsRolePortalOpen(true)}
-        onOpenTutorial={() => setIsTutorialOpen(true)}
-        onOpenTeacherAdmin={() => setIsTeacherAdminOpen(true)}
-        onOpenClinicalCases={() => setIsClinicalCasesOpen(true)}
-        onOpenQuiz={() => setIsQuizOpen(true)}
-        onOpenEducational={() => setIsEducationalOpen(true)}
-        onOpenGasometry={() => setIsGasometryOpen(true)}
-        onOpenMissions={() => setIsMissionsOpen(true)}
-      />
+      {currentPage === 'clinical_cases' ? (
+        <ClinicalCasesPage
+          onBackToSimulator={() => setCurrentPage('simulator')}
+          onLoadCaseInSimulator={(selectedCase) => {
+            handleLoadCase(selectedCase);
+            setCurrentPage('simulator');
+          }}
+          currentMonitored={monitored}
+          currentSettings={settings}
+          currentPatient={patient}
+        />
+      ) : (
+        <>
+          {/* 1. Header Bar */}
+          <TopBar
+            mode={settings.mode}
+            patient={patient}
+            activeAlarms={activeAlarms}
+            userRole={userRole}
+            simulationTimeSeconds={0}
+            onOpenPatientConfig={() => setIsPatientConfigOpen(true)}
+            onOpenAlarmsModal={() => setIsAlarmsModalOpen(true)}
+            onOpenAudioSettings={() => setIsAudioSettingsOpen(true)}
+            onOpenMenu={() => setIsMenuOpen(true)}
+            onOpenRolePortal={() => setIsRolePortalOpen(true)}
+            onOpenTutorial={() => setIsInteractiveTourOpen(true)}
+            onOpenTeacherAdmin={handleOpenTeacherAdmin}
+            onOpenClinicalCases={() => setCurrentPage('clinical_cases')}
+            onOpenQuiz={() => setIsQuizOpen(true)}
+            onOpenEducational={() => setIsEducationalOpen(true)}
+            onOpenGasometry={() => setIsGasometryOpen(true)}
+            onOpenMissions={() => setIsMissionsOpen(true)}
+          />
 
       {/* Audio Unlock Banner (Minimal & Dismissible if browser suspended AudioContext) */}
       {audioContextState !== 'running' && !isAudioBannerDismissed && (
@@ -694,7 +746,7 @@ export default function App() {
         {/* Main Central/Left Workspace: Maximized Waveforms on Top + Mode & Parameters on Bottom */}
         <div className="flex-1 min-w-0 h-full flex flex-col gap-0 overflow-hidden">
           {/* Top Waveforms Area (Maximized Canvas Height & Width) */}
-          <div className="flex-1 min-h-0 overflow-hidden">
+          <div id="tour-waveforms" className="flex-1 min-h-0 overflow-hidden">
             {viewMode === 'waveforms' && (
               <div className="h-full">
                 <WaveformDisplay
@@ -797,6 +849,7 @@ export default function App() {
           {/* Bottom Area: Parameters & Mode (User Resizable Height) */}
           {!isParamPanelCollapsed && (
             <div
+              id="tour-parameters"
               style={{ height: `${paramPanelHeight}px` }}
               className="shrink-0 overflow-hidden"
             >
@@ -864,6 +917,7 @@ export default function App() {
         {/* Right Column: Monitorization & Mechanics (User Resizable Width) */}
         {!isRightPanelCollapsed && (
           <div
+            id="tour-monitored"
             style={{ width: `${rightPanelWidth}px` }}
             className="h-full min-h-0 shrink-0 overflow-hidden"
           >
@@ -882,6 +936,8 @@ export default function App() {
         patient={patient}
         viewMode={viewMode}
         onToggleInspHold={handleToggleInspHold}
+        onStartInspHold={handleStartInspHold}
+        onEndInspHold={handleEndInspHold}
         onToggleExpHold={handleToggleExpHold}
         onToggleO2Suction={handleToggleO2Suction}
         onToggleNebulizer={handleToggleNebulizer}
@@ -901,6 +957,8 @@ export default function App() {
         onOpenMissions={() => setIsMissionsOpen(true)}
         onResetSimulation={() => physicsEngine.reset()}
       />
+      </>
+      )}
 
       {/* Modals & Dialogs */}
       <RoleSelectionPortal
@@ -918,7 +976,7 @@ export default function App() {
         }}
         onOpenCases={() => {
           setIsRolePortalOpen(false);
-          setIsClinicalCasesOpen(true);
+          setCurrentPage('clinical_cases');
         }}
         onOpenQuiz={() => {
           setIsRolePortalOpen(false);
@@ -939,19 +997,33 @@ export default function App() {
         isOpen={isTutorialOpen}
         onClose={() => setIsTutorialOpen(false)}
         onOpenMissions={() => setIsMissionsOpen(true)}
-        onOpenCases={() => setIsClinicalCasesOpen(true)}
+        onOpenCases={() => {
+          setIsTutorialOpen(false);
+          setCurrentPage('clinical_cases');
+        }}
+        onStartTour={() => {
+          setIsTutorialOpen(false);
+          setIsInteractiveTourOpen(true);
+        }}
       />
 
       <TeacherAdminModal
-        isOpen={isTeacherAdminOpen}
+        isOpen={isTeacherAdminOpen && userRole === 'teacher'}
         onClose={() => setIsTeacherAdminOpen(false)}
-        onLoadCaseInSimulator={handleLoadCase}
+        onLoadCaseInSimulator={(selectedCase) => {
+          handleLoadCase(selectedCase);
+          setCurrentPage('simulator');
+        }}
       />
 
       <MenuModal
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
-        onOpenClinicalCases={() => setIsClinicalCasesOpen(true)}
+        userRole={userRole}
+        onOpenClinicalCases={() => {
+          setIsMenuOpen(false);
+          setCurrentPage('clinical_cases');
+        }}
         onOpenEducational={() => setIsEducationalOpen(true)}
         onOpenCalculator={() => setIsCalculatorOpen(true)}
         onOpenAlarms={() => setIsAlarmsModalOpen(true)}
@@ -962,13 +1034,13 @@ export default function App() {
         onOpenMissions={() => setIsMissionsOpen(true)}
         onOpenRolePortal={() => setIsRolePortalOpen(true)}
         onOpenTutorial={() => setIsTutorialOpen(true)}
-        onOpenTeacherAdmin={() => setIsTeacherAdminOpen(true)}
+        onOpenTeacherAdmin={handleOpenTeacherAdmin}
       />
 
       <QuizModal
         isOpen={isQuizOpen}
         onClose={() => setIsQuizOpen(false)}
-        onOpenTeacherAdmin={() => setIsTeacherAdminOpen(true)}
+        onOpenTeacherAdmin={handleOpenTeacherAdmin}
       />
 
       <ClinicalCaseModal
@@ -1000,7 +1072,7 @@ export default function App() {
         monitoredData={monitored}
         settings={settings}
         patient={patient}
-        onOpenCases={() => setIsClinicalCasesOpen(true)}
+        onOpenCases={() => setCurrentPage('clinical_cases')}
       />
 
       <PatientConfigModal
@@ -1031,6 +1103,18 @@ export default function App() {
         isOpen={isAudioSettingsOpen}
         onClose={() => setIsAudioSettingsOpen(false)}
         spo2={monitored.spo2}
+      />
+
+      <InteractiveTour
+        isOpen={isInteractiveTourOpen}
+        onClose={() => setIsInteractiveTourOpen(false)}
+        onComplete={() => educationalStorage.setTourCompleted(true)}
+      />
+
+      <TeacherAuthModal
+        isOpen={isTeacherAuthOpen}
+        onClose={() => setIsTeacherAuthOpen(false)}
+        onSuccess={handleTeacherAuthSuccess}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import { audioEngine } from '../services/audioEngine';
 interface MenuModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userRole?: 'student' | 'teacher' | null;
   onOpenClinicalCases: () => void;
   onOpenEducational: () => void;
   onOpenCalculator: () => void;
@@ -23,6 +24,7 @@ interface MenuModalProps {
 export const MenuModal: React.FC<MenuModalProps> = ({
   isOpen,
   onClose,
+  userRole,
   onOpenClinicalCases,
   onOpenEducational,
   onOpenCalculator,
@@ -114,8 +116,8 @@ export const MenuModal: React.FC<MenuModalProps> = ({
             </button>
           )}
 
-          {/* Student Tutorial */}
-          {onOpenTutorial && (
+          {/* Student Tutorial / Tour (Only for Students) */}
+          {userRole !== 'teacher' && onOpenTutorial && (
             <button
               onClick={() => {
                 onClose();
@@ -135,16 +137,16 @@ export const MenuModal: React.FC<MenuModalProps> = ({
                 <GraduationCap className="w-5 h-5" />
               </div>
               <div>
-                <span className="block text-sm font-display font-bold">Guia & Tutorial do Estudante</span>
+                <span className="block text-sm font-display font-bold">Guia Interativo & Tour do Aluno</span>
                 <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                  Aprenda como operar o ventilador e resolver desafios fisiológicos
+                  Passo a passo das curvas, parâmetros e manobras do ventilador
                 </span>
               </div>
             </button>
           )}
 
-          {/* Teacher Admin Panel */}
-          {onOpenTeacherAdmin && (
+          {/* Teacher Admin Panel (Only visible for teachers) */}
+          {userRole === 'teacher' && onOpenTeacherAdmin && (
             <button
               onClick={() => {
                 onClose();
@@ -164,9 +166,9 @@ export const MenuModal: React.FC<MenuModalProps> = ({
                 <Sliders className="w-5 h-5" />
               </div>
               <div>
-                <span className="block text-sm font-display font-bold">Painel Docente (Cadastrar Quiz & Casos)</span>
+                <span className="block text-sm font-display font-bold">Painel Administrativo do Docente</span>
                 <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                  Adicione questões personalizadas e crie novos casos clínicos
+                  Cadastre novos casos fisiopatológicos e gerencie o banco de questões
                 </span>
               </div>
             </button>
@@ -284,9 +286,9 @@ export const MenuModal: React.FC<MenuModalProps> = ({
               <Stethoscope className="w-5 h-5" />
             </div>
             <div>
-              <span className="block text-sm font-display font-bold">Casos Clínicos & Cenários</span>
+              <span className="block text-sm font-display font-bold">Casos Clínicos & Quiz de Avaliação</span>
               <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                SDRA, DPOC, Asma, Pneumotórax, EAP
+                Estudos de casos reais, metas de ventilação protetora e banco de questões
               </span>
             </div>
           </button>
