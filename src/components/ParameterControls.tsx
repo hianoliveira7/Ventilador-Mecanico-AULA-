@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { VentilatorSettings, VentilationMode } from '../types/ventilation';
 import { audioEngine } from '../services/audioEngine';
-import { Plus, Minus, Check, X, Wind, Gauge, SlidersHorizontal, Clock } from 'lucide-react';
+import { Plus, Minus, Check, X, Wind, Gauge, SlidersHorizontal, Settings2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 interface ParameterControlsProps {
@@ -59,23 +59,13 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
   themeColor,
   activeVal,
   onUpdate,
-  onConfirm,
-  onDiscardParam,
 }) => {
   const { isLight } = useTheme();
-  const [isEditing, setIsEditing] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
-  const [tempInputVal, setTempInputVal] = useState((value ?? min).toString());
   const popoverRef = useRef<HTMLDivElement | null>(null);
 
   const safeVal = value ?? min;
   const isChanged = activeVal !== undefined && Math.abs(activeVal - safeVal) > 0.001;
-
-  useEffect(() => {
-    if (!isEditing) {
-      setTempInputVal(safeVal.toString());
-    }
-  }, [safeVal, isEditing]);
 
   // Close quick presets on click outside
   useEffect(() => {
@@ -127,152 +117,75 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
     }
   };
 
-  // Color schemes for clinical categories
+  // Color schemes for categories
   const colorMap = {
     cyan: {
-      lightValue: 'text-cyan-800',
-      darkValue: 'text-cyan-300',
-      accentBg: isLight ? 'bg-cyan-700' : 'bg-cyan-500',
-      borderGlow: 'border-cyan-500/40',
-      trackFill: isLight ? 'from-cyan-600 to-cyan-800' : 'from-cyan-500 to-cyan-300',
+      badgeBg: isLight ? 'bg-cyan-100 text-cyan-900 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+      valueText: isLight ? 'text-cyan-950 font-black' : 'text-cyan-300 font-black',
+      sliderAccent: 'accent-cyan-500',
     },
     emerald: {
-      lightValue: 'text-emerald-800',
-      darkValue: 'text-emerald-300',
-      accentBg: isLight ? 'bg-emerald-700' : 'bg-emerald-500',
-      borderGlow: 'border-emerald-500/40',
-      trackFill: isLight ? 'from-emerald-600 to-emerald-800' : 'from-emerald-500 to-emerald-300',
+      badgeBg: isLight ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      valueText: isLight ? 'text-emerald-950 font-black' : 'text-emerald-300 font-black',
+      sliderAccent: 'accent-emerald-500',
     },
     amber: {
-      lightValue: 'text-amber-800',
-      darkValue: 'text-amber-300',
-      accentBg: isLight ? 'bg-amber-600' : 'bg-amber-500',
-      borderGlow: 'border-amber-500/40',
-      trackFill: isLight ? 'from-amber-600 to-amber-700' : 'from-amber-500 to-amber-300',
+      badgeBg: isLight ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+      valueText: isLight ? 'text-amber-950 font-black' : 'text-amber-300 font-black',
+      sliderAccent: 'accent-amber-500',
     },
     purple: {
-      lightValue: 'text-purple-900',
-      darkValue: 'text-purple-300',
-      accentBg: isLight ? 'bg-purple-700' : 'bg-purple-500',
-      borderGlow: 'border-purple-500/40',
-      trackFill: isLight ? 'from-purple-600 to-purple-800' : 'from-purple-500 to-purple-300',
+      badgeBg: isLight ? 'bg-purple-100 text-purple-900 border-purple-300' : 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+      valueText: isLight ? 'text-purple-950 font-black' : 'text-purple-300 font-black',
+      sliderAccent: 'accent-purple-500',
     },
     blue: {
-      lightValue: 'text-blue-900',
-      darkValue: 'text-blue-300',
-      accentBg: isLight ? 'bg-blue-700' : 'bg-blue-500',
-      borderGlow: 'border-blue-500/40',
-      trackFill: isLight ? 'from-blue-600 to-blue-800' : 'from-blue-500 to-blue-300',
+      badgeBg: isLight ? 'bg-blue-100 text-blue-900 border-blue-300' : 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+      valueText: isLight ? 'text-blue-950 font-black' : 'text-blue-300 font-black',
+      sliderAccent: 'accent-blue-500',
     },
     teal: {
-      lightValue: 'text-teal-900',
-      darkValue: 'text-teal-300',
-      accentBg: isLight ? 'bg-teal-700' : 'bg-teal-500',
-      borderGlow: 'border-teal-500/40',
-      trackFill: isLight ? 'from-teal-600 to-teal-800' : 'from-teal-500 to-teal-300',
+      badgeBg: isLight ? 'bg-teal-100 text-teal-900 border-teal-300' : 'bg-teal-500/20 text-teal-300 border-teal-500/40',
+      valueText: isLight ? 'text-teal-950 font-black' : 'text-teal-300 font-black',
+      sliderAccent: 'accent-teal-500',
     },
   };
 
   const scheme = colorMap[themeColor];
-  const valueColor = isLight ? scheme.lightValue : scheme.darkValue;
-
   const presets = PARAM_PRESETS[field as string] || [];
 
   return (
     <div
       ref={popoverRef}
-      className={`relative flex-1 min-w-[135px] max-w-[185px] shrink-0 rounded-xl p-2 flex flex-col justify-between select-none transition-all duration-150 border ${
+      className={`relative flex-1 min-w-[170px] sm:min-w-[185px] md:min-w-[200px] shrink-0 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between select-none transition-all duration-150 border snap-start ${
         isChanged
           ? isLight
             ? 'bg-amber-50/90 border-amber-500 shadow-lg ring-2 ring-amber-400/60'
-            : 'bg-[#18130e] border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.35)] ring-1 ring-amber-500/80'
+            : 'bg-[#1b150b] border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.35)] ring-1 ring-amber-500/70'
           : isLight
           ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-sm'
-          : 'bg-[#0c0e17] hover:bg-[#111422] border-zinc-800/90 shadow-inner'
+          : 'bg-[#0b0e1a] hover:bg-[#111527] border-zinc-800 shadow-inner'
       }`}
     >
-      {/* 0. Floating Confirmation Button (Appears directly on top of the modified parameter button) */}
-      {isChanged && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 shadow-2xl animate-bounce">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              audioEngine.playConfirmBeep();
-              if (onConfirm) onConfirm();
-            }}
-            className="px-2 py-0.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-black text-[9.5px] flex items-center gap-1 shadow-lg ring-1 ring-white cursor-pointer"
-            title="Confirmar ajuste para entrar no próximo ciclo"
-          >
-            <Check className="w-3 h-3 stroke-[3]" />
-            <span>CONFIRMAR</span>
-          </button>
-          {onDiscardParam && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                audioEngine.playClick(750);
-                onDiscardParam();
-              }}
-              className="p-0.5 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-600 shadow-md cursor-pointer"
-              title="Cancelar e restaurar valor anterior"
-            >
-              <X className="w-2.5 h-2.5" />
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* 1. Header: Acronym, Title & Unit */}
+      {/* 1. Header Row: Acronym Badge + Title */}
       <div className="flex items-center justify-between gap-1 leading-none">
-        <div className="flex items-baseline gap-1 truncate">
-          <span
-            className={`font-mono font-black text-xs tracking-tight ${
-              isChanged
-                ? isLight ? 'text-amber-900 font-extrabold' : 'text-amber-300 font-extrabold'
-                : isLight ? 'text-slate-900' : 'text-white'
-            }`}
-          >
-            {acronym}
-          </span>
-          <span
-            className={`text-[9px] font-sans font-medium truncate ${
-              isLight ? 'text-slate-600' : 'text-zinc-400'
-            }`}
-            title={title}
-          >
-            {title}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1 shrink-0">
-          {isChanged && (
-            <span
-              className={`text-[8px] font-mono font-bold px-1 py-0.2 rounded border uppercase ${
-                isLight
-                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                  : 'bg-amber-950 text-amber-300 border-amber-600/70'
-              }`}
-              title={`Valor ativo: ${activeVal}`}
-            >
-              Proposto
-            </span>
-          )}
-          <span
-            className={`text-[9px] font-mono font-bold px-1 py-0.5 rounded ${
-              isLight
-                ? 'bg-slate-100 text-slate-700'
-                : 'bg-[#151928] text-zinc-300'
-            }`}
-          >
-            {unit}
-          </span>
-        </div>
+        <span
+          className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-black border uppercase tracking-wider shadow-xs ${scheme.badgeBg}`}
+        >
+          {acronym}
+        </span>
+        <span
+          className={`text-xs font-display font-bold truncate ${
+            isLight ? 'text-slate-700' : 'text-zinc-300'
+          }`}
+          title={title}
+        >
+          {title}
+        </span>
       </div>
 
-      {/* 2. Hero Digital Readout with Flanking Tactile Touch Steppers */}
-      <div className="flex items-center justify-between gap-1 my-1">
+      {/* 2. Value Readout with - and + Steppers (Optimized for Tablet Touch Targets) */}
+      <div className="flex items-center justify-between gap-1.5 my-1.5">
         {/* Minus Button */}
         <button
           type="button"
@@ -280,114 +193,41 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
           onPointerUp={stopHolding}
           onPointerLeave={stopHolding}
           disabled={safeVal <= min}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
             safeVal <= min
               ? isLight
                 ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
-                : 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
+                : 'bg-zinc-900 text-zinc-700 border-zinc-800 cursor-not-allowed'
               : isLight
-              ? 'bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border-slate-300 shadow-sm font-bold'
-              : 'bg-[#191d2d] hover:bg-[#23293f] active:bg-[#2a314c] text-zinc-100 border-zinc-700/80 shadow-sm font-bold'
+              ? 'bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border-slate-300 shadow-sm font-black'
+              : 'bg-[#181d30] hover:bg-[#232a45] active:bg-[#2c3558] text-white border-zinc-700/90 shadow-sm font-black'
           }`}
           title="Diminuir (mantenha pressionado para aceleração)"
         >
-          <Minus className="w-3.5 h-3.5 stroke-[3]" />
+          <Minus className="w-5 h-5 stroke-[3]" />
         </button>
 
-        {/* Center Value */}
-        <div className="flex-1 text-center min-w-0 px-1 relative">
-          {isEditing ? (
-            <input
-              type="number"
-              step={step}
-              autoFocus
-              value={tempInputVal}
-              onChange={(e) => setTempInputVal(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const parsed = parseFloat(tempInputVal);
-                  if (!isNaN(parsed)) {
-                    onUpdate(field, Math.max(min, Math.min(max, parsed)));
-                  }
-                  setIsEditing(false);
-                } else if (e.key === 'Escape') {
-                  setIsEditing(false);
-                }
-              }}
-              onBlur={() => {
-                const parsed = parseFloat(tempInputVal);
-                if (!isNaN(parsed)) {
-                  onUpdate(field, Math.max(min, Math.min(max, parsed)));
-                }
-                setIsEditing(false);
-              }}
-              className={`w-full font-mono text-base font-black text-center rounded-md outline-none border ${
-                isLight
-                  ? 'bg-white border-cyan-600 text-slate-950 shadow-inner'
-                  : 'bg-[#06080e] border-cyan-500 text-white shadow-inner'
-              }`}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowPresets((prev) => !prev)}
-              onDoubleClick={() => {
-                setTempInputVal(safeVal.toString());
-                setIsEditing(true);
-              }}
-              className="group w-full block cursor-pointer transition-transform active:scale-95"
-              title="Clique para atalhos rápidos ou duplo clique para digitar valor"
-            >
-              <span
-                className={`font-mono text-2xl font-black tabular-nums tracking-tight block truncate ${valueColor}`}
-              >
-                {typeof safeVal === 'number'
-                  ? safeVal % 1 !== 0
-                    ? safeVal.toFixed(1)
-                    : safeVal
-                  : safeVal}
-              </span>
-            </button>
-          )}
-
-          {/* Quick Presets Popover */}
-          {showPresets && presets.length > 0 && (
-            <div
-              className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 p-1.5 rounded-xl border shadow-xl z-50 min-w-[140px] flex flex-wrap gap-1 justify-center animate-fadeIn ${
-                isLight ? 'bg-white border-slate-300' : 'bg-[#111422] border-zinc-700'
-              }`}
-            >
-              <div
-                className={`w-full text-[8.5px] font-mono font-bold uppercase pb-1 text-center border-b mb-0.5 ${
-                  isLight ? 'border-slate-200 text-slate-600' : 'border-zinc-800 text-zinc-400'
-                }`}
-              >
-                Atalhos Rápidos
-              </div>
-              {presets.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => {
-                    audioEngine.playKnobTick();
-                    onUpdate(field, preset);
-                    setShowPresets(false);
-                  }}
-                  className={`px-1.5 py-0.5 text-[9.5px] font-mono font-bold rounded cursor-pointer transition-all border ${
-                    safeVal === preset
-                      ? isLight
-                        ? 'bg-cyan-700 text-white border-cyan-700'
-                        : 'bg-cyan-500 text-black border-cyan-400 font-black'
-                      : isLight
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-                      : 'bg-[#1a1f33] hover:bg-[#252c48] text-zinc-200 border-zinc-700'
-                  }`}
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Value Display (Click to open presets) */}
+        <div
+          onClick={() => {
+            if (presets.length > 0) {
+              audioEngine.playClick(1000);
+              setShowPresets((p) => !p);
+            }
+          }}
+          className={`flex-1 flex items-baseline justify-center gap-1 cursor-pointer rounded-xl py-1 px-1 border transition-all ${
+            isLight
+              ? 'hover:bg-slate-100 border-transparent hover:border-slate-300'
+              : 'hover:bg-[#15192c] border-transparent hover:border-zinc-700'
+          }`}
+          title="Clique para abrir atalhos rápidos de valores"
+        >
+          <span className={`text-2xl sm:text-3xl font-mono tabular-nums tracking-tight ${scheme.valueText}`}>
+            {step < 1 ? safeVal.toFixed(1) : Math.round(safeVal)}
+          </span>
+          <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+            {unit}
+          </span>
         </div>
 
         {/* Plus Button */}
@@ -397,56 +237,81 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
           onPointerUp={stopHolding}
           onPointerLeave={stopHolding}
           disabled={safeVal >= max}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
             safeVal >= max
               ? isLight
                 ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
-                : 'bg-zinc-900 text-zinc-600 border-zinc-800 cursor-not-allowed'
+                : 'bg-zinc-900 text-zinc-700 border-zinc-800 cursor-not-allowed'
               : isLight
-              ? 'bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border-slate-300 shadow-sm font-bold'
-              : 'bg-[#191d2d] hover:bg-[#23293f] active:bg-[#2a314c] text-zinc-100 border-zinc-700/80 shadow-sm font-bold'
+              ? 'bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-900 border-slate-300 shadow-sm font-black'
+              : 'bg-[#181d30] hover:bg-[#232a45] active:bg-[#2c3558] text-white border-zinc-700/90 shadow-sm font-black'
           }`}
           title="Aumentar (mantenha pressionado para aceleração)"
         >
-          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+          <Plus className="w-5 h-5 stroke-[3]" />
         </button>
+
+        {/* Quick Presets Popover */}
+        {showPresets && presets.length > 0 && (
+          <div
+            className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 rounded-2xl border shadow-2xl z-50 min-w-[160px] flex flex-wrap gap-1 justify-center animate-fadeIn ${
+              isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#121626] border-zinc-700 text-white'
+            }`}
+          >
+            <div
+              className={`w-full text-[9.5px] font-mono font-bold uppercase pb-1 text-center border-b mb-1 ${
+                isLight ? 'border-slate-200 text-slate-500' : 'border-zinc-800 text-zinc-400'
+              }`}
+            >
+              Atalhos Rápidos ({acronym})
+            </div>
+            {presets.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => {
+                  audioEngine.playKnobTick();
+                  onUpdate(field, preset);
+                  setShowPresets(false);
+                }}
+                className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg cursor-pointer transition-all border ${
+                  safeVal === preset
+                    ? isLight
+                      ? 'bg-cyan-700 text-white border-cyan-700 font-black'
+                      : 'bg-cyan-500 text-black border-cyan-400 font-black shadow-md'
+                    : isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                    : 'bg-[#1c223a] hover:bg-[#283052] text-zinc-200 border-zinc-700'
+                }`}
+              >
+                {preset} {unit}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* 3. Physiological Range Gauge / Interactive Scrubber */}
-      <div className="flex items-center gap-1.5 mt-0.5">
-        <span
-          className={`text-[8.5px] font-mono font-bold shrink-0 ${
-            isLight ? 'text-slate-600' : 'text-zinc-400'
-          }`}
-        >
+      {/* 3. Touch Scrubber Slider */}
+      <div className="flex items-center gap-2 mt-0.5">
+        <span className={`text-[9.5px] font-mono font-bold shrink-0 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
           {min}
         </span>
-
-        <div className="flex-1 relative flex items-center">
-          <input
-            type="range"
-            min={min}
-            max={max}
-            step={step}
-            value={safeVal}
-            onChange={(e) => {
-              audioEngine.playKnobTick();
-              const val = parseFloat(e.target.value);
-              if (!isNaN(val)) onUpdate(field, val);
-            }}
-            className={`w-full h-1.5 rounded-full appearance-none cursor-pointer relative z-10 transition-all ${
-              isLight
-                ? 'bg-slate-200 accent-cyan-700'
-                : 'bg-zinc-800 accent-cyan-400'
-            }`}
-          />
-        </div>
-
-        <span
-          className={`text-[8.5px] font-mono font-bold shrink-0 ${
-            isLight ? 'text-slate-600' : 'text-zinc-400'
-          }`}
-        >
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={safeVal}
+          onChange={(e) => {
+            audioEngine.playKnobTick();
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val)) onUpdate(field, val);
+          }}
+          className={`w-full h-2 rounded-full appearance-none cursor-pointer relative z-10 transition-all ${
+            isLight ? 'bg-slate-200' : 'bg-zinc-800'
+          } ${scheme.sliderAccent}`}
+        />
+        <span className={`text-[9.5px] font-mono font-bold shrink-0 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
           {max}
         </span>
       </div>
@@ -463,20 +328,20 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
   onDiscard,
 }) => {
   const { isLight } = useTheme();
-
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const mode = draftSettings.mode;
 
   const handleModeChange = (newMode: VentilationMode) => {
-    audioEngine.playClick(850);
+    audioEngine.playClick(1000);
     const updated: VentilatorSettings = {
       ...draftSettings,
       mode: newMode,
     };
 
     if (newMode === 'VCV') {
-      updated.tidalVolume = updated.tidalVolume || 450;
-      updated.flowWaveform = updated.flowWaveform || 'square';
-      updated.inspiratoryPausePercent = updated.inspiratoryPausePercent ?? 10;
+      updated.tidalVolume = updated.tidalVolume || 420;
+      updated.inspiratoryFlow = updated.inspiratoryFlow || 60;
+      updated.flowWaveform = updated.flowWaveform || 'decelerating';
     } else if (newMode === 'PCV') {
       updated.inspiratoryPressure = updated.inspiratoryPressure || 15;
       updated.inspiratoryTimePCV = updated.inspiratoryTimePCV || 1.0;
@@ -499,33 +364,34 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
     });
   };
 
-  const modes: { id: VentilationMode; label: string; desc: string }[] = [
-    { id: 'VCV', label: 'VCV', desc: 'Volume Controlado' },
-    { id: 'PCV', label: 'PCV', desc: 'Pressão Controlada' },
-    { id: 'PSV', label: 'PSV', desc: 'Pressão de Suporte' },
-    { id: 'SIMV_VC', label: 'SIMV-VC', desc: 'Sincronizada Intermitente' },
-    { id: 'CPAP', label: 'CPAP', desc: 'Pressão Contínua' },
+  const modes: { id: VentilationMode; label: string; sub: string }[] = [
+    { id: 'VCV', label: 'VCV', sub: 'Vol. Controlado' },
+    { id: 'PCV', label: 'PCV', sub: 'Pressão Control.' },
+    { id: 'PSV', label: 'PSV', sub: 'Suporte Espontâneo' },
+    { id: 'APRV', label: 'APRV', sub: 'Liberação Pressão' },
+    { id: 'SIMV_VC', label: 'SIMV-VC', sub: 'Intermitente Sinc.' },
+    { id: 'CPAP', label: 'CPAP', sub: 'Pressão Contínua' },
   ];
 
   return (
     <div
       className={`rounded-2xl border shadow-xl flex flex-col h-full overflow-hidden select-none transition-colors ${
-        isLight ? 'bg-white border-slate-200' : 'bg-[#080910] border-zinc-800'
+        isLight ? 'bg-white border-slate-200' : 'bg-[#070912] border-zinc-800'
       }`}
     >
-      {/* Top Header of Bottom Bar: Mode Selector & Confirmation/Discard Actions */}
+      {/* 1. TOP HEADER: High-Visibility Mode Selector Tabs + Master Actions */}
       <div
-        className={`px-3 py-1.5 border-b flex flex-wrap items-center justify-between gap-2 shrink-0 ${
-          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0b0d17] border-zinc-800'
+        className={`px-3.5 py-2 border-b flex flex-wrap items-center justify-between gap-2 shrink-0 ${
+          isLight ? 'bg-slate-100/90 border-slate-200' : 'bg-[#0d101d] border-zinc-800'
         }`}
       >
-        {/* Left: Mode Buttons (Medical Segmented Tab Bar) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          <div className="flex items-center gap-1 mr-1">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-500" />
+        {/* Left: Mode Buttons Bar (Scrollable / Swipeable on Tablet) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none snap-x">
+          <div className="flex items-center gap-1.5 mr-1 shrink-0">
+            <SlidersHorizontal className="w-4 h-4 text-cyan-500" />
             <span
-              className={`text-[10px] font-display font-black uppercase tracking-wider shrink-0 ${
-                isLight ? 'text-slate-800' : 'text-zinc-300'
+              className={`text-xs font-display font-black uppercase tracking-wider shrink-0 ${
+                isLight ? 'text-slate-800' : 'text-zinc-200'
               }`}
             >
               MODO:
@@ -533,8 +399,8 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           </div>
 
           <div
-            className={`flex items-center p-0.5 rounded-xl border ${
-              isLight ? 'bg-slate-200/80 border-slate-300' : 'bg-[#121524] border-zinc-700/60'
+            className={`flex items-center p-1 rounded-2xl border gap-1 shrink-0 ${
+              isLight ? 'bg-slate-200/90 border-slate-300' : 'bg-[#141829] border-zinc-700/70'
             }`}
           >
             {modes.map((m) => {
@@ -544,78 +410,95 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                   key={m.id}
                   type="button"
                   onClick={() => handleModeChange(m.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex flex-col items-start gap-0 shrink-0 snap-start relative ${
                     isActive
                       ? isLight
-                        ? 'bg-white text-cyan-900 border border-slate-300 shadow-sm font-black'
-                        : 'bg-cyan-500 text-black border border-cyan-400 font-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                        ? 'bg-white text-slate-900 border border-slate-300 shadow-md font-black ring-2 ring-cyan-500/30'
+                        : 'bg-gradient-to-r from-cyan-500 to-sky-500 text-black border border-cyan-300 font-black shadow-[0_0_16px_rgba(6,182,212,0.5)]'
                       : isLight
-                      ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-semibold'
-                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-[#191d30]'
+                      ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
+                      : 'text-zinc-300 hover:text-white hover:bg-[#1f253e] font-bold'
                   }`}
-                  title={m.desc}
+                  title={`${m.label} - ${m.sub}`}
                 >
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isActive
+                          ? isLight
+                            ? 'bg-cyan-600 shadow-[0_0_6px_#0891b2]'
+                            : 'bg-black'
+                          : 'bg-zinc-500/50'
+                      }`}
+                    />
+                    <span className="text-xs font-mono font-black">{m.label}</span>
+                  </div>
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      isActive
-                        ? isLight ? 'bg-cyan-700' : 'bg-black'
-                        : isLight ? 'bg-slate-400' : 'bg-zinc-600'
+                    className={`text-[9.5px] font-sans font-semibold line-clamp-1 ${
+                      isActive ? (isLight ? 'text-cyan-800 font-bold' : 'text-slate-950 font-bold') : 'text-zinc-400'
                     }`}
-                  />
-                  <span>{m.label}</span>
+                  >
+                    {m.sub}
+                  </span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Right: Confirmation Dock with Clinical Safety Alerts */}
+        {/* Right: Advanced Toggle & Confirmation / Discard Dock */}
         <div className="flex items-center gap-2 ml-auto shrink-0">
-          {hasChanges && (
-            <button
-              type="button"
-              onClick={() => {
-                audioEngine.playClick(750);
-                onDiscard();
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
-                isLight
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-sm'
-                  : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
-              }`}
-              title="Cancelar modificações e voltar aos parâmetros originais"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>Descartar</span>
-            </button>
-          )}
+          {/* Advanced Parameters Expander Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              audioEngine.playClick(900);
+              setShowAdvanced((prev) => !prev);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
+              showAdvanced
+                ? isLight
+                  ? 'bg-cyan-50 text-cyan-900 border-cyan-400 ring-1 ring-cyan-400'
+                  : 'bg-cyan-950/80 text-cyan-300 border-cyan-500/80'
+                : isLight
+                ? 'bg-white hover:bg-slate-200 text-slate-800 border-slate-300'
+                : 'bg-[#15192b] hover:bg-[#1f253d] text-zinc-300 border-zinc-700'
+            }`}
+            title="Exibir ou ocultar parâmetros avançados (Forma de onda, Pausa, Esens)"
+          >
+            <Settings2 className="w-4 h-4 text-cyan-400" />
+            <span className="hidden sm:inline">Avançados</span>
+          </button>
 
+          {/* Master Confirm Button (Transforms from PARÂMETROS ATIVOS into CONFIRMAR PARÂMETROS when modified) */}
           <button
             type="button"
             disabled={!hasChanges}
             onClick={() => {
-              audioEngine.playConfirmBeep();
-              onConfirm();
+              if (hasChanges) {
+                audioEngine.playConfirmBeep();
+                onConfirm();
+              }
             }}
-            className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-2 border cursor-pointer ${
               hasChanges
                 ? isLight
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-md animate-pulse font-black'
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_18px_rgba(16,185,129,0.5)] animate-pulse font-black'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-lg animate-pulse font-black'
+                  : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_22px_rgba(16,185,129,0.7)] animate-pulse font-black'
                 : isLight
-                ? 'bg-slate-100 text-slate-500 border-slate-300 cursor-not-allowed font-medium'
-                : 'bg-[#12141f] text-zinc-500 border-zinc-800 cursor-not-allowed opacity-60'
+                ? 'bg-slate-100 text-slate-500 border-slate-300 cursor-default font-semibold'
+                : 'bg-[#121422] text-zinc-500 border-zinc-800 cursor-default opacity-70'
             }`}
           >
-            <Check className="w-3.5 h-3.5 stroke-[3]" />
+            <Check className={`w-4 h-4 stroke-[3] ${hasChanges ? 'animate-bounce' : ''}`} />
             <span>{hasChanges ? 'CONFIRMAR PARÂMETROS' : 'PARÂMETROS ATIVOS'}</span>
           </button>
         </div>
       </div>
 
-      {/* Horizontal Parameters List (Direct Touch Tiles arranged in one continuous, ergonomic row) */}
-      <div className="p-2 flex items-stretch gap-2 overflow-x-auto flex-1 min-h-0">
-        {/* 1. Primary Volume / Pressure controls */}
+      {/* 2. PARAMETERS DOCK: Horizontal Scrollable Touch Row for Tablet & Desktop */}
+      <div className="p-2.5 sm:p-3 flex items-stretch gap-2.5 sm:gap-3.5 overflow-x-auto flex-1 min-h-0 scrollbar-thin snap-x">
+        {/* 1. Primary Volume / Pressure Controls */}
         {(mode === 'VCV' || mode === 'SIMV_VC') && (
           <TouchParamTile
             title="Volume Corrente"
@@ -629,8 +512,6 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="mL"
             themeColor="cyan"
             onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('tidalVolume', settings.tidalVolume)}
           />
         )}
 
@@ -647,8 +528,6 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="cmH₂O"
             themeColor="cyan"
             onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('inspiratoryPressure', settings.inspiratoryPressure ?? 15)}
           />
         )}
 
@@ -665,12 +544,10 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="cmH₂O"
             themeColor="cyan"
             onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('pressureSupport', settings.pressureSupport ?? 10)}
           />
         )}
 
-        {/* 2. Frequency / Rate */}
+        {/* 2. Respiratory Rate / Frequency */}
         {mode === 'SIMV_VC' && (
           <TouchParamTile
             title="Freq. SIMV"
@@ -684,8 +561,6 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="rpm"
             themeColor="emerald"
             onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('simvRate', settings.simvRate ?? 8)}
           />
         )}
 
@@ -702,8 +577,6 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="rpm"
             themeColor="emerald"
             onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('respiratoryRate', settings.respiratoryRate)}
           />
         )}
 
@@ -721,14 +594,12 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="s"
             themeColor="purple"
             onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('inspiratoryTimePCV', settings.inspiratoryTimePCV)}
           />
         )}
 
         {/* 4. PEEP */}
         <TouchParamTile
-          title="Pressão Exp. Final"
+          title="PEEP / CPAP"
           acronym="PEEP"
           field="peep"
           value={draftSettings.peep}
@@ -739,13 +610,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           unit="cmH₂O"
           themeColor="blue"
           onUpdate={updateField}
-          onConfirm={onConfirm}
-          onDiscardParam={() => updateField('peep', settings.peep)}
         />
 
         {/* 5. FiO2 */}
         <TouchParamTile
-          title="Fração de Oxigênio"
+          title="Fração Oxigênio"
           acronym="FiO₂"
           field="fio2"
           value={draftSettings.fio2}
@@ -756,36 +625,29 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           unit="%"
           themeColor="amber"
           onUpdate={updateField}
-          onConfirm={onConfirm}
-          onDiscardParam={() => updateField('fio2', settings.fio2)}
         />
 
-        {/* 6. Ergonomic Trigger / Disparo Tile */}
+        {/* 6. Disparo & Sensibilidade Card */}
         <div
-          className={`flex-1 min-w-[155px] max-w-[200px] shrink-0 rounded-xl p-2 flex flex-col justify-between select-none transition-all duration-150 border ${
+          className={`flex-1 min-w-[175px] sm:min-w-[190px] md:min-w-[210px] shrink-0 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between select-none transition-all duration-150 border snap-start ${
             isLight
               ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-sm'
-              : 'bg-[#0c0e17] hover:bg-[#111422] border-zinc-800/90 shadow-inner'
+              : 'bg-[#0b0e1a] hover:bg-[#111527] border-zinc-800 shadow-inner'
           }`}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between gap-1 leading-none">
-            <span
-              className={`font-mono font-black text-xs tracking-tight ${
-                isLight ? 'text-slate-900' : 'text-white'
-              }`}
-            >
+          <div className="flex items-center justify-between gap-1 leading-none mb-1">
+            <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-black border uppercase tracking-wider bg-amber-500/20 text-amber-300 border-amber-500/40">
               DISPARO
             </span>
-            <span className={`text-[9px] font-sans font-medium ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+            <span className={`text-xs font-display font-bold ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
               Sensibilidade
             </span>
           </div>
 
-          {/* Trigger Type Segmented Toggle */}
+          {/* Trigger Type Toggle */}
           <div
-            className={`flex p-0.5 rounded-lg border my-0.5 ${
-              isLight ? 'bg-slate-100 border-slate-300' : 'bg-[#070810] border-zinc-800'
+            className={`flex p-0.5 rounded-xl border my-1 ${
+              isLight ? 'bg-slate-100 border-slate-300' : 'bg-[#060812] border-zinc-800'
             }`}
           >
             <button
@@ -794,17 +656,17 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 audioEngine.playClick(950);
                 onUpdateDraft({ ...draftSettings, triggerType: 'flow', triggerSensitivity: 2.0 });
               }}
-              className={`flex-1 py-0.5 text-[8.5px] font-mono font-bold rounded flex items-center justify-center gap-1 cursor-pointer transition-all ${
+              className={`flex-1 py-1 text-[9.5px] font-mono font-bold rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-all ${
                 draftSettings.triggerType === 'flow'
                   ? isLight
-                    ? 'bg-cyan-700 text-white shadow-sm font-black'
-                    : 'bg-cyan-500 text-black shadow-sm font-black'
+                    ? 'bg-cyan-700 text-white shadow font-black'
+                    : 'bg-cyan-500 text-black shadow font-black'
                   : isLight
                   ? 'text-slate-700 hover:text-slate-900 font-semibold'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              <Wind className="w-2.5 h-2.5" />
+              <Wind className="w-3.5 h-3.5" />
               <span>FLUXO</span>
             </button>
             <button
@@ -813,23 +675,23 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 audioEngine.playClick(950);
                 onUpdateDraft({ ...draftSettings, triggerType: 'pressure', triggerSensitivity: 2.0 });
               }}
-              className={`flex-1 py-0.5 text-[8.5px] font-mono font-bold rounded flex items-center justify-center gap-1 cursor-pointer transition-all ${
+              className={`flex-1 py-1 text-[9.5px] font-mono font-bold rounded-lg flex items-center justify-center gap-1 cursor-pointer transition-all ${
                 draftSettings.triggerType === 'pressure'
                   ? isLight
-                    ? 'bg-cyan-700 text-white shadow-sm font-black'
-                    : 'bg-cyan-500 text-black shadow-sm font-black'
+                    ? 'bg-cyan-700 text-white shadow font-black'
+                    : 'bg-cyan-500 text-black shadow font-black'
                   : isLight
                   ? 'text-slate-700 hover:text-slate-900 font-semibold'
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              <Gauge className="w-2.5 h-2.5" />
+              <Gauge className="w-3.5 h-3.5" />
               <span>PRESSÃO</span>
             </button>
           </div>
 
-          {/* Steppers & Sensitivity Value */}
-          <div className="flex items-center justify-between gap-1 my-0.5">
+          {/* Value Steppers */}
+          <div className="flex items-center justify-between gap-1.5">
             <button
               type="button"
               onClick={() => {
@@ -838,21 +700,20 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 const nextVal = Math.max(0.5, Number(((draftSettings.triggerSensitivity ?? 2.0) - stepVal).toFixed(1)));
                 updateField('triggerSensitivity', nextVal);
               }}
-              className={`w-7 h-7 rounded-lg flex items-center justify-center border cursor-pointer active:scale-90 transition-all shrink-0 ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center border cursor-pointer active:scale-90 transition-all shrink-0 ${
                 isLight
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300 shadow-sm font-bold'
-                  : 'bg-[#191d2d] hover:bg-[#23293f] text-zinc-100 border-zinc-700 font-bold'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300 shadow-sm font-black'
+                  : 'bg-[#181d30] hover:bg-[#232a45] text-white border-zinc-700 font-black'
               }`}
-              title="Diminuir sensibilidade"
             >
-              <Minus className="w-3.5 h-3.5 stroke-[3]" />
+              <Minus className="w-4 h-4 stroke-[3]" />
             </button>
 
-            <div className="flex items-baseline justify-center gap-0.5 min-w-0">
-              <span className={`text-xl font-mono font-black tabular-nums ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
+            <div className="flex items-baseline justify-center gap-0.5">
+              <span className={`text-2xl font-mono font-black tabular-nums ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
                 {(draftSettings.triggerSensitivity ?? 2.0).toFixed(1)}
               </span>
-              <span className={`text-[8.5px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+              <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
                 {draftSettings.triggerType === 'flow' ? 'L/min' : 'cmH₂O'}
               </span>
             </div>
@@ -866,178 +727,118 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 const nextVal = Math.min(maxVal, Number(((draftSettings.triggerSensitivity ?? 2.0) + stepVal).toFixed(1)));
                 updateField('triggerSensitivity', nextVal);
               }}
-              className={`w-7 h-7 rounded-lg flex items-center justify-center border cursor-pointer active:scale-90 transition-all shrink-0 ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center border cursor-pointer active:scale-90 transition-all shrink-0 ${
                 isLight
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300 shadow-sm font-bold'
-                  : 'bg-[#191d2d] hover:bg-[#23293f] text-zinc-100 border-zinc-700 font-bold'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-900 border-slate-300 shadow-sm font-black'
+                  : 'bg-[#181d30] hover:bg-[#232a45] text-white border-zinc-700 font-black'
               }`}
-              title="Aumentar sensibilidade"
             >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+              <Plus className="w-4 h-4 stroke-[3]" />
             </button>
-          </div>
-
-          {/* Quick Info bar */}
-          <div
-            className={`flex items-center justify-between text-[8px] font-mono font-bold ${
-              isLight ? 'text-slate-600' : 'text-zinc-400'
-            }`}
-          >
-            <span>Faixa</span>
-            <span>{draftSettings.triggerType === 'flow' ? '0.5 – 10 L/m' : '0.5 – 5 cm'}</span>
           </div>
         </div>
 
-        {/* 7. Graphical Flow Waveform Tile (VCV & SIMV) with Authentic Waveform Glyphs */}
-        {(mode === 'VCV' || mode === 'SIMV_VC') && (
-          <div
-            className={`flex-1 min-w-[145px] max-w-[185px] shrink-0 rounded-xl p-2 flex flex-col justify-between select-none transition-all duration-150 border ${
-              isLight
-                ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-sm'
-                : 'bg-[#0c0e17] hover:bg-[#111422] border-zinc-800/90 shadow-inner'
-            }`}
-          >
-            <div className="flex items-center justify-between leading-none">
-              <span
-                className={`font-mono font-black text-xs tracking-tight ${
-                  isLight ? 'text-slate-900' : 'text-white'
+        {/* 7. Secondary / Advanced Parameters (Waveform, Pause, Esens) when showAdvanced is active */}
+        {showAdvanced && (
+          <>
+            {/* Waveform Selector */}
+            {(mode === 'VCV' || mode === 'SIMV_VC') && (
+              <div
+                className={`flex-1 min-w-[165px] sm:min-w-[180px] shrink-0 rounded-2xl p-3 flex flex-col justify-between border animate-fadeIn ${
+                  isLight ? 'bg-white border-slate-300 shadow-sm' : 'bg-[#0b0e1a] border-zinc-800 shadow-inner'
                 }`}
               >
-                ONDA DE FLUXO
-              </span>
-              <span className={`text-[8.5px] font-mono font-bold ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                VCV
-              </span>
-            </div>
+                <div className="flex items-center justify-between leading-none mb-1">
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-black border uppercase tracking-wider bg-purple-500/20 text-purple-300 border-purple-500/40">
+                    ONDA FLUXO
+                  </span>
+                  <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+                    VCV
+                  </span>
+                </div>
 
-            {/* Visual Waveform Selectors with Realistic Clinical Glyphs */}
-            <div className="grid grid-cols-2 gap-1.5 my-1">
-              {/* Square wave button */}
-              <button
-                type="button"
-                onClick={() => {
-                  audioEngine.playClick(950);
-                  onUpdateDraft({ ...draftSettings, flowWaveform: 'square' });
-                }}
-                className={`py-1 px-1.5 rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all ${
-                  draftSettings.flowWaveform === 'square'
-                    ? isLight
-                      ? 'bg-cyan-50 border-cyan-600 text-cyan-950 ring-1 ring-cyan-600 shadow-sm'
-                      : 'bg-cyan-950/60 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
-                    : isLight
-                    ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
-                    : 'bg-[#151928] hover:bg-[#1f253d] border-zinc-700 text-zinc-400'
-                }`}
-              >
-                {/* SVG Square Flow Graphic */}
-                <svg className="w-8 h-4 my-0.5" viewBox="0 0 40 20" fill="none">
-                  <path
-                    d="M 2 18 L 8 18 L 8 4 L 32 4 L 32 18 L 38 18"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-[8.5px] font-mono font-bold uppercase">Quadrada</span>
-              </button>
+                <div className="grid grid-cols-2 gap-1.5 my-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioEngine.playClick(950);
+                      onUpdateDraft({ ...draftSettings, flowWaveform: 'square' });
+                    }}
+                    className={`py-1.5 px-1 rounded-xl border flex flex-col items-center justify-center cursor-pointer transition-all ${
+                      draftSettings.flowWaveform === 'square'
+                        ? isLight
+                          ? 'bg-cyan-50 border-cyan-600 text-cyan-950 ring-1 ring-cyan-600 shadow-sm'
+                          : 'bg-cyan-950/70 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                        : isLight
+                        ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                        : 'bg-[#151928] hover:bg-[#1f253d] border-zinc-700 text-zinc-400'
+                    }`}
+                  >
+                    <svg className="w-8 h-4" viewBox="0 0 40 20" fill="none">
+                      <path d="M 2 18 L 8 18 L 8 4 L 32 4 L 32 18 L 38 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="text-[9px] font-mono font-bold uppercase mt-0.5">Quadrada</span>
+                  </button>
 
-              {/* Decelerating Ramp wave button */}
-              <button
-                type="button"
-                onClick={() => {
-                  audioEngine.playClick(950);
-                  onUpdateDraft({ ...draftSettings, flowWaveform: 'decelerating' });
-                }}
-                className={`py-1 px-1.5 rounded-lg border flex flex-col items-center justify-center cursor-pointer transition-all ${
-                  draftSettings.flowWaveform === 'decelerating'
-                    ? isLight
-                      ? 'bg-cyan-50 border-cyan-600 text-cyan-950 ring-1 ring-cyan-600 shadow-sm'
-                      : 'bg-cyan-950/60 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
-                    : isLight
-                    ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
-                    : 'bg-[#151928] hover:bg-[#1f253d] border-zinc-700 text-zinc-400'
-                }`}
-              >
-                {/* SVG Decelerating Flow Graphic */}
-                <svg className="w-8 h-4 my-0.5" viewBox="0 0 40 20" fill="none">
-                  <path
-                    d="M 2 18 L 8 18 L 8 4 L 32 18 L 38 18"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="text-[8.5px] font-mono font-bold uppercase">Decresc.</span>
-              </button>
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioEngine.playClick(950);
+                      onUpdateDraft({ ...draftSettings, flowWaveform: 'decelerating' });
+                    }}
+                    className={`py-1.5 px-1 rounded-xl border flex flex-col items-center justify-center cursor-pointer transition-all ${
+                      draftSettings.flowWaveform === 'decelerating'
+                        ? isLight
+                          ? 'bg-cyan-50 border-cyan-600 text-cyan-950 ring-1 ring-cyan-600 shadow-sm'
+                          : 'bg-cyan-950/70 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                        : isLight
+                        ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                        : 'bg-[#151928] hover:bg-[#1f253d] border-zinc-700 text-zinc-400'
+                    }`}
+                  >
+                    <svg className="w-8 h-4" viewBox="0 0 40 20" fill="none">
+                      <path d="M 2 18 L 8 18 L 8 4 L 32 18 L 38 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="text-[9px] font-mono font-bold uppercase mt-0.5">Decresc.</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
-            <span
-              className={`text-[8px] font-mono text-center font-bold ${
-                isLight ? 'text-slate-600' : 'text-zinc-400'
-              }`}
-            >
-              {draftSettings.flowWaveform === 'square' ? 'Fluxo Constante' : 'Rampa Desacelerada'}
-            </span>
-          </div>
-        )}
+            {/* Inspiratory Pause % */}
+            {(mode === 'VCV' || mode === 'SIMV_VC') && (
+              <TouchParamTile
+                title="Pausa Insp."
+                acronym="Pausa"
+                field="inspiratoryPausePercent"
+                value={draftSettings.inspiratoryPausePercent ?? 10}
+                activeVal={settings.inspiratoryPausePercent}
+                min={0}
+                max={30}
+                step={5}
+                unit="%"
+                themeColor="purple"
+                onUpdate={updateField}
+              />
+            )}
 
-        {/* 8. Inspiratory Pause (Pausa Insp %) */}
-        {(mode === 'VCV' || mode === 'SIMV_VC') && (
-          <TouchParamTile
-            title="Pausa Insp."
-            acronym="Pausa"
-            field="inspiratoryPausePercent"
-            value={draftSettings.inspiratoryPausePercent ?? 10}
-            activeVal={settings.inspiratoryPausePercent}
-            min={0}
-            max={30}
-            step={5}
-            unit="%"
-            themeColor="purple"
-            onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('inspiratoryPausePercent', settings.inspiratoryPausePercent ?? 10)}
-          />
-        )}
-
-        {/* 9. Expiratory Sensitivity (Esens %) - PSV & CPAP */}
-        {(mode === 'PSV' || mode === 'CPAP') && (
-          <TouchParamTile
-            title="Sensib. Expiratória"
-            acronym="Esens"
-            field="expiratorySensitivity"
-            value={draftSettings.expiratorySensitivity ?? 25}
-            activeVal={settings.expiratorySensitivity}
-            min={10}
-            max={70}
-            step={5}
-            unit="%"
-            themeColor="teal"
-            onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('expiratorySensitivity', settings.expiratorySensitivity ?? 25)}
-          />
-        )}
-
-        {/* 10. SIMV PS - SIMV_VC */}
-        {mode === 'SIMV_VC' && (
-          <TouchParamTile
-            title="Pressão Suporte"
-            acronym="PS"
-            field="simvPs"
-            value={draftSettings.simvPs ?? 10}
-            activeVal={settings.simvPs}
-            min={0}
-            max={30}
-            step={1}
-            unit="cmH₂O"
-            themeColor="blue"
-            onUpdate={updateField}
-            onConfirm={onConfirm}
-            onDiscardParam={() => updateField('simvPs', settings.simvPs ?? 10)}
-          />
+            {/* Expiratory Sensitivity % */}
+            {(mode === 'PSV' || mode === 'CPAP') && (
+              <TouchParamTile
+                title="Sensib. Expiratória"
+                acronym="Esens"
+                field="expiratorySensitivity"
+                value={draftSettings.expiratorySensitivity ?? 25}
+                activeVal={settings.expiratorySensitivity}
+                min={10}
+                max={70}
+                step={5}
+                unit="%"
+                themeColor="teal"
+                onUpdate={updateField}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

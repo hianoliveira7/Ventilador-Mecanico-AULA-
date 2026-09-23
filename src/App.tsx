@@ -242,7 +242,7 @@ export default function App() {
   const [isAudioBannerDismissed, setIsAudioBannerDismissed] = useState<boolean>(false);
 
   // 8a. Resizable Parameter Controls Splitter (Vertical height between graphs and parameters)
-  const [paramPanelHeight, setParamPanelHeight] = useState<number>(148);
+  const [paramPanelHeight, setParamPanelHeight] = useState<number>(200);
   const [isDraggingParamSplitter, setIsDraggingParamSplitter] = useState<boolean>(false);
   const [isParamPanelCollapsed, setIsParamPanelCollapsed] = useState<boolean>(false);
 
@@ -810,8 +810,8 @@ export default function App() {
           {/* Draggable Resizer Splitter between Graph Area and Parameter Controls */}
           <div
             onPointerDown={handleParamSplitterPointerDown}
-            onDoubleClick={() => setParamPanelHeight(148)}
-            title="Arraste verticalmente para ajustar o espaço entre os gráficos e os parâmetros (duplo clique para restaurar 148px)"
+            onDoubleClick={() => setParamPanelHeight(200)}
+            title="Arraste verticalmente para ajustar o espaço entre os gráficos e os parâmetros (duplo clique para restaurar 200px)"
             className={`group relative h-3.5 my-0.5 w-full cursor-row-resize flex items-center justify-center shrink-0 select-none z-20 transition-colors ${
               isDraggingParamSplitter ? 'bg-cyan-500/20' : ''
             }`}
@@ -860,8 +860,10 @@ export default function App() {
           {!isParamPanelCollapsed && (
             <div
               id="tour-parameters"
-              style={{ height: `${paramPanelHeight}px` }}
-              className="shrink-0 overflow-hidden"
+              style={{
+                height: `${Math.max(200, paramPanelHeight)}px`,
+              }}
+              className="shrink-0 overflow-y-auto lg:overflow-hidden transition-all"
             >
               <ParameterControls
                 settings={settings}
