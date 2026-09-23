@@ -19,6 +19,8 @@ import {
   Calculator,
   Layers,
   HeartPulse,
+  GraduationCap,
+  Target,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -42,6 +44,8 @@ interface ManeuverBarProps {
   onOpenClinicalCases?: () => void;
   onOpenCalculator?: () => void;
   onOpenAudio?: () => void;
+  onOpenQuiz?: () => void;
+  onOpenMissions?: () => void;
   onResetSimulation?: () => void;
 }
 
@@ -62,6 +66,8 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
   onOpenClinicalCases,
   onOpenCalculator,
   onOpenAudio,
+  onOpenQuiz,
+  onOpenMissions,
   onResetSimulation,
 }) => {
   const { isLight } = useTheme();
@@ -438,6 +444,62 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
                 </span>
               </div>
             </button>
+
+            {/* Missions Pop-up Button */}
+            {onOpenMissions && (
+              <button
+                onClick={() => {
+                  audioEngine.playClick(950);
+                  setIsDropdownOpen(false);
+                  onOpenMissions();
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left font-display font-medium text-xs transition-all cursor-pointer ${
+                  isLight ? 'hover:bg-amber-50 text-slate-800' : 'hover:bg-amber-950/40 text-zinc-200'
+                }`}
+              >
+                <div
+                  className={`p-1 rounded-lg border ${
+                    isLight ? 'bg-amber-50 text-amber-700 border-amber-300' : 'bg-amber-950 text-amber-400 border-amber-700/50'
+                  }`}
+                >
+                  <Target className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className={`font-bold ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>Missões & Metas Clínicas</span>
+                  <span className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+                    Janela flutuante de metas do caso
+                  </span>
+                </div>
+              </button>
+            )}
+
+            {/* Quiz Button */}
+            {onOpenQuiz && (
+              <button
+                onClick={() => {
+                  audioEngine.playClick(950);
+                  setIsDropdownOpen(false);
+                  onOpenQuiz();
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left font-display font-medium text-xs transition-all cursor-pointer ${
+                  isLight ? 'hover:bg-emerald-50 text-slate-800' : 'hover:bg-emerald-950/40 text-zinc-200'
+                }`}
+              >
+                <div
+                  className={`p-1 rounded-lg border ${
+                    isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-emerald-950 text-emerald-400 border-emerald-700/50'
+                  }`}
+                >
+                  <GraduationCap className="w-3.5 h-3.5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className={`font-bold ${isLight ? 'text-emerald-800' : 'text-emerald-300'}`}>Quiz de Fixação VM</span>
+                  <span className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+                    5 questões com feedback imediato
+                  </span>
+                </div>
+              </button>
+            )}
 
             {/* Audio Settings */}
             <button

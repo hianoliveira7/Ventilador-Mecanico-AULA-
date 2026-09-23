@@ -106,6 +106,10 @@ export interface MonitoredData {
   
   isPlateauMeasured: boolean;
   patientInteractionMessage: string; // Dynamic clinical status
+  activeAsynchrony?: 'none' | 'ineffective_effort' | 'double_trigger' | 'flow_starvation' | 'auto_trigger' | 'premature_cycling' | 'delayed_cycling';
+  asynchronyDescription?: string;
+  isEquilibrating?: boolean;
+  equilibrationProgressPercent?: number;
   
   // Mechanics
   staticCompliance: number; // mL/cmH2O (Cstat)

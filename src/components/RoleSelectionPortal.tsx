@@ -1,0 +1,422 @@
+import React from 'react';
+import {
+  GraduationCap,
+  UserCheck,
+  Target,
+  BookOpen,
+  HelpCircle,
+  Activity,
+  SlidersHorizontal,
+  ChevronRight,
+  Sparkles,
+  PlusCircle,
+  FileSpreadsheet,
+  X,
+} from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+import { audioEngine } from '../services/audioEngine';
+
+interface RoleSelectionPortalProps {
+  isOpen?: boolean;
+  currentRole?: 'student' | 'teacher' | null;
+  onSelectRole: (role: 'student' | 'teacher') => void;
+  onClose?: () => void;
+  onOpenTutorial?: () => void;
+  onOpenMissions?: () => void;
+  onOpenCases?: () => void;
+  onOpenQuiz?: () => void;
+  onOpenEducational?: () => void;
+  onOpenTeacherAdmin?: () => void;
+  onEnterSimulatorDirectly?: () => void;
+}
+
+export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
+  isOpen = true,
+  currentRole,
+  onSelectRole,
+  onClose,
+  onOpenTutorial,
+  onOpenMissions,
+  onOpenCases,
+  onOpenQuiz,
+  onOpenEducational,
+  onOpenTeacherAdmin,
+  onEnterSimulatorDirectly,
+}) => {
+  const { isLight } = useTheme();
+
+  if (isOpen === false) return null;
+
+  const handleChooseRole = (role: 'student' | 'teacher') => {
+    audioEngine.playConfirmBeep();
+    onSelectRole(role);
+  };
+
+  const handleEnterDirectly = () => {
+    audioEngine.playConfirmBeep();
+    if (onEnterSimulatorDirectly) {
+      onEnterSimulatorDirectly();
+    } else if (onClose) {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-fade-in">
+      <div
+        className={`w-full max-w-4xl rounded-3xl border shadow-2xl overflow-hidden my-auto transition-all relative ${
+          isLight
+            ? 'bg-gradient-to-b from-white to-slate-50 border-slate-300 text-slate-900'
+            : 'bg-gradient-to-b from-[#0d111d] to-[#070913] border-zinc-700 text-zinc-100'
+        }`}
+      >
+        {/* Top Close Button if onClose is available */}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className={`absolute top-4 right-4 z-20 p-2 rounded-full border transition-all cursor-pointer ${
+              isLight
+                ? 'bg-white/80 hover:bg-white text-slate-700 border-slate-200 shadow-sm'
+                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border-zinc-700'
+            }`}
+            title="Fechar Portal"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
+        {/* Top Hero Banner */}
+        <div
+          className={`p-6 border-b text-center relative overflow-hidden ${
+            isLight
+              ? 'bg-gradient-to-r from-cyan-600 via-sky-600 to-indigo-700 text-white'
+              : 'bg-gradient-to-r from-cyan-950/80 via-slate-900 to-indigo-950/80 border-zinc-800'
+          }`}
+        >
+          <div className="relative z-10 max-w-2xl mx-auto space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-xs font-mono font-bold tracking-wider uppercase">
+              <Activity className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+              <span>Simulador de Ventilação Mecânica em UTI</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-display font-black tracking-tight leading-tight">
+              Portal de Acesso & Aprendizagem Clínica
+            </h1>
+            <p className="text-xs md:text-sm font-sans opacity-90 max-w-xl mx-auto">
+              Identifique o seu perfil para acessar ferramentas personalizadas de estudo desafiador ou gestão pedagógica docente.
+            </p>
+          </div>
+        </div>
+
+        {/* Profiles Grid: Aluno vs Professor */}
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* PROFILE 1: ALUNO / ESTUDANTE */}
+          <div
+            className={`rounded-2xl border p-5 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl ${
+              isLight
+                ? 'bg-white border-cyan-300 shadow-md ring-2 ring-cyan-500/20'
+                : 'bg-[#101526] border-cyan-800/80 hover:border-cyan-600'
+            }`}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                      isLight ? 'bg-cyan-100 text-cyan-800' : 'bg-cyan-950/90 text-cyan-300 border border-cyan-700/60'
+                    }`}
+                  >
+                    <GraduationCap className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-500 block">
+                      Perfil Estudante
+                    </span>
+                    <h2 className="text-lg font-display font-black">Ambiente do Aluno</h2>
+                  </div>
+                </div>
+                <span
+                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    currentRole === 'student'
+                      ? isLight
+                        ? 'bg-cyan-600 text-white border-cyan-600'
+                        : 'bg-cyan-500 text-slate-950 font-black border-cyan-400'
+                      : isLight
+                      ? 'bg-cyan-50 text-cyan-900 border-cyan-300'
+                      : 'bg-cyan-950/60 text-cyan-300 border-cyan-800'
+                  }`}
+                >
+                  {currentRole === 'student' ? 'Perfil Ativo' : 'Desafios Clínicos'}
+                </span>
+              </div>
+
+              <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-zinc-300'}`}>
+                Desenvolva raciocínio clínico real. Você não receberá receitas prontas: o simulador desafia você a identificar a fisiopatologia, titular o ventilador e alcançar o efeito terapêutico correto com proteção pulmonar.
+              </p>
+
+              {/* Action Quick Links for Student */}
+              <div className="space-y-2 pt-1">
+                {onOpenTutorial && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseRole('student');
+                      onOpenTutorial();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-cyan-50/80 hover:bg-cyan-100/80 text-cyan-900 border-cyan-300 shadow-sm'
+                        : 'bg-cyan-950/40 hover:bg-cyan-900/50 text-cyan-200 border-cyan-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-cyan-500" />
+                      <span>1. Tutorial Guiado do Estudante</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-cyan-500" />
+                  </button>
+                )}
+
+                {onOpenMissions && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseRole('student');
+                      onOpenMissions();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-emerald-500" />
+                      <span>2. Missões Clínicas Desafiadoras</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
+                )}
+
+                {onOpenCases && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseRole('student');
+                      onOpenCases();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-blue-500" />
+                      <span>3. Casos Clínicos & Patologias</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
+                )}
+
+                {onOpenQuiz && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseRole('student');
+                      onOpenQuiz();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <HelpCircle className="w-4 h-4 text-purple-500" />
+                      <span>4. Quiz de Avaliação Teórico-Prática</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                handleChooseRole('student');
+                handleEnterDirectly();
+              }}
+              className="mt-5 w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 cursor-pointer transition-all"
+            >
+              <span>Entrar como Aluno no Simulador</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* PROFILE 2: PROFESSOR / DOCENTE */}
+          <div
+            className={`rounded-2xl border p-5 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl ${
+              isLight
+                ? 'bg-white border-indigo-300 shadow-md ring-2 ring-indigo-500/20'
+                : 'bg-[#101526] border-indigo-800/80 hover:border-indigo-600'
+            }`}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                      isLight ? 'bg-indigo-100 text-indigo-800' : 'bg-indigo-950/90 text-indigo-300 border border-indigo-700/60'
+                    }`}
+                  >
+                    <UserCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-indigo-500 block">
+                      Perfil Docente
+                    </span>
+                    <h2 className="text-lg font-display font-black">Ambiente do Professor</h2>
+                  </div>
+                </div>
+                <span
+                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    currentRole === 'teacher'
+                      ? isLight
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-indigo-500 text-slate-950 font-black border-indigo-400'
+                      : isLight
+                      ? 'bg-indigo-50 text-indigo-900 border-indigo-300'
+                      : 'bg-indigo-950/60 text-indigo-300 border-indigo-800'
+                  }`}
+                >
+                  {currentRole === 'teacher' ? 'Perfil Ativo' : 'Painel Admin'}
+                </span>
+              </div>
+
+              <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-zinc-300'}`}>
+                Gerencie todo o conteúdo pedagógico da plataforma. Cadastre novas questões para o Quiz, crie novos casos clínicos com desafios específicos para suas aulas e conduza demonstrações ao vivo.
+              </p>
+
+              {/* Action Quick Links for Teacher */}
+              <div className="space-y-2 pt-1">
+                {onOpenTeacherAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseRole('teacher');
+                      onOpenTeacherAdmin();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-indigo-50/80 hover:bg-indigo-100/80 text-indigo-900 border-indigo-300 shadow-sm'
+                        : 'bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-200 border-indigo-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
+                      <span>1. Painel Administrativo do Docente</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-indigo-500" />
+                  </button>
+                )}
+
+                {onOpenTeacherAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseRole('teacher');
+                      onOpenTeacherAdmin();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <PlusCircle className="w-4 h-4 text-purple-500" />
+                      <span>2. Cadastrar Novas Questões de Quiz</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
+                )}
+
+                {onOpenTeacherAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseRole('teacher');
+                      onOpenTeacherAdmin();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                      <span>3. Criar Novos Casos & Desafios</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
+                )}
+
+                {onOpenEducational && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseRole('teacher');
+                      onOpenEducational();
+                    }}
+                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
+                      isLight
+                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
+                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-blue-500" />
+                      <span>4. Biblioteca de Guias & Fórmulas</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 opacity-70" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                handleChooseRole('teacher');
+                handleEnterDirectly();
+              }}
+              className="mt-5 w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all"
+            >
+              <span>Entrar como Professor no Simulador</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Footer info */}
+        <div
+          className={`px-6 py-3 border-t text-center text-[11px] font-mono flex items-center justify-between ${
+            isLight ? 'bg-slate-100/80 border-slate-200 text-slate-600' : 'bg-[#0a0d17] border-zinc-800 text-zinc-400'
+          }`}
+        >
+          <span>Você poderá alternar o perfil de Aluno / Professor a qualquer momento na barra superior.</span>
+          <button
+            type="button"
+            onClick={handleEnterDirectly}
+            className="hover:underline text-cyan-500 font-bold cursor-pointer"
+          >
+            Pular e Ir para o Ventilador →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

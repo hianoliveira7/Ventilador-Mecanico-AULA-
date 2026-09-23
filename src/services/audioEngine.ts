@@ -866,6 +866,10 @@ class VentilatorAudioEngine {
     this.playClick(1150);
   }
 
+  public playKnobTick() {
+    this.playClick(1150);
+  }
+
   public playConfirmBeep() {
     if (!this.settings.soundEnabled || this.isMuted) return;
     try {

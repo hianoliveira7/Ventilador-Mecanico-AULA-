@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, VolumeX, Play, User, Activity } from 'lucide-react';
+import { Volume2, VolumeX, Play, User, Activity, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, GripVertical } from 'lucide-react';
 import {
   VentilatorSettings,
   PatientParameters,
@@ -21,14 +21,18 @@ import { MonitorPanel } from './components/MonitorPanel';
 import { ManeuverBar } from './components/ManeuverBar';
 import { ClinicalCaseModal } from './components/ClinicalCaseModal';
 import { EducationalModal } from './components/EducationalModal';
-import { GasometryModal } from './components/GasometryModal';
+import { DraggableGasometryModal } from './components/DraggableGasometryModal';
+import { DraggableMissionsModal } from './components/DraggableMissionsModal';
 import { PatientConfigModal } from './components/PatientConfigModal';
 import { AlarmManagerModal } from './components/AlarmManagerModal';
 import { ClinicalCalculatorModal } from './components/ClinicalCalculatorModal';
 import { AudioSettingsModal } from './components/AudioSettingsModal';
-import { GasometryCard } from './components/GasometryCard';
-import { LungVisualizer } from './components/LungVisualizer';
 import { MenuModal } from './components/MenuModal';
+import { QuizModal } from './components/QuizModal';
+import { RoleSelectionPortal } from './components/RoleSelectionPortal';
+import { StudentTutorialModal } from './components/StudentTutorialModal';
+import { TeacherAdminModal } from './components/TeacherAdminModal';
+import { educationalStorage, UserRole } from './services/educationalStorage';
 import { useTheme } from './context/ThemeContext';
 
 export default function App() {
@@ -175,16 +179,89 @@ export default function App() {
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
 
   // 7. View & Modals
+  const [userRole, setUserRole] = useState<UserRole | null>(() => educationalStorage.getUserRole());
+  const [isRolePortalOpen, setIsRolePortalOpen] = useState<boolean>(() => !educationalStorage.getUserRole());
+  const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
+  const [isTeacherAdminOpen, setIsTeacherAdminOpen] = useState<boolean>(false);
+
+  const handleSelectRole = (role: UserRole) => {
+    setUserRole(role);
+    educationalStorage.setUserRole(role);
+    setIsRolePortalOpen(false);
+    if (role === 'student') {
+      setIsTutorialOpen(true);
+    }
+  };
+
   const [viewMode, setViewMode] = useState<'waveforms' | 'loops' | 'split'>('waveforms');
   const [isClinicalCasesOpen, setIsClinicalCasesOpen] = useState<boolean>(false);
   const [isEducationalOpen, setIsEducationalOpen] = useState<boolean>(false);
+  const [isQuizOpen, setIsQuizOpen] = useState<boolean>(false);
+  const [activeClinicalCase, setActiveClinicalCase] = useState<ClinicalCase | null>(CLINICAL_CASES[0]);
   const [isGasometryOpen, setIsGasometryOpen] = useState<boolean>(false);
+  const [isMissionsOpen, setIsMissionsOpen] = useState<boolean>(false);
   const [isPatientConfigOpen, setIsPatientConfigOpen] = useState<boolean>(false);
   const [isAlarmsModalOpen, setIsAlarmsModalOpen] = useState<boolean>(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
   const [isAudioSettingsOpen, setIsAudioSettingsOpen] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [audioContextState, setAudioContextState] = useState<string>(audioEngine.getContextState());
+  const [isAudioBannerDismissed, setIsAudioBannerDismissed] = useState<boolean>(false);
+
+  // 8a. Resizable Parameter Controls Splitter (Vertical height between graphs and parameters)
+  const [paramPanelHeight, setParamPanelHeight] = useState<number>(148);
+  const [isDraggingParamSplitter, setIsDraggingParamSplitter] = useState<boolean>(false);
+  const [isParamPanelCollapsed, setIsParamPanelCollapsed] = useState<boolean>(false);
+
+  const handleParamSplitterPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingParamSplitter(true);
+    const startY = e.clientY;
+    const startHeight = paramPanelHeight;
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      // Dragging upward increases parameter controls height; dragging downward gives more space to graphs
+      const delta = startY - moveEvent.clientY;
+      const newHeight = Math.min(320, Math.max(90, startHeight + delta));
+      setParamPanelHeight(newHeight);
+    };
+
+    const onPointerUp = () => {
+      setIsDraggingParamSplitter(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
+
+  // 8b. Resizable Clinical Panel & Splitter State
+  const [rightPanelWidth, setRightPanelWidth] = useState<number>(265);
+  const [isDraggingSplitter, setIsDraggingSplitter] = useState<boolean>(false);
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState<boolean>(false);
+
+  const handleSplitterPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingSplitter(true);
+    const startX = e.clientX;
+    const startWidth = rightPanelWidth;
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const delta = startX - moveEvent.clientX; // Dragging left increases right panel width
+      const newWidth = Math.min(500, Math.max(200, startWidth + delta));
+      setRightPanelWidth(newWidth);
+    };
+
+    const onPointerUp = () => {
+      setIsDraggingSplitter(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  };
 
   // Listen to audio engine context state changes
   useEffect(() => {
@@ -522,6 +599,7 @@ export default function App() {
 
   // Load a full clinical case
   const handleLoadCase = (selectedCase: ClinicalCase) => {
+    setActiveClinicalCase(selectedCase);
     setPatient(selectedCase.patientProfile);
     setSettings(selectedCase.initialSettings);
     setDraftSettings(selectedCase.initialSettings);
@@ -539,90 +617,84 @@ export default function App() {
         mode={settings.mode}
         patient={patient}
         activeAlarms={activeAlarms}
+        userRole={userRole}
         simulationTimeSeconds={0}
         onOpenPatientConfig={() => setIsPatientConfigOpen(true)}
         onOpenAlarmsModal={() => setIsAlarmsModalOpen(true)}
         onOpenAudioSettings={() => setIsAudioSettingsOpen(true)}
         onOpenMenu={() => setIsMenuOpen(true)}
+        onOpenRolePortal={() => setIsRolePortalOpen(true)}
+        onOpenTutorial={() => setIsTutorialOpen(true)}
+        onOpenTeacherAdmin={() => setIsTeacherAdminOpen(true)}
+        onOpenClinicalCases={() => setIsClinicalCasesOpen(true)}
+        onOpenQuiz={() => setIsQuizOpen(true)}
+        onOpenEducational={() => setIsEducationalOpen(true)}
+        onOpenGasometry={() => setIsGasometryOpen(true)}
+        onOpenMissions={() => setIsMissionsOpen(true)}
       />
 
-      {/* Audio Unlock / Activation Banner if browser suspended AudioContext */}
-      {(audioContextState !== 'running' || isAudioMuted) && (
+      {/* Audio Unlock Banner (Minimal & Dismissible if browser suspended AudioContext) */}
+      {audioContextState !== 'running' && !isAudioBannerDismissed && (
         <div
           id="audio-activation-banner"
           onClick={() => {
-            if (isAudioMuted) {
-              handleToggleAudioMute();
-            }
             audioEngine.resumeAudio();
+            setIsAudioBannerDismissed(true);
           }}
-          className={`border-b px-3 py-1.5 flex items-center justify-between cursor-pointer transition-all text-xs z-30 ${
+          className={`border-b px-3 py-1 flex items-center justify-between cursor-pointer transition-all text-xs z-30 ${
             isLight
               ? 'bg-cyan-50 border-cyan-300 hover:bg-cyan-100 text-cyan-950'
-              : 'bg-[#0e1626] border-cyan-500/40 hover:bg-[#131f36] text-cyan-200'
+              : 'bg-[#0b1322] border-cyan-500/30 hover:bg-[#101b30] text-cyan-200'
           }`}
         >
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`p-1 rounded-sm border animate-pulse ${
-                isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-700' : 'bg-cyan-950 border-cyan-700/60 text-cyan-400'
-              }`}
-            >
-              <Volume2 className="w-3.5 h-3.5" />
-            </div>
+          <div className="flex items-center gap-2">
+            <Volume2 className="w-3.5 h-3.5 text-cyan-500 animate-pulse" />
             <span className="font-mono text-[11px]">
               <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white font-bold'}>
-                {isAudioMuted ? 'ÁUDIO MUTADO:' : 'ATIVAR ÁUDIO DA UTI:'}
+                ÁUDIO DA UTI SUSPENSO:
               </strong>{' '}
-              {isAudioMuted
-                ? 'Clique para desmutar os alarmes e ruídos ventilatórios.'
-                : 'O navegador requer 1 clique para liberar os sons pneumáticos, oxímetro e alarmes.'}
+              Clique aqui para habilitar os sons de respiração e alarmes no navegador.
             </span>
           </div>
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isAudioMuted) {
-                handleToggleAudioMute();
-              }
-              audioEngine.resumeAudio();
-            }}
-            className="px-2.5 py-0.5 bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-[11px] rounded-sm shadow transition-all flex items-center gap-1 shrink-0 cursor-pointer"
-          >
-            <Play className="w-3 h-3 fill-current" />
-            <span>{isAudioMuted ? 'Desmutar' : 'Ligar Áudio'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                audioEngine.resumeAudio();
+                setIsAudioBannerDismissed(true);
+              }}
+              className="px-2 py-0.5 bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-[10px] rounded shadow transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              <span>Ativar Áudio</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAudioBannerDismissed(true);
+              }}
+              className={`p-1 rounded transition-colors cursor-pointer ${
+                isLight ? 'hover:bg-slate-200 text-slate-600' : 'hover:bg-zinc-800 text-zinc-400'
+              }`}
+              title="Dispensar aviso"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
       )}
 
-      {/* 2. Main 3-Column Studio Layout (Curves Maximized) */}
+      {/* 2. Main Studio Layout (Flexible Split View with Resizable Splitters) */}
       <main
-        className={`flex-1 grid grid-cols-12 gap-2 p-2 min-h-0 overflow-hidden transition-colors ${
+        className={`flex-1 flex min-h-0 overflow-hidden p-2 gap-0 relative transition-colors ${
           isLight ? 'bg-slate-100' : 'bg-[#070709]'
         }`}
       >
-        {/* Left Column: Parameter Setting Controls & Patient SpO2 Oximeter */}
-        <div className="col-span-12 lg:col-span-3 h-full min-h-0 flex flex-col gap-2">
-          <div className="flex-[3] min-h-0 overflow-hidden flex flex-col">
-            <ParameterControls
-              settings={settings}
-              draftSettings={draftSettings}
-              onUpdateDraft={handleUpdateDraft}
-              hasChanges={hasChanges}
-              onConfirm={handleConfirmSettings}
-              onDiscard={handleDiscardSettings}
-            />
-          </div>
-          <div className="flex-[1] min-h-[140px] shrink-0">
-            <LungVisualizer monitored={monitored} patient={patient} />
-          </div>
-        </div>
-
-        {/* Center Column: Respiratory Curves (Maximized) & Gasometry Card */}
-        <div className="col-span-12 lg:col-span-6 h-full min-h-0 flex flex-col gap-2">
-          {/* Top Waveforms Area (Maximized Canvas Height) */}
-          <div className="flex-1 min-h-0">
+        {/* Main Central/Left Workspace: Maximized Waveforms on Top + Mode & Parameters on Bottom */}
+        <div className="flex-1 min-w-0 h-full flex flex-col gap-0 overflow-hidden">
+          {/* Top Waveforms Area (Maximized Canvas Height & Width) */}
+          <div className="flex-1 min-h-0 overflow-hidden">
             {viewMode === 'waveforms' && (
               <div className="h-full">
                 <WaveformDisplay
@@ -632,6 +704,7 @@ export default function App() {
                   peepSet={settings.peep}
                   viewMode={viewMode}
                   onSelectViewMode={setViewMode}
+                  monitored={monitored}
                 />
               </div>
             )}
@@ -657,6 +730,7 @@ export default function App() {
                     peepSet={settings.peep}
                     viewMode={viewMode}
                     onSelectViewMode={setViewMode}
+                    monitored={monitored}
                   />
                 </div>
                 <div className="min-h-0">
@@ -671,25 +745,135 @@ export default function App() {
             )}
           </div>
 
-          {/* Bottom Center Area: Gasometry Card with Color Grading */}
-          <div className="shrink-0">
-            <GasometryCard
-              monitored={monitored}
-              patient={patient}
-              settings={settings}
-              onOpenModal={() => setIsGasometryOpen(true)}
+          {/* Draggable Resizer Splitter between Graph Area and Parameter Controls */}
+          <div
+            onPointerDown={handleParamSplitterPointerDown}
+            onDoubleClick={() => setParamPanelHeight(148)}
+            title="Arraste verticalmente para ajustar o espaço entre os gráficos e os parâmetros (duplo clique para restaurar 148px)"
+            className={`group relative h-3.5 my-0.5 w-full cursor-row-resize flex items-center justify-center shrink-0 select-none z-20 transition-colors ${
+              isDraggingParamSplitter ? 'bg-cyan-500/20' : ''
+            }`}
+          >
+            {/* Visual Grab Bar */}
+            <div
+              className={`h-1 rounded-full transition-all duration-150 ${
+                isDraggingParamSplitter
+                  ? 'w-48 bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.9)] scale-y-125'
+                  : isLight
+                  ? 'w-28 bg-slate-300 group-hover:bg-cyan-600 group-hover:w-40'
+                  : 'w-28 bg-zinc-700/80 group-hover:bg-cyan-400 group-hover:w-40'
+              }`}
             />
+
+            {/* Quick Collapse / Expand button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsParamPanelCollapsed((prev) => !prev);
+              }}
+              className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border shadow-sm flex items-center justify-center cursor-pointer transition-all hover:scale-110 z-30 ${
+                isLight
+                  ? 'bg-white border-slate-300 text-slate-700 hover:text-cyan-700 hover:border-cyan-400'
+                  : 'bg-[#121420] border-zinc-700 text-zinc-300 hover:text-cyan-400 hover:border-cyan-500'
+              }`}
+              title={isParamPanelCollapsed ? 'Expandir Parâmetros' : 'Recolher Parâmetros'}
+            >
+              {isParamPanelCollapsed ? (
+                <ChevronUp className="w-3 h-3" />
+              ) : (
+                <ChevronDown className="w-3 h-3" />
+              )}
+            </button>
+
+            {/* Dragging height indicator badge */}
+            {isDraggingParamSplitter && (
+              <div className="absolute top-1/2 -translate-y-7 bg-cyan-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-lg pointer-events-none whitespace-nowrap z-40">
+                Altura: {paramPanelHeight}px
+              </div>
+            )}
           </div>
+
+          {/* Bottom Area: Parameters & Mode (User Resizable Height) */}
+          {!isParamPanelCollapsed && (
+            <div
+              style={{ height: `${paramPanelHeight}px` }}
+              className="shrink-0 overflow-hidden"
+            >
+              <ParameterControls
+                settings={settings}
+                draftSettings={draftSettings}
+                onUpdateDraft={handleUpdateDraft}
+                hasChanges={hasChanges}
+                onConfirm={handleConfirmSettings}
+                onDiscard={handleDiscardSettings}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Right Column: Monitorization & Resized Pulmonary Mechanics */}
-        <div className="col-span-12 lg:col-span-3 h-full min-h-0">
-          <MonitorPanel
-            monitored={monitored}
-            patient={patient}
-            onOpenGasometry={() => setIsGasometryOpen(true)}
+        {/* Draggable Resizer Splitter between Graph Area and Clinical Data Panel */}
+        <div
+          onPointerDown={handleSplitterPointerDown}
+          onDoubleClick={() => setRightPanelWidth(265)}
+          title="Arraste para ajustar a largura do painel de dados clínicos (duplo clique para restaurar 265px)"
+          className={`group relative w-3.5 mx-0.5 h-full cursor-col-resize flex items-center justify-center shrink-0 select-none z-20 transition-colors ${
+            isDraggingSplitter ? 'bg-cyan-500/20' : ''
+          }`}
+        >
+          {/* Visual Grab Handle */}
+          <div
+            className={`w-1 rounded-full transition-all duration-150 ${
+              isDraggingSplitter
+                ? 'h-32 bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.9)] scale-x-125'
+                : isLight
+                ? 'h-20 bg-slate-300 group-hover:bg-cyan-500 group-hover:h-28'
+                : 'h-20 bg-zinc-700/80 group-hover:bg-cyan-400 group-hover:h-28'
+            }`}
           />
+
+          {/* Quick Collapse / Expand button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsRightPanelCollapsed((prev) => !prev);
+            }}
+            className={`absolute -left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border shadow-md flex items-center justify-center cursor-pointer transition-all hover:scale-110 z-30 ${
+              isLight
+                ? 'bg-white border-slate-300 text-slate-700 hover:text-cyan-600 hover:border-cyan-400'
+                : 'bg-[#121420] border-zinc-700 text-zinc-300 hover:text-cyan-400 hover:border-cyan-500'
+            }`}
+            title={isRightPanelCollapsed ? 'Expandir Painel de Dados Clínicos' : 'Recolher Painel de Dados Clínicos'}
+          >
+            {isRightPanelCollapsed ? (
+              <ChevronLeft className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          {/* Dragging width indicator badge */}
+          {isDraggingSplitter && (
+            <div className="absolute top-1/2 -translate-y-16 bg-cyan-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-lg pointer-events-none whitespace-nowrap z-40">
+              {rightPanelWidth}px
+            </div>
+          )}
         </div>
+
+        {/* Right Column: Monitorization & Mechanics (User Resizable Width) */}
+        {!isRightPanelCollapsed && (
+          <div
+            style={{ width: `${rightPanelWidth}px` }}
+            className="h-full min-h-0 shrink-0 overflow-hidden"
+          >
+            <MonitorPanel
+              monitored={monitored}
+              patient={patient}
+              onOpenGasometry={() => setIsGasometryOpen(true)}
+            />
+          </div>
+        )}
       </main>
 
       {/* 3. Bottom Diagnostic Maneuvers & Control Bar (with Dropdown) */}
@@ -713,10 +897,57 @@ export default function App() {
         onOpenCalculator={() => setIsCalculatorOpen(true)}
         onOpenHelp={() => setIsEducationalOpen(true)}
         onOpenAudio={() => setIsAudioSettingsOpen(true)}
+        onOpenQuiz={() => setIsQuizOpen(true)}
+        onOpenMissions={() => setIsMissionsOpen(true)}
         onResetSimulation={() => physicsEngine.reset()}
       />
 
       {/* Modals & Dialogs */}
+      <RoleSelectionPortal
+        isOpen={isRolePortalOpen}
+        currentRole={userRole}
+        onSelectRole={handleSelectRole}
+        onClose={() => setIsRolePortalOpen(false)}
+        onOpenTutorial={() => {
+          setIsRolePortalOpen(false);
+          setIsTutorialOpen(true);
+        }}
+        onOpenMissions={() => {
+          setIsRolePortalOpen(false);
+          setIsMissionsOpen(true);
+        }}
+        onOpenCases={() => {
+          setIsRolePortalOpen(false);
+          setIsClinicalCasesOpen(true);
+        }}
+        onOpenQuiz={() => {
+          setIsRolePortalOpen(false);
+          setIsQuizOpen(true);
+        }}
+        onOpenEducational={() => {
+          setIsRolePortalOpen(false);
+          setIsEducationalOpen(true);
+        }}
+        onOpenTeacherAdmin={() => {
+          setIsRolePortalOpen(false);
+          setIsTeacherAdminOpen(true);
+        }}
+        onEnterSimulatorDirectly={() => setIsRolePortalOpen(false)}
+      />
+
+      <StudentTutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
+        onOpenMissions={() => setIsMissionsOpen(true)}
+        onOpenCases={() => setIsClinicalCasesOpen(true)}
+      />
+
+      <TeacherAdminModal
+        isOpen={isTeacherAdminOpen}
+        onClose={() => setIsTeacherAdminOpen(false)}
+        onLoadCaseInSimulator={handleLoadCase}
+      />
+
       <MenuModal
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
@@ -726,6 +957,18 @@ export default function App() {
         onOpenAlarms={() => setIsAlarmsModalOpen(true)}
         onOpenAudio={() => setIsAudioSettingsOpen(true)}
         onOpenPatient={() => setIsPatientConfigOpen(true)}
+        onOpenQuiz={() => setIsQuizOpen(true)}
+        onOpenGasometry={() => setIsGasometryOpen(true)}
+        onOpenMissions={() => setIsMissionsOpen(true)}
+        onOpenRolePortal={() => setIsRolePortalOpen(true)}
+        onOpenTutorial={() => setIsTutorialOpen(true)}
+        onOpenTeacherAdmin={() => setIsTeacherAdminOpen(true)}
+      />
+
+      <QuizModal
+        isOpen={isQuizOpen}
+        onClose={() => setIsQuizOpen(false)}
+        onOpenTeacherAdmin={() => setIsTeacherAdminOpen(true)}
       />
 
       <ClinicalCaseModal
@@ -742,12 +985,22 @@ export default function App() {
         onClose={() => setIsEducationalOpen(false)}
       />
 
-      <GasometryModal
+      <DraggableGasometryModal
         isOpen={isGasometryOpen}
         onClose={() => setIsGasometryOpen(false)}
         monitored={monitored}
         patient={patient}
         settings={settings}
+      />
+
+      <DraggableMissionsModal
+        isOpen={isMissionsOpen}
+        onClose={() => setIsMissionsOpen(false)}
+        currentCase={activeClinicalCase}
+        monitoredData={monitored}
+        settings={settings}
+        patient={patient}
+        onOpenCases={() => setIsClinicalCasesOpen(true)}
       />
 
       <PatientConfigModal
