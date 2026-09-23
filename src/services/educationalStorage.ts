@@ -116,7 +116,7 @@ const STORAGE_KEYS = {
   TEACHER_PASSWORD: 'vm_sim_teacher_password',
 };
 
-const DEFAULT_TEACHER_PASSWORD = 'docente123';
+const DEFAULT_TEACHER_PASSWORD = '14253697';
 
 export const educationalStorage = {
   // Teacher Authentication & Password Management
