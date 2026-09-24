@@ -165,7 +165,7 @@ export function computeRespiratoryMechanics(input: MechanicsWorkerInput): Mechan
   // Severinghaus oxygen-hemoglobin dissociation
   const p50 = 26.6 * Math.pow(10, -(newpH - 7.40) * 0.4);
   const v = newPaO2 / p50;
-  const targetSpO2 = Math.min(100, Math.max(35, Math.round((Math.pow(v, 2.7) / (Math.pow(v, 2.7) + 1)) * 100)));
+  const targetSpO2 = Math.min(100, Math.max(0, Math.round((Math.pow(v, 2.7) / (Math.pow(v, 2.7) + 1)) * 100)));
   const newSpO2 = state.currentSpO2 + (targetSpO2 - state.currentSpO2) * alphaABG;
 
   // 6. Transition & Equilibration Metrics

@@ -218,61 +218,34 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
               </div>
             </div>
 
-            {/* IBW Highlight Box */}
-            <div className="p-3.5 rounded-xl bg-gradient-to-br from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/40 space-y-2">
+            {/* Clinical Guidance: Student IBW Calculation Challenge */}
+            <div className={`p-3.5 rounded-xl border space-y-2.5 ${
+              isLight ? 'bg-indigo-50/80 border-indigo-200' : 'bg-gradient-to-br from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/40'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-indigo-300">
-                  <Calculator className="w-4 h-4" />
+                  <Calculator className="w-4 h-4 text-indigo-400" />
                   <span className="text-xs font-display font-bold">
-                    PESO PREDITO CALCULADO (IBW)
+                    DESAFIO: CÁLCULO DO PESO PREDITO (IBW)
                   </span>
                 </div>
-                <span className="text-sm font-mono font-black text-indigo-200 bg-indigo-900/50 px-2 py-0.5 rounded border border-indigo-400/40">
-                  {ibw} kg
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-500/30">
+                  Cálculo Obrigatório do Aluno
                 </span>
               </div>
-              <p className="text-[11px] text-indigo-200/80 leading-relaxed font-sans">
-                ⚠️ <strong>Atenção Clínica:</strong> Em ventilação mecânica protetora, o volume corrente ($V_t$) deve ser calculado rigorosamente pelo <strong>Peso Predito ({ibw} kg)</strong> e nunca pelo peso real ({patient.actualWeightKg} kg), prevenindo volutrauma.
+              
+              <p className="text-[11.5px] leading-relaxed font-sans text-indigo-200/90">
+                ⚠️ <strong>Atenção do Estudante:</strong> O ventilador não calculará o Peso Predito por você. Utilize os dados de antropometria do paciente para calcular o <strong>IBW</strong> e programe o Volume Corrente ($V_t$) de <strong>4 a 8 mL/kg</strong> de Peso Predito:
               </p>
 
-              {/* Quick Preset Buttons */}
-              <div className="pt-1">
-                <span className="text-[10px] font-mono text-indigo-300 block mb-1">
-                  Metas Rápidas de $V_t$ para {ibw} kg:
-                </span>
-                <div className="grid grid-cols-4 gap-1.5 text-center font-mono text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPresetVt(4)}
-                    className="p-1.5 rounded-lg bg-indigo-900/40 hover:bg-indigo-800/80 border border-indigo-700/50 text-indigo-200 transition-colors cursor-pointer"
-                  >
-                    <span className="font-bold block">4 mL/kg</span>
-                    <span>{Math.round(ibw * 4)} mL</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPresetVt(5)}
-                    className="p-1.5 rounded-lg bg-indigo-900/40 hover:bg-indigo-800/80 border border-indigo-700/50 text-indigo-200 transition-colors cursor-pointer"
-                  >
-                    <span className="font-bold block">5 mL/kg</span>
-                    <span>{Math.round(ibw * 5)} mL</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPresetVt(6)}
-                    className="p-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-800/80 border border-emerald-500/50 text-emerald-200 font-bold transition-colors cursor-pointer shadow-sm"
-                  >
-                    <span className="block">6 mL/kg ⭐</span>
-                    <span>{Math.round(ibw * 6)} mL</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleApplyPresetVt(8)}
-                    className="p-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-800/80 border border-amber-700/50 text-amber-200 transition-colors cursor-pointer"
-                  >
-                    <span className="font-bold block">8 mL/kg</span>
-                    <span>{Math.round(ibw * 8)} mL</span>
-                  </button>
+              <div className="p-2.5 rounded-lg bg-black/40 border border-indigo-500/30 text-[10.5px] font-mono text-indigo-200 space-y-1">
+                <div className="flex justify-between border-b border-indigo-500/20 pb-1">
+                  <span>MASCULINO:</span>
+                  <span className="text-indigo-300 font-bold">50 + 0.91 × (Altura em cm - 152.4)</span>
+                </div>
+                <div className="flex justify-between pt-0.5">
+                  <span>FEMININO:</span>
+                  <span className="text-indigo-300 font-bold">45.5 + 0.91 × (Altura em cm - 152.4)</span>
                 </div>
               </div>
             </div>

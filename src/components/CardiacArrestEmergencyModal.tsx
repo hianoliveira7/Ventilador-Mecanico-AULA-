@@ -3,17 +3,14 @@ import { VentilatorSettings, MonitoredData } from '../types/ventilation';
 import { audioEngine } from '../services/audioEngine';
 import {
   AlertOctagon,
-  Flame,
   Clock,
   HeartCrack,
   CheckCircle2,
-  XCircle,
-  Sliders,
-  Zap,
+  AlertTriangle,
   RotateCcw,
   FileText,
   Activity,
-  Wind,
+  Sliders,
 } from 'lucide-react';
 
 interface CardiacArrestEmergencyModalProps {
@@ -41,13 +38,16 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
   const [secondsRemaining, setSecondsRemaining] = useState<number>(20);
   const [hasDied, setHasDied] = useState<boolean>(false);
   const [hasSucceeded, setHasSucceeded] = useState<boolean>(false);
+  const [attemptError, setAttemptError] = useState<string | null>(null);
 
-  // Local draft rescue settings
+  // Local draft rescue settings - initialized from current settings
   const [fio2, setFio2] = useState<number>(currentSettings.fio2 || 60);
-  const [peep, setPeep] = useState<number>(currentSettings.peep || 10);
-  const [respiratoryRate, setRespiratoryRate] = useState<number>(currentSettings.respiratoryRate || 20);
+  const [peep, setPeep] = useState<number>(currentSettings.peep || 8);
+  const [respiratoryRate, setRespiratoryRate] = useState<number>(currentSettings.respiratoryRate || 18);
   const [tidalVolume, setTidalVolume] = useState<number>(currentSettings.tidalVolume || 420);
-  const [mode, setMode] = useState<string>(currentSettings.mode || 'VCV');
+  const [mode, setMode] = useState<'VCV' | 'PCV'>(
+    currentSettings.mode === 'PCV' ? 'PCV' : 'VCV'
+  );
 
   const timerRef = useRef<number | null>(null);
 
@@ -56,24 +56,24 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
     setSecondsRemaining(20);
     setHasDied(false);
     setHasSucceeded(false);
-    setFio2(currentSettings.fio2);
-    setPeep(currentSettings.peep);
-    setRespiratoryRate(currentSettings.respiratoryRate);
-    setTidalVolume(currentSettings.tidalVolume);
-    setMode(currentSettings.mode);
+    setAttemptError(null);
+    setFio2(currentSettings.fio2 || 60);
+    setPeep(currentSettings.peep || 8);
+    setRespiratoryRate(currentSettings.respiratoryRate || 18);
+    setTidalVolume(currentSettings.tidalVolume || 420);
+    setMode(currentSettings.mode === 'PCV' ? 'PCV' : 'VCV');
 
     audioEngine.triggerAlarmPattern('high');
 
     timerRef.current = window.setInterval(() => {
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
-          clearInterval(timerRef.current!);
+          if (timerRef.current) clearInterval(timerRef.current);
           setHasDied(true);
           audioEngine.stopAlarm();
           audioEngine.playFlatlineTone();
           return 0;
         }
-        // Pulse warning sound each second
         if (prev <= 6) {
           audioEngine.playErrorBeep();
         }
@@ -87,43 +87,29 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
     };
   }, [isOpen]);
 
-  // Check if current parameters meet PCR standards:
+  // Medical criteria validation for PCR resuscitation
   // 1. FiO2 == 100%
-  // 2. FR between 10 and 12 rpm (ACLS / Parada)
-  // 3. PEEP <= 5 cmH2O (Evitar barotrauma/atrapalhar retorno venoso durante RCP)
-  const isFiO2Correct = fio2 >= 99;
-  const isRRCorrect = respiratoryRate >= 8 && respiratoryRate <= 12;
-  const isPeepCorrect = peep <= 5;
-  const isPcrProtocolMet = isFiO2Correct && isRRCorrect && isPeepCorrect;
-
-  const handleApplyInstantPcrProtocol = () => {
-    setFio2(100);
-    setPeep(5);
-    setRespiratoryRate(10);
-    setTidalVolume(Math.min(420, currentSettings.tidalVolume));
-    setMode('VCV');
-
-    const rescueSettings: VentilatorSettings = {
-      ...currentSettings,
-      mode: 'VCV',
-      fio2: 100,
-      peep: 5,
-      respiratoryRate: 10,
-      tidalVolume: Math.min(420, currentSettings.tidalVolume),
-    };
-
-    if (timerRef.current) clearInterval(timerRef.current);
-    audioEngine.stopAlarm();
-    audioEngine.playConfirmBeep();
-    setHasSucceeded(true);
-    onApplyRescueSettings(rescueSettings);
+  // 2. FR between 8 and 12 rpm (ACLS guideline for cardiac arrest ventilation)
+  // 3. PEEP <= 5 cmH2O (preserves venous return during chest compressions)
+  const validatePcrSettings = (): { valid: boolean; reason?: string } => {
+    if (fio2 < 99) {
+      return { valid: false, reason: 'Fração Inspirada de Oxigênio (FiO₂) inadequada para a emergência de PCR.' };
+    }
+    if (respiratoryRate < 8 || respiratoryRate > 12) {
+      return { valid: false, reason: 'Frequência ventilatória fora da faixa recomendada no protocolo de PCR.' };
+    }
+    if (peep > 5) {
+      return { valid: false, reason: 'PEEP excessiva pode comprometer o retorno venoso e débito cardíaco na PCR.' };
+    }
+    return { valid: true };
   };
 
-  const handleManualConfirm = () => {
-    if (isPcrProtocolMet) {
+  const handleConfirmSettings = () => {
+    const validation = validatePcrSettings();
+    if (validation.valid) {
       const rescueSettings: VentilatorSettings = {
         ...currentSettings,
-        mode: mode as any,
+        mode,
         fio2,
         peep,
         respiratoryRate,
@@ -134,15 +120,17 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
       audioEngine.stopAlarm();
       audioEngine.playConfirmBeep();
       setHasSucceeded(true);
+      setAttemptError(null);
       onApplyRescueSettings(rescueSettings);
     } else {
       audioEngine.playErrorBeep();
+      setAttemptError(validation.reason || 'Parâmetros ventilatórios inadequados para a PCR. Corrija antes de confirmar!');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in select-none">
-      <div className="w-full max-w-2xl bg-[#090b10] border-2 border-rose-600 rounded-3xl shadow-2xl shadow-rose-950/80 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in select-none">
+      <div className="w-full max-w-xl bg-[#090b10] border-2 border-rose-600 rounded-3xl shadow-2xl shadow-rose-950/80 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header with Critical Blinking Banner */}
         <div className="bg-gradient-to-r from-rose-900 via-rose-700 to-red-800 p-4 sm:p-5 text-white flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
@@ -152,11 +140,11 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display font-black text-sm sm:text-base tracking-wider uppercase">
-                  🚨 PROTOCOLO DE PARADA CARDIORRESPIRATÓRIA (PCR)
+                  🚨 PARADA CARDIORRESPIRATÓRIA (PCR)
                 </span>
               </div>
               <p className="text-xs text-rose-100 font-medium">
-                Deterioração crítica aguda: o paciente entrou em colapso respiratório e peri-parada!
+                Saturação em nível crítico (SpO₂ &lt; 35%): paciente em colapso e arresto circulatório!
               </p>
             </div>
           </div>
@@ -174,7 +162,7 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
           )}
         </div>
 
-        {/* Modal Body */}
+        {/* Modal Content */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 text-zinc-100 font-sans">
           {/* STATE 1: PATIENT DECEASED */}
           {hasDied ? (
@@ -188,14 +176,14 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                   💀 PACIENTE EVOLUIU A ÓBITO
                 </h3>
                 <p className="text-xs text-rose-200/90 max-w-lg mx-auto leading-relaxed">
-                  O tempo limite de 20 segundos expirou sem a instituição adequada do protocolo ventilatório de reanimação (PCR). O paciente desenvolveu assistolia refratária decorrente de hipóxia celular e acidose metabólica/respiratória extrema.
+                  O tempo de emergência de 20 segundos expirou sem a configuração adequada dos parâmetros de ventilação mecânica para o protocolo de PCR. O paciente evoluiu com anóxia tecidual e parada cardiorrespiratória irreversível.
                 </p>
               </div>
 
               <div className="p-3 bg-black/60 rounded-xl border border-zinc-800 text-left space-y-1 text-xs font-mono text-zinc-300">
                 <div className="flex justify-between text-zinc-400 text-[11px] pb-1 border-b border-zinc-800">
-                  <span>MOMENTO DO COLAPSO:</span>
-                  <span className="text-rose-400 font-bold">Assistolia Irreversível</span>
+                  <span>DESFECHO CLÍNICO:</span>
+                  <span className="text-rose-400 font-bold">Óbito por Anóxia & PCR Refratária</span>
                 </div>
                 <div className="flex justify-between pt-1">
                   <span>SpO₂ Terminal:</span>
@@ -204,10 +192,6 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                 <div className="flex justify-between">
                   <span>pH Gasométrico:</span>
                   <span className="text-rose-400 font-bold">{monitored.ph.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Parâmetros de PCR Exigidos:</span>
-                  <span className="text-amber-400">FiO₂ 100% • FR 10 rpm • PEEP ≤ 5 cmH₂O</span>
                 </div>
               </div>
 
@@ -222,7 +206,7 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span>Reiniciar Caso Clínico</span>
+                  <span>Reiniciar Simulação</span>
                 </button>
 
                 <button
@@ -235,7 +219,7 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                   className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-mono font-bold text-xs flex items-center gap-2 cursor-pointer"
                 >
                   <FileText className="w-4 h-4" />
-                  <span>Ver Relatório de Debriefing / AAR</span>
+                  <span>Relatório de Debriefing</span>
                 </button>
               </div>
             </div>
@@ -248,30 +232,11 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
 
               <div className="space-y-1">
                 <h3 className="text-xl font-display font-black text-emerald-400 uppercase tracking-wide">
-                  ✅ RITMO E RETORNO DA CIRCULAÇÃO ESPONTÂNEA (RCE) OBTIDOS!
+                  ✅ RETORNO DA CIRCULAÇÃO ESPONTÂNEA (RCE)!
                 </h3>
                 <p className="text-xs text-emerald-200/90 max-w-lg mx-auto leading-relaxed">
-                  Excelente conduta! Os parâmetros de ventilação na PCR foram ajustados a tempo (FiO₂ a 100%, frequência protetora de 10 rpm e PEEP despressurizada em ≤ 5 cmH₂O), permitindo retorno venoso adequado durante as compressões torácicas e oxigenação tecidual.
+                  Excelente conduta emergencial! Os parâmetros de ventilação durante a PCR foram ajustados corretamente a tempo, garantindo oxigenação tecidual e minimizando a pressão intratorácica para o retorno venoso.
                 </p>
-              </div>
-
-              <div className="p-3 bg-black/60 rounded-xl border border-zinc-800 text-left space-y-1 text-xs font-mono text-emerald-300">
-                <div className="flex justify-between text-zinc-400 text-[11px] pb-1 border-b border-zinc-800">
-                  <span>RESPOSTA HEMODINÂMICA:</span>
-                  <span className="text-emerald-400 font-bold">RCE Confirmado</span>
-                </div>
-                <div className="flex justify-between pt-1">
-                  <span>FiO₂ Aplicada:</span>
-                  <span className="font-bold">100% (Hiperoxigenação de Resgate)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Frequência Ventilatória:</span>
-                  <span className="font-bold">10 rpm (Prevenção de Hiperventilação Iatrogênica)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>PEEP de Ressuscitação:</span>
-                  <span className="font-bold">5 cmH₂O (Otimização do Débito Cardíaco)</span>
-                </div>
               </div>
 
               <button
@@ -280,85 +245,75 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                 className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/60 mx-auto"
               >
                 <Activity className="w-4 h-4" />
-                <span>Continuar Simulação com Estabilização</span>
+                <span>Continuar Simulação</span>
               </button>
             </div>
           ) : (
-            /* STATE 3: ACTIVE EMERGENCY COUNTDOWN & RESCUE CONTROLS */
+            /* STATE 3: ACTIVE EMERGENCY CONTROLS (No answer codes given) */
             <>
-              {/* Critical Gas & Vitals Warning */}
-              <div className="p-3.5 rounded-2xl bg-rose-950/30 border border-rose-800/70 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-                <div className="flex items-center gap-2 text-rose-300">
-                  <Flame className="w-4 h-4 text-rose-400 animate-pulse" />
-                  <span className="font-bold">GASOMETRIA & SINAIS VITAIS CRÍTICOS:</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-0.5 rounded bg-rose-900/60 border border-rose-600 text-rose-200 font-bold">
-                    SpO₂: {monitored.spo2}% (Crítica)
+              <div className="p-3.5 rounded-2xl bg-rose-950/30 border border-rose-800/70 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between font-mono">
+                  <span className="font-bold text-rose-300 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-400 animate-pulse" />
+                    STATUS DO PACIENTE:
                   </span>
-                  <span className="px-2 py-0.5 rounded bg-rose-900/60 border border-rose-600 text-rose-200 font-bold">
-                    pH: {monitored.ph.toFixed(2)} (Acidose Extrema)
+                  <span className="px-2 py-0.5 rounded bg-rose-900/80 text-rose-200 font-bold border border-rose-600">
+                    SpO₂: {monitored.spo2}%
                   </span>
                 </div>
+                <p className="text-[11.5px] text-zinc-300 leading-relaxed">
+                  O paciente entrou em Parada Cardiorrespiratória (PCR). Configure rapidamente os parâmetros ventilatórios de emergência adequados para o manejo do paciente em PCR e confirme a aplicação antes que os 20 segundos se esgotem.
+                </p>
               </div>
 
-              {/* Protocol Requirements Checklist */}
-              <div className="space-y-2">
-                <span className="text-xs font-display font-bold text-amber-300 block uppercase tracking-wider">
-                  Requisitos do Protocolo de PCR no Ventilador (ACLS):
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono">
-                  <div className={`p-2 rounded-xl border flex items-center gap-2 ${isFiO2Correct ? 'bg-emerald-950/40 border-emerald-600 text-emerald-300' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
-                    {isFiO2Correct ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <XCircle className="w-4 h-4 text-rose-400 shrink-0" />}
-                    <span>1. FiO₂ = 100%</span>
-                  </div>
-                  <div className={`p-2 rounded-xl border flex items-center gap-2 ${isRRCorrect ? 'bg-emerald-950/40 border-emerald-600 text-emerald-300' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
-                    {isRRCorrect ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <XCircle className="w-4 h-4 text-rose-400 shrink-0" />}
-                    <span>2. FR: 10 a 12 rpm</span>
-                  </div>
-                  <div className={`p-2 rounded-xl border flex items-center gap-2 ${isPeepCorrect ? 'bg-emerald-950/40 border-emerald-600 text-emerald-300' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
-                    {isPeepCorrect ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <XCircle className="w-4 h-4 text-rose-400 shrink-0" />}
-                    <span>3. PEEP ≤ 5 cmH₂O</span>
-                  </div>
+              {attemptError && (
+                <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-600 text-rose-200 text-xs font-mono flex items-center gap-2 animate-in fade-in">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>{attemptError}</span>
                 </div>
-              </div>
+              )}
 
-              {/* Instant 1-Click Action Button */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-950/50 via-rose-950/50 to-indigo-950/50 border border-amber-600/60 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="space-y-0.5 text-center sm:text-left">
-                  <span className="text-xs font-display font-bold text-amber-300 block">
-                    ⚡ Ação de Resgate Rápido (1-Clique):
-                  </span>
-                  <span className="text-[11px] text-zinc-300">
-                    Aplica imediatamente FiO₂ 100%, FR 10 rpm, PEEP 5 cmH₂O e modo VCV.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleApplyInstantPcrProtocol}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-mono font-black text-xs shadow-lg shadow-rose-950/60 flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-105"
-                >
-                  <Zap className="w-4 h-4 fill-current" />
-                  <span>ATIVAR PROTOCOLO PCR IMEDIATO</span>
-                </button>
-              </div>
-
-              {/* Manual Configuration Controls */}
-              <div className="p-4 rounded-2xl bg-[#111422] border border-zinc-800 space-y-3 text-xs">
-                <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
-                  <span className="font-display font-bold text-zinc-300 flex items-center gap-1.5">
+              {/* Ventilator Settings Form - Student must choose correct values */}
+              <div className="p-4 rounded-2xl bg-[#111422] border border-zinc-800 space-y-4 text-xs">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <span className="font-display font-bold text-zinc-200 flex items-center gap-1.5">
                     <Sliders className="w-4 h-4 text-cyan-400" />
-                    <span>Ajuste Manual dos Parâmetros</span>
+                    <span>Ajuste os Parâmetros Ventilatórios na PCR</span>
                   </span>
-                  <span className="text-[10px] font-mono text-zinc-400">Configure e confirme</span>
+                  <span className="text-[10px] font-mono text-zinc-400">Insira e Confirme</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
+                  {/* Modo */}
+                  <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+                    <label className="text-[11px] text-zinc-400 block font-bold">Modo Ventilatório:</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setMode('VCV')}
+                        className={`py-1.5 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${
+                          mode === 'VCV' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'
+                        }`}
+                      >
+                        VCV
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMode('PCV')}
+                        className={`py-1.5 rounded-lg border text-xs font-bold transition-colors cursor-pointer ${
+                          mode === 'PCV' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-400'
+                        }`}
+                      >
+                        PCV
+                      </button>
+                    </div>
+                  </div>
+
                   {/* FiO2 */}
-                  <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-1">
-                    <div className="flex justify-between text-xs font-mono">
-                      <span>FiO₂</span>
-                      <span className={`font-bold ${fio2 >= 99 ? 'text-emerald-400' : 'text-rose-400'}`}>{fio2}%</span>
+                  <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-zinc-400 font-bold">FiO₂ (%):</span>
+                      <span className="font-bold text-cyan-400">{fio2}%</span>
                     </div>
                     <input
                       type="range"
@@ -367,22 +322,15 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                       step={1}
                       value={fio2}
                       onChange={(e) => setFio2(Number(e.target.value))}
-                      className="w-full accent-rose-500 cursor-pointer"
+                      className="w-full accent-cyan-500 cursor-pointer"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setFio2(100)}
-                      className="w-full py-1 text-[10px] font-mono font-bold bg-rose-950/60 hover:bg-rose-900 border border-rose-700/60 text-rose-200 rounded cursor-pointer"
-                    >
-                      Definir 100%
-                    </button>
                   </div>
 
                   {/* FR */}
-                  <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-1">
-                    <div className="flex justify-between text-xs font-mono">
-                      <span>FR</span>
-                      <span className={`font-bold ${respiratoryRate >= 8 && respiratoryRate <= 12 ? 'text-emerald-400' : 'text-rose-400'}`}>{respiratoryRate} rpm</span>
+                  <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-zinc-400 font-bold">FR (rpm):</span>
+                      <span className="font-bold text-cyan-400">{respiratoryRate} rpm</span>
                     </div>
                     <input
                       type="range"
@@ -391,22 +339,15 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                       step={1}
                       value={respiratoryRate}
                       onChange={(e) => setRespiratoryRate(Number(e.target.value))}
-                      className="w-full accent-amber-500 cursor-pointer"
+                      className="w-full accent-cyan-500 cursor-pointer"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setRespiratoryRate(10)}
-                      className="w-full py-1 text-[10px] font-mono font-bold bg-amber-950/60 hover:bg-amber-900 border border-amber-700/60 text-amber-200 rounded cursor-pointer"
-                    >
-                      Definir 10 rpm
-                    </button>
                   </div>
 
                   {/* PEEP */}
-                  <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 space-y-1">
-                    <div className="flex justify-between text-xs font-mono">
-                      <span>PEEP</span>
-                      <span className={`font-bold ${peep <= 5 ? 'text-emerald-400' : 'text-rose-400'}`}>{peep} cmH₂O</span>
+                  <div className="p-3 rounded-xl bg-zinc-900/90 border border-zinc-800 space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-zinc-400 font-bold">PEEP (cmH₂O):</span>
+                      <span className="font-bold text-cyan-400">{peep} cmH₂O</span>
                     </div>
                     <input
                       type="range"
@@ -415,32 +356,18 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                       step={1}
                       value={peep}
                       onChange={(e) => setPeep(Number(e.target.value))}
-                      className="w-full accent-emerald-500 cursor-pointer"
+                      className="w-full accent-cyan-500 cursor-pointer"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setPeep(5)}
-                      className="w-full py-1 text-[10px] font-mono font-bold bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-200 rounded cursor-pointer"
-                    >
-                      Definir 5 cmH₂O
-                    </button>
                   </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleManualConfirm}
-                  disabled={!isPcrProtocolMet}
-                  className={`w-full py-2.5 rounded-xl font-mono font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                    isPcrProtocolMet
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-lg shadow-emerald-950/50'
-                      : 'bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed'
-                  }`}
+                  onClick={handleConfirmSettings}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-rose-950/60 transition-transform active:scale-95"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>
-                    {isPcrProtocolMet ? 'CONFIRMAR E APLICAR PARÂMETROS DE PCR' : 'Ajuste FiO₂=100%, FR=10 e PEEP≤5 para confirmar'}
-                  </span>
+                  <span>APLICAR E CONFIRMAR PARÂMETROS DE RESGATE</span>
                 </button>
               </div>
             </>

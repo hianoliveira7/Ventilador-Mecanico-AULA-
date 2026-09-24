@@ -266,7 +266,6 @@ export default function App() {
     setUserRole('student');
     educationalStorage.setUserRole('student');
     setIsRolePortalOpen(false);
-    setIsInteractiveTourOpen(true);
   };
 
   const handleLoadAsynchronyScenario = (
@@ -827,18 +826,18 @@ export default function App() {
         setHighPlateauSeconds((s) => s + 1);
       }
 
-      // Critical Peri-Arrest / Cardiac Arrest Trigger (Severe Asphyxia / Acidemia / Hypoxia)
-      // If SpO2 <= 72% or (pH <= 7.10 and SpO2 <= 85%) during active ventilation
+      // Critical Cardiac Arrest (PCR) Trigger: SpO2 <= 35% in any case
       if (
-        isVentilatingRef.current &&
         !maneuverStateRef.current.isFrozen &&
         monitored.spo2 > 0 &&
-        (monitored.spo2 <= 72 || (monitored.ph <= 7.10 && monitored.spo2 <= 85)) &&
+        monitored.spo2 <= 35 &&
         !isCardiacArrestModalOpen &&
         !hasTriggeredPcrRef.current
       ) {
         hasTriggeredPcrRef.current = true;
         setIsCardiacArrestModalOpen(true);
+      } else if (monitored.spo2 > 40) {
+        hasTriggeredPcrRef.current = false;
       }
 
       // Dynamic Physiological Deterioration Trigger
@@ -990,6 +989,9 @@ export default function App() {
             setCaseStartTime(Date.now());
             physicsEngine.reset(patient.compliance, patient.resistance, configuredSettings.peep);
             audioEngine.playConfirmBeep();
+            if (!educationalStorage.hasCompletedTour()) {
+              setIsInteractiveTourOpen(true);
+            }
           }}
           onOpenCasesList={() => setCurrentPage('clinical_cases')}
           onUpdatePatient={setPatient}
@@ -1397,7 +1399,7 @@ export default function App() {
       />
 
       <StudentTutorialModal
-        isOpen={isTutorialOpen}
+        isOpen={isTutorialOpen && isVentilating}
         onClose={() => setIsTutorialOpen(false)}
         onOpenMissions={() => setIsMissionsOpen(true)}
         onOpenCases={() => {
@@ -1538,7 +1540,7 @@ export default function App() {
       />
 
       <InteractiveTour
-        isOpen={isInteractiveTourOpen}
+        isOpen={isInteractiveTourOpen && isVentilating}
         onClose={() => setIsInteractiveTourOpen(false)}
         onComplete={() => educationalStorage.setTourCompleted(true)}
       />
