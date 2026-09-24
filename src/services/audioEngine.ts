@@ -923,6 +923,52 @@ class VentilatorAudioEngine {
       // Guard
     }
   }
+
+  // Cardiac Arrest / Code Blue Continuous Flatline Monitor Tone
+  private flatlineOsc: OscillatorNode | null = null;
+  private flatlineGain: GainNode | null = null;
+
+  public playFlatlineTone() {
+    if (!this.settings.soundEnabled || this.isMuted) return;
+    try {
+      this.stopFlatlineTone();
+      const ctx = this.getOrCreateContext();
+      if (!ctx || ctx.state !== 'running' || !this.masterGain) return;
+
+      const now = ctx.currentTime;
+      this.flatlineOsc = ctx.createOscillator();
+      this.flatlineGain = ctx.createGain();
+
+      this.flatlineOsc.type = 'sine';
+      this.flatlineOsc.frequency.setValueAtTime(880, now); // Continuous 880 Hz standard ICU monitor flatline
+
+      this.flatlineGain.gain.setValueAtTime(0.001, now);
+      this.flatlineGain.gain.linearRampToValueAtTime(0.22, now + 0.1);
+
+      this.flatlineOsc.connect(this.flatlineGain);
+      this.flatlineGain.connect(this.masterGain);
+
+      this.flatlineOsc.start(now);
+    } catch {
+      // Guard
+    }
+  }
+
+  public stopFlatlineTone() {
+    try {
+      if (this.flatlineOsc) {
+        this.flatlineOsc.stop();
+        this.flatlineOsc.disconnect();
+        this.flatlineOsc = null;
+      }
+      if (this.flatlineGain) {
+        this.flatlineGain.disconnect();
+        this.flatlineGain = null;
+      }
+    } catch {
+      // Guard
+    }
+  }
 }
 
 export const audioEngine = new VentilatorAudioEngine();

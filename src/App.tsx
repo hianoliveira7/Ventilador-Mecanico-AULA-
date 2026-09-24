@@ -41,6 +41,7 @@ import { InteractiveTour } from './components/InteractiveTour';
 import { DebriefingModal } from './components/DebriefingModal';
 import { FlashcardsModal } from './components/FlashcardsModal';
 import { VentilatorAdmissionScreen } from './components/VentilatorAdmissionScreen';
+import { CardiacArrestEmergencyModal } from './components/CardiacArrestEmergencyModal';
 import { educationalStorage, UserRole } from './services/educationalStorage';
 import {
   PedagogicalSettings,
@@ -61,6 +62,10 @@ export default function App() {
   const [isDebriefingOpen, setIsDebriefingOpen] = useState<boolean>(false);
   const [currentDebriefingReport, setCurrentDebriefingReport] = useState<CaseDebriefingReport | null>(null);
   const [isFlashcardsOpen, setIsFlashcardsOpen] = useState<boolean>(false);
+
+  // Peri-Arrest / Cardiac Arrest (PCR) Emergency State
+  const [isCardiacArrestModalOpen, setIsCardiacArrestModalOpen] = useState<boolean>(false);
+  const hasTriggeredPcrRef = useRef<boolean>(false);
 
   // Ventilator Standby / Pre-Ventilation State
   const [isVentilating, setIsVentilating] = useState<boolean>(false);
@@ -755,6 +760,8 @@ export default function App() {
     setDeteriorationWarning(null);
     setDeteriorationSecondsCounter(0);
     setCurrentPhaseIndex(0);
+    setIsCardiacArrestModalOpen(false);
+    hasTriggeredPcrRef.current = false;
 
     // If it's an admission case, starts in Standby so student configures initial parameters from scratch!
     const shouldStartStandby =
@@ -818,6 +825,20 @@ export default function App() {
       }
       if (monitored.plateauPressure > pedagogicalSettings.platSafetyThreshold) {
         setHighPlateauSeconds((s) => s + 1);
+      }
+
+      // Critical Peri-Arrest / Cardiac Arrest Trigger (Severe Asphyxia / Acidemia / Hypoxia)
+      // If SpO2 <= 72% or (pH <= 7.10 and SpO2 <= 85%) during active ventilation
+      if (
+        isVentilatingRef.current &&
+        !maneuverStateRef.current.isFrozen &&
+        monitored.spo2 > 0 &&
+        (monitored.spo2 <= 72 || (monitored.ph <= 7.10 && monitored.spo2 <= 85)) &&
+        !isCardiacArrestModalOpen &&
+        !hasTriggeredPcrRef.current
+      ) {
+        hasTriggeredPcrRef.current = true;
+        setIsCardiacArrestModalOpen(true);
       }
 
       // Dynamic Physiological Deterioration Trigger
@@ -1553,6 +1574,35 @@ export default function App() {
           if (preset.spontaneousDrive !== undefined) setPatient((p) => ({ ...p, spontaneousDrive: preset.spontaneousDrive! }));
           audioEngine.playConfirmBeep();
           setIsFlashcardsOpen(false);
+        }}
+      />
+
+      <CardiacArrestEmergencyModal
+        isOpen={isCardiacArrestModalOpen}
+        onClose={() => setIsCardiacArrestModalOpen(false)}
+        monitored={monitored}
+        currentSettings={settings}
+        onApplyRescueSettings={(rescueSettings) => {
+          setSettings(rescueSettings);
+          setDraftSettings(rescueSettings);
+          // Rapid stabilization bounce on rescue
+          setPatient((p) => ({
+            ...p,
+            shuntFraction: Math.max(10, Math.round((p.shuntFraction ?? 20) * 0.7)),
+          }));
+          audioEngine.playConfirmBeep();
+        }}
+        onRestartCase={() => {
+          if (activeClinicalCase) {
+            handleLoadCase(activeClinicalCase);
+          } else {
+            physicsEngine.reset();
+            setSettings({ ...settings, fio2: 60, peep: 8, respiratoryRate: 16 });
+          }
+        }}
+        onOpenDebriefing={() => {
+          generateDebriefingReport();
+          setIsDebriefingOpen(true);
         }}
       />
     </div>

@@ -141,6 +141,15 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const [goalDescription2, setGoalDescription2] = useState('Normalizar oxigenação (PaO₂/FiO₂ > 200) com PEEP adequada');
   const [teachingPointsText, setTeachingPointsText] = useState('Avaliar o Peso Predito (IBW) para cálculo de volume protetor.\nMonitorar rigorosamente a Driving Pressure (ΔP ≤ 14 cmH₂O).');
 
+  // Dynamic Worsening Progression Configuration
+  const [enableDynamicWorsening, setEnableDynamicWorsening] = useState<boolean>(false);
+  const [worseningPhaseTitle, setWorseningPhaseTitle] = useState('Fase 2: Deterioração Pulmonar & Queda de Complacência');
+  const [worseningDescription, setWorseningDescription] = useState('O paciente apresentou piora inflamatória aguda: complacência caiu e o shunt aumentou. Reavalie a Driving Pressure imediatamente!');
+  const [worsenedCompliance, setWorsenedCompliance] = useState<number>(18);
+  const [worsenedResistance, setWorsenedResistance] = useState<number>(12);
+  const [worsenedShuntFraction, setWorsenedShuntFraction] = useState<number>(38);
+  const [worsenedDeadSpaceFraction, setWorsenedDeadSpaceFraction] = useState<number>(55);
+
   const calculatedIBW = Math.round(
     patientGender === 'male'
       ? 50 + 0.91 * (patientHeight - 152.4)
@@ -267,6 +276,16 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     setGoalDescription1('Manter Volume Protetor ≤ 6 mL/kg e Pplatô ≤ 30 cmH₂O');
     setGoalDescription2('Normalizar oxigenação (PaO₂/FiO₂ > 200) com PEEP adequada');
     setTeachingPointsText('Avaliar o Peso Predito (IBW) para cálculo de volume protetor.\nMonitorar rigorosamente a Driving Pressure (ΔP ≤ 14 cmH₂O).');
+    
+    // Reset Dynamic Worsening
+    setEnableDynamicWorsening(false);
+    setWorseningPhaseTitle('Fase 2: Deterioração Pulmonar & Queda de Complacência');
+    setWorseningDescription('O paciente apresentou piora inflamatória aguda: complacência caiu e o shunt aumentou. Reavalie a Driving Pressure imediatamente!');
+    setWorsenedCompliance(18);
+    setWorsenedResistance(12);
+    setWorsenedShuntFraction(38);
+    setWorsenedDeadSpaceFraction(55);
+
     setActiveTab('new_case');
   };
 
@@ -313,6 +332,26 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     setGoalDescription1(c.goals?.[0]?.description || 'Manter Volume Protetor ≤ 6 mL/kg e Pplatô ≤ 30 cmH₂O');
     setGoalDescription2(c.goals?.[1]?.description || 'Normalizar oxigenação (PaO₂/FiO₂ > 200) com PEEP adequada');
     setTeachingPointsText(c.teachingPoints ? c.teachingPoints.join('\n') : '');
+
+    // Dynamic Worsening Load
+    if (c.phases && c.phases.length > 1) {
+      setEnableDynamicWorsening(true);
+      setWorseningPhaseTitle(c.phases[1].name || 'Fase 2: Deterioração Pulmonar & Queda de Complacência');
+      setWorseningDescription(c.phases[1].description || '');
+      setWorsenedCompliance(c.phases[1].patientOverrides?.compliance ?? 18);
+      setWorsenedResistance(c.phases[1].patientOverrides?.resistance ?? 12);
+      setWorsenedShuntFraction(c.phases[1].patientOverrides?.shuntFraction ?? 38);
+      setWorsenedDeadSpaceFraction(Math.round((c.phases[1].patientOverrides?.deadSpaceFraction ?? 0.55) * 100));
+    } else {
+      setEnableDynamicWorsening(false);
+      setWorseningPhaseTitle('Fase 2: Deterioração Pulmonar & Queda de Complacência');
+      setWorseningDescription('O paciente apresentou piora inflamatória aguda: complacência caiu e o shunt aumentou. Reavalie a Driving Pressure imediatamente!');
+      setWorsenedCompliance(18);
+      setWorsenedResistance(12);
+      setWorsenedShuntFraction(38);
+      setWorsenedDeadSpaceFraction(55);
+    }
+
     setActiveTab('new_case');
     audioEngine.playClick(900);
   };
@@ -327,6 +366,44 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     const targetId = editingCaseId || `teacher_case_${Date.now()}`;
     const existingCase = cases.find((c) => c.id === targetId);
 
+    // Build progressive phases if dynamic worsening is enabled
+    const configuredPhases = enableDynamicWorsening
+      ? [
+          {
+            id: `phase-1-${targetId}`,
+            name: 'Fase 1: Admissão & Estabilização Inicial',
+            description: caseDescription.trim(),
+            goals: [
+              {
+                id: `goal-1-${targetId}`,
+                description: goalDescription1 || 'Manter ventilação protetora',
+                isMet: (monitored: any) => monitored.drivingPressure <= 15 && monitored.drivingPressure > 0,
+                targetFeedback: 'Estabilização inicial adequada.',
+              },
+            ],
+          },
+          {
+            id: `phase-2-${targetId}`,
+            name: worseningPhaseTitle.trim() || 'Fase 2: Deterioração Fisiopatológica Aguda',
+            description: worseningDescription.trim() || 'O paciente apresentou piora aguda da mecânica pulmonar.',
+            patientOverrides: {
+              compliance: worsenedCompliance,
+              resistance: worsenedResistance,
+              shuntFraction: worsenedShuntFraction,
+              deadSpaceFraction: Number((worsenedDeadSpaceFraction / 100).toFixed(2)),
+            },
+            goals: [
+              {
+                id: `goal-2-${targetId}`,
+                description: 'Controlar Driving Pressure ≤ 14 cmH₂O e desmamar FiO₂',
+                isMet: (monitored: any) => monitored.drivingPressure <= 14.5 && monitored.drivingPressure > 0,
+                targetFeedback: 'Driving pressure controlada com sucesso apesar da piora mecânica.',
+              },
+            ],
+          },
+        ]
+      : existingCase?.phases;
+
     const savedCase: ClinicalCase = {
       id: targetId,
       title: caseTitle.trim(),
@@ -335,7 +412,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
       description: caseDescription.trim(),
       clinicalHistory: caseHistory.trim() || caseDescription.trim(),
       physicalExam: casePhysicalExam.trim(),
-      phases: existingCase?.phases, // Preserve any progressive dynamic phases
+      phases: configuredPhases,
       patientProfile: {
         name: patientName.trim() || 'Paciente Cadastrado',
         age: patientAge,
@@ -1468,6 +1545,112 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                     }`}
                   />
                 </div>
+              </div>
+
+              {/* 8. Evolução Temporal / Piora Fisiopatológica Dinâmica */}
+              <div className={`p-4 rounded-xl border space-y-3.5 ${isLight ? 'bg-rose-50/60 border-rose-200' : 'bg-rose-950/20 border-rose-900/60'}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-mono font-bold text-rose-400 uppercase tracking-wider block">
+                      8. Evolução Temporal & Piora Dinâmica da Fisiopatologia
+                    </span>
+                    <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                      Permite que a gravidade do paciente piore automaticamente após a admissão (queda de complacência, aumento de shunt).
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableDynamicWorsening}
+                      onChange={(e) => setEnableDynamicWorsening(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600"></div>
+                  </label>
+                </div>
+
+                {enableDynamicWorsening && (
+                  <div className="pt-2 border-t border-rose-800/40 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-mono font-bold block mb-1">Título da Fase de Piora</label>
+                        <input
+                          type="text"
+                          value={worseningPhaseTitle}
+                          onChange={(e) => setWorseningPhaseTitle(e.target.value)}
+                          className={`w-full px-3 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                            isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                          }`}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-mono font-bold block mb-1">Mensagem de Alerta da Deterioração</label>
+                        <input
+                          type="text"
+                          value={worseningDescription}
+                          onChange={(e) => setWorseningDescription(e.target.value)}
+                          className={`w-full px-3 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                            isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                      <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
+                        <span className="text-[10px] font-mono text-zinc-400 block mb-1">Complacência ($C_{'{'}st{'}'}$) Piorada</span>
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="number"
+                            value={worsenedCompliance}
+                            onChange={(e) => setWorsenedCompliance(Number(e.target.value))}
+                            className="w-16 px-1 py-0.5 rounded text-center font-mono font-bold text-xs bg-zinc-800 text-cyan-400 border border-zinc-700"
+                          />
+                          <span className="text-[9px] text-zinc-500">mL/cm</span>
+                        </div>
+                      </div>
+
+                      <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
+                        <span className="text-[10px] font-mono text-zinc-400 block mb-1">Resistência ($R_{'{'}aw{'}'}$) Piorada</span>
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="number"
+                            value={worsenedResistance}
+                            onChange={(e) => setWorsenedResistance(Number(e.target.value))}
+                            className="w-16 px-1 py-0.5 rounded text-center font-mono font-bold text-xs bg-zinc-800 text-amber-400 border border-zinc-700"
+                          />
+                          <span className="text-[9px] text-zinc-500">cmH₂O/L/s</span>
+                        </div>
+                      </div>
+
+                      <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
+                        <span className="text-[10px] font-mono text-zinc-400 block mb-1">Shunt ($Q_s/Q_t$) Piorado</span>
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="number"
+                            value={worsenedShuntFraction}
+                            onChange={(e) => setWorsenedShuntFraction(Number(e.target.value))}
+                            className="w-16 px-1 py-0.5 rounded text-center font-mono font-bold text-xs bg-zinc-800 text-rose-400 border border-zinc-700"
+                          />
+                          <span className="text-[9px] text-zinc-500">%</span>
+                        </div>
+                      </div>
+
+                      <div className={`p-2.5 rounded-xl border ${isLight ? 'bg-white border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
+                        <span className="text-[10px] font-mono text-zinc-400 block mb-1">Espaço Morto ($V_d/V_t$)</span>
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="number"
+                            value={worsenedDeadSpaceFraction}
+                            onChange={(e) => setWorsenedDeadSpaceFraction(Number(e.target.value))}
+                            className="w-16 px-1 py-0.5 rounded text-center font-mono font-bold text-xs bg-zinc-800 text-purple-400 border border-zinc-700"
+                          />
+                          <span className="text-[9px] text-zinc-500">%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Submit Buttons */}
