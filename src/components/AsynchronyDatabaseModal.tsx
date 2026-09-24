@@ -25,7 +25,7 @@ import { audioEngine } from '../services/audioEngine';
 interface AsynchronyDatabaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoadAsynchronyScenario: (patient: PatientParameters, settings: VentilatorSettings, title: string) => void;
+  onLoadAsynchronyScenario: (patient: PatientParameters, settings: VentilatorSettings, title: string, preset: AsynchronyPreset) => void;
 }
 
 export const AsynchronyDatabaseModal: React.FC<AsynchronyDatabaseModalProps> = ({
@@ -58,7 +58,7 @@ export const AsynchronyDatabaseModal: React.FC<AsynchronyDatabaseModalProps> = (
 
   const handleSimulate = (item: AsynchronyPreset) => {
     audioEngine.playConfirmBeep();
-    onLoadAsynchronyScenario(item.patientPreset, item.ventilatorPreset, item.title);
+    onLoadAsynchronyScenario(item.patientPreset, item.ventilatorPreset, item.title, item);
     onClose();
   };
 

@@ -74,14 +74,14 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
   return (
     <div
       id="tour-maneuvers"
-      className={`border-t px-2.5 py-1.5 flex items-center justify-between gap-2 select-none shadow-2xl relative z-40 transition-colors shrink-0 overflow-x-auto scrollbar-none ${
+      className={`border-t px-2 py-1 flex flex-nowrap items-center justify-between gap-2 select-none shadow-2xl relative z-40 transition-colors shrink-0 overflow-x-auto scrollbar-none whitespace-nowrap ${
         isLight
           ? 'bg-white border-slate-200 text-slate-900'
           : 'bg-[#07080d] border-zinc-800/90 text-zinc-100'
       }`}
     >
-      {/* Left / Center: Clinical Diagnostic Maneuvers (Single Line) */}
-      <div className="flex items-center gap-1.5 shrink-0 overflow-x-auto scrollbar-none">
+      {/* Left / Center: Clinical Diagnostic Maneuvers (Strict Single Line) */}
+      <div className="flex flex-nowrap items-center gap-1.5 shrink-0 overflow-x-auto scrollbar-none">
         <span className={`text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 hidden sm:inline ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
           MANOBRAS:
         </span>

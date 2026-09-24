@@ -93,15 +93,15 @@ export const TopBar: React.FC<TopBarProps> = ({
   return (
     <header
       id="tour-topbar"
-      className={`px-3 py-1.5 flex items-center justify-between select-none shrink-0 shadow-sm border-b transition-colors ${
+      className={`px-3 py-1.5 flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 select-none shrink-0 shadow-sm border-b whitespace-nowrap overflow-x-hidden transition-colors ${
         isLight
           ? 'bg-white border-slate-200 text-slate-900'
           : 'bg-[#06070b] border-zinc-800/90 text-white'
       }`}
     >
       {/* Left: Brand Logo, Mode & Role Switcher */}
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5">
           <div
             className={`w-7 h-7 rounded-lg flex items-center justify-center font-display font-black text-xs shadow-xs ${
               isLight
@@ -111,7 +111,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             VM
           </div>
-          <div className="hidden md:flex flex-col">
+          <div className="hidden sm:flex flex-col">
             <span
               className={`font-display font-black tracking-wider text-xs leading-none ${
                 isLight ? 'text-slate-900' : 'text-slate-100'
@@ -149,12 +149,12 @@ export const TopBar: React.FC<TopBarProps> = ({
             {userRole === 'teacher' ? (
               <>
                 <UserCheck className="w-3.5 h-3.5 text-indigo-500" />
-                <span className="hidden sm:inline">Professor</span>
+                <span className="hidden md:inline">Professor</span>
               </>
             ) : (
               <>
                 <GraduationCap className="w-3.5 h-3.5 text-cyan-500" />
-                <span className="hidden sm:inline">Aluno</span>
+                <span className="hidden md:inline">Aluno</span>
               </>
             )}
           </button>
@@ -175,7 +175,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Center: Clean Patient & Clinical Status Pill */}
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 shrink-0">
         {/* Patient Quick Chip */}
         <button
           onClick={onOpenPatientConfig}
@@ -187,11 +187,11 @@ export const TopBar: React.FC<TopBarProps> = ({
           title="Clique para configurar parâmetros do paciente"
         >
           <User className={`w-3.5 h-3.5 ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`} />
-          <span className="text-[10px] sm:text-[11px] font-display font-bold truncate max-w-[90px] sm:max-w-[140px]">
+          <span className="text-[10px] sm:text-[11px] font-display font-bold truncate max-w-[80px] sm:max-w-[120px] md:max-w-[150px]">
             {patient.name}
           </span>
           <span
-            className={`hidden md:inline-block text-[9px] font-mono px-1 py-0.2 rounded border ${
+            className={`hidden lg:inline-block text-[9px] font-mono px-1 py-0.2 rounded border ${
               isLight
                 ? 'bg-slate-200 text-slate-700 border-slate-300'
                 : 'bg-zinc-800 text-zinc-300 border-zinc-700'
@@ -209,11 +209,11 @@ export const TopBar: React.FC<TopBarProps> = ({
             title="Alarme ativo! Clique para ver detalhes"
           >
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span className="truncate max-w-[100px] sm:max-w-[160px]">{topAlarm.title}</span>
+            <span className="truncate max-w-[90px] sm:max-w-[140px]">{topAlarm.title}</span>
           </button>
         ) : (
           <div
-            className={`hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded-lg border shrink-0 ${
+            className={`hidden xl:flex items-center gap-1.5 px-2 py-0.5 rounded-lg border shrink-0 ${
               isLight
                 ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                 : 'bg-emerald-950/40 border-emerald-700/40 text-emerald-300'
@@ -226,7 +226,23 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
 
       {/* Right: Essential Action Controls */}
-      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
+      <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
+        {/* Asynchronies Database Button */}
+        {onOpenAsynchronies && (
+          <button
+            onClick={onOpenAsynchronies}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
+              isLight
+                ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-300'
+                : 'bg-amber-950/60 hover:bg-amber-900/70 text-amber-300 border-amber-700/60'
+            }`}
+            title="Abrir Banco de Dados de Assincronias Paciente-Ventilador (Simular & Resolver)"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+            <span className="font-display font-black hidden md:inline">Assincronias</span>
+          </button>
+        )}
+
         {/* Clinical Cases & Quiz Page Button */}
         {onOpenClinicalCases && (
           <button
@@ -244,26 +260,10 @@ export const TopBar: React.FC<TopBarProps> = ({
           </button>
         )}
 
-        {/* Asynchronies Database Button */}
-        {onOpenAsynchronies && (
-          <button
-            onClick={onOpenAsynchronies}
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
-              isLight
-                ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-300'
-                : 'bg-amber-950/60 hover:bg-amber-900/70 text-amber-300 border-amber-700/60'
-            }`}
-            title="Abrir Banco de Dados de Assincronias Paciente-Ventilador"
-          >
-            <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            <span className="font-display font-black hidden lg:inline">Assincronias</span>
-          </button>
-        )}
-
         {/* Fullscreen Toggle Button */}
         <button
           onClick={toggleFullscreen}
-          className={`p-1 sm:px-2 sm:py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
+          className={`p-1 sm:px-1.5 sm:py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 hidden sm:flex ${
             isFullscreen
               ? 'bg-cyan-600 text-white border-cyan-500'
               : isLight
@@ -288,7 +288,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               title="Painel Administrativo do Docente"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">Admin</span>
+              <span className="hidden xl:inline">Admin</span>
             </button>
           )
         ) : (
@@ -328,7 +328,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Audio Settings / Volume Toggle */}
         <button
           onClick={onOpenAudioSettings}
-          className={`p-1 sm:p-1.5 rounded-lg border transition-all cursor-pointer shadow-xs shrink-0 ${
+          className={`p-1 sm:p-1.5 rounded-lg border transition-all cursor-pointer shadow-xs shrink-0 hidden sm:flex ${
             isLight
               ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
               : 'bg-[#10121c] hover:bg-[#181b2a] text-zinc-300 border-zinc-800'
@@ -341,7 +341,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Theme Toggle (Light / Dark) */}
         <button
           onClick={handleToggleTheme}
-          className={`p-1 sm:p-1.5 rounded-lg border transition-all cursor-pointer shadow-xs shrink-0 ${
+          className={`p-1 sm:p-1.5 rounded-lg border transition-all cursor-pointer shadow-xs shrink-0 hidden sm:flex ${
             isLight
               ? 'bg-slate-100 hover:bg-slate-200 text-amber-700 border-slate-300'
               : 'bg-[#10121c] hover:bg-[#181b2a] text-amber-300 border-zinc-800'

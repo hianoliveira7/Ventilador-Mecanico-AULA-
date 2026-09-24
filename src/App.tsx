@@ -32,6 +32,8 @@ import { MenuModal } from './components/MenuModal';
 import { QuizModal } from './components/QuizModal';
 import { RoleSelectionPortal } from './components/RoleSelectionPortal';
 import { AsynchronyDatabaseModal } from './components/AsynchronyDatabaseModal';
+import { AsynchronyResolutionBanner } from './components/AsynchronyResolutionBanner';
+import { AsynchronyPreset } from './data/asynchroniesData';
 import { StudentTutorialModal } from './components/StudentTutorialModal';
 import { TeacherAdminModal } from './components/TeacherAdminModal';
 import { TeacherAuthModal } from './components/TeacherAuthModal';
@@ -186,6 +188,7 @@ export default function App() {
   const [userRole, setUserRole] = useState<UserRole | null>(() => educationalStorage.getUserRole());
   const [isRolePortalOpen, setIsRolePortalOpen] = useState<boolean>(true);
   const [isAsynchroniesOpen, setIsAsynchroniesOpen] = useState<boolean>(false);
+  const [activeAsynchrony, setActiveAsynchrony] = useState<AsynchronyPreset | null>(null);
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
   const [isInteractiveTourOpen, setIsInteractiveTourOpen] = useState<boolean>(false);
   const [isTeacherAdminOpen, setIsTeacherAdminOpen] = useState<boolean>(false);
@@ -203,10 +206,19 @@ export default function App() {
     setIsInteractiveTourOpen(true);
   };
 
-  const handleLoadAsynchronyScenario = (newPatient: PatientParameters, newSettings: VentilatorSettings, _title: string) => {
+  const handleLoadAsynchronyScenario = (
+    newPatient: PatientParameters,
+    newSettings: VentilatorSettings,
+    _title: string,
+    preset?: AsynchronyPreset
+  ) => {
+    physicsEngine.reset(newPatient.compliance, newPatient.resistance, newSettings.peep);
     setPatient(newPatient);
     setSettings(newSettings);
     setDraftSettings(newSettings);
+    if (preset) {
+      setActiveAsynchrony(preset);
+    }
     audioEngine.playConfirmBeep();
   };
 
@@ -781,6 +793,18 @@ export default function App() {
       >
         {/* Main Central/Left Workspace: Maximized Waveforms on Top + Mode & Parameters on Bottom */}
         <div className="flex-1 min-w-0 h-full flex flex-col gap-0 overflow-hidden">
+          {/* Active Asynchrony Resolution Banner (Simulate & Solve Challenge) */}
+          {activeAsynchrony && (
+            <AsynchronyResolutionBanner
+              asynchrony={activeAsynchrony}
+              currentSettings={settings}
+              currentPatient={patient}
+              currentMonitored={monitored}
+              onOpenDatabase={() => setIsAsynchroniesOpen(true)}
+              onClose={() => setActiveAsynchrony(null)}
+            />
+          )}
+
           {/* Top Waveforms Area (Maximized Canvas Height & Width) */}
           <div id="tour-waveforms" className="flex-1 min-h-0 overflow-hidden">
             {viewMode === 'waveforms' && (
@@ -804,6 +828,9 @@ export default function App() {
                   peepSet={settings.peep}
                   viewMode={viewMode}
                   onSelectViewMode={setViewMode}
+                  monitored={monitored}
+                  patient={patient}
+                  isFrozen={maneuverState.isFrozen}
                 />
               </div>
             )}
@@ -827,6 +854,9 @@ export default function App() {
                     peepSet={settings.peep}
                     viewMode={viewMode}
                     onSelectViewMode={setViewMode}
+                    monitored={monitored}
+                    patient={patient}
+                    isFrozen={maneuverState.isFrozen}
                   />
                 </div>
               </div>

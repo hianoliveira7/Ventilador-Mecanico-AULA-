@@ -69,6 +69,47 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   const peakInspFlowRef = useRef<number>(55);
   const peakExpFlowRef = useRef<number>(45);
 
+  // Active adaptive scale tracking with auto-headroom to prevent cutting off curves
+  const lastScalesRef = useRef<{ effPMax: number; effFMax: number; effVMax: number }>({
+    effPMax: 40,
+    effFMax: 80,
+    effVMax: 800,
+  });
+
+  // Dynamic scale calculation with auto-headroom to ensure waveforms NEVER clip or cut off
+  const getDynamicScales = useCallback(() => {
+    const buf = bufferRef.current;
+    const recent = buf.slice(-100);
+
+    let maxP = Math.max(currentSample?.pressure ?? 0, monitored?.peakPressure ?? 0, 20);
+    let maxF = Math.max(Math.abs(currentSample?.flow ?? 0), 40);
+    let maxV = Math.max(currentSample?.volume ?? 0, monitored?.vti ?? 0, monitored?.vte ?? 0, 300);
+
+    for (let i = 0; i < recent.length; i++) {
+      const s = recent[i];
+      if (s) {
+        if (s.pressure > maxP) maxP = s.pressure;
+        const absF = Math.abs(s.flow);
+        if (absF > maxF) maxF = absF;
+        if (s.volume > maxV) maxV = s.volume;
+      }
+    }
+
+    // Eff P Max: minimum pressureMax setting, or rounded up with 22% headroom
+    const baseP = pressureMax > 0 ? pressureMax : 40;
+    const effPMax = Math.max(baseP, Math.ceil((maxP * 1.22) / 10) * 10);
+
+    // Eff Flow Max: minimum flowMax setting, or rounded up with 22% headroom
+    const baseF = flowMax > 0 ? flowMax : 80;
+    const effFMax = Math.max(baseF, Math.ceil((maxF * 1.22) / 20) * 20);
+
+    // Eff Volume Max: minimum volumeMax setting, or rounded up with 22% headroom
+    const baseV = volumeMax > 0 ? volumeMax : 800;
+    const effVMax = Math.max(baseV, Math.ceil((maxV * 1.22) / 100) * 100);
+
+    return { effPMax, effFMax, effVMax };
+  }, [currentSample, monitored, pressureMax, flowMax, volumeMax]);
+
   // Sync buffer on new sample
   useEffect(() => {
     if (!currentSample || maneuverState.isFrozen) return;
@@ -269,19 +310,34 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const numTracks = isSplit ? 2 : 3;
     const trackGap = 6;
     const totalGap = trackGap * (numTracks - 1);
-    const availableHeight = isSplit ? height * 0.52 : height;
+    const availableHeight = height;
     const trackHeight = (availableHeight - totalGap) / numTracks;
 
     const t1Top = 0;
     const t1Bottom = trackHeight;
     const t2Top = trackHeight + trackGap;
-    const t2Bottom = trackHeight * 2 + trackGap;
-    const t3Top = trackHeight * 2 + totalGap;
+    const t2Bottom = isSplit ? height : trackHeight * 2 + trackGap;
+    const t3Top = isSplit ? height : trackHeight * 2 + totalGap;
     const t3Bottom = height;
 
-    const padLeft = 48;
+    const padLeft = 52;
     const padRight = 16;
     const chartW = width - padLeft - padRight;
+
+    // Use current adaptive scales with auto-headroom
+    const scales = getDynamicScales();
+    const effPMax = scales.effPMax;
+    const effFMax = scales.effFMax;
+    const effVMax = scales.effVMax;
+    lastScalesRef.current = scales;
+
+    const topSafety = 24;
+    const bottomSafety = 12;
+    const usableH = Math.max(30, trackHeight - topSafety - bottomSafety);
+
+    const pZeroY = t1Bottom - bottomSafety;
+    const fZeroY = t2Top + trackHeight / 2;
+    const vZeroY = t3Bottom - bottomSafety;
 
     // Track Cards
     const drawTrackCard = (top: number, bottom: number) => {
@@ -299,27 +355,18 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     drawTrackCard(t2Top, t2Bottom);
     if (!isSplit) {
       drawTrackCard(t3Top, t3Bottom);
-    } else {
-      ctx.fillStyle = isLight ? '#ffffff' : '#090c14';
-      if (typeof ctx.roundRect === 'function') {
-        ctx.beginPath();
-        ctx.roundRect(2, availableHeight + 4, width - 4, height - availableHeight - 6, 8);
-        ctx.fill();
-      } else {
-        ctx.fillRect(2, availableHeight + 4, width - 4, height - availableHeight - 6);
-      }
     }
 
     // Grid Lines
     const drawGridLines = (top: number, bottom: number, zeroY: number, hasZeroLine: boolean = true) => {
       ctx.save();
       const numHoriz = 4;
-      const rowStep = (bottom - top - 24) / numHoriz;
+      const rowStep = usableH / numHoriz;
       ctx.strokeStyle = isLight ? '#f1f5f9' : '#101522';
       ctx.lineWidth = 1;
 
       for (let r = 1; r <= numHoriz; r++) {
-        const y = top + 12 + r * rowStep;
+        const y = top + topSafety + (numHoriz - r) * rowStep;
         ctx.beginPath();
         ctx.moveTo(padLeft, y);
         ctx.lineTo(width - padRight, y);
@@ -348,14 +395,10 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       ctx.restore();
     };
 
-    const pZeroY = t1Bottom - 18;
     drawGridLines(t1Top, t1Bottom, pZeroY, true);
-
-    const fZeroY = t2Top + (t2Bottom - t2Top) / 2;
     drawGridLines(t2Top, t2Bottom, fZeroY, true);
 
     if (!isSplit) {
-      const vZeroY = t3Bottom - 18;
       drawGridLines(t3Top, t3Bottom, vZeroY, true);
     }
 
@@ -364,18 +407,17 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     ctx.fillStyle = isLight ? '#64748b' : '#64748b';
     ctx.textAlign = 'right';
 
-    ctx.fillText(`${pressureMax}`, padLeft - 6, t1Top + 14);
-    ctx.fillText(`${Math.round(pressureMax / 2)}`, padLeft - 6, t1Top + (t1Bottom - t1Top) / 2 + 3);
+    ctx.fillText(`${effPMax}`, padLeft - 6, t1Top + topSafety + 5);
+    ctx.fillText(`${Math.round(effPMax / 2)}`, padLeft - 6, t1Top + topSafety + usableH / 2 + 3);
     ctx.fillText('0', padLeft - 6, pZeroY + 3);
 
-    ctx.fillText(`+${flowMax}`, padLeft - 6, t2Top + 14);
+    ctx.fillText(`+${effFMax}`, padLeft - 6, t2Top + 18);
     ctx.fillText('0', padLeft - 6, fZeroY + 3);
-    ctx.fillText(`-${flowMax}`, padLeft - 6, t2Bottom - 6);
+    ctx.fillText(`-${effFMax}`, padLeft - 6, t2Bottom - 10);
 
     if (!isSplit) {
-      const vZeroY = t3Bottom - 18;
-      ctx.fillText(`${volumeMax}`, padLeft - 6, t3Top + 14);
-      ctx.fillText(`${Math.round(volumeMax / 2)}`, padLeft - 6, t3Top + (t3Bottom - t3Top) / 2 + 3);
+      ctx.fillText(`${effVMax}`, padLeft - 6, t3Top + topSafety + 5);
+      ctx.fillText(`${Math.round(effVMax / 2)}`, padLeft - 6, t3Top + topSafety + usableH / 2 + 3);
       ctx.fillText('0', padLeft - 6, vZeroY + 3);
     }
 
@@ -625,28 +667,45 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     const numTracks = isSplit ? 2 : 3;
     const trackGap = 6;
     const totalGap = trackGap * (numTracks - 1);
-    const availableHeight = isSplit ? height * 0.52 : height;
+    const availableHeight = height;
     const trackHeight = (availableHeight - totalGap) / numTracks;
 
     const t1Top = 0;
     const t1Bottom = trackHeight;
     const t2Top = trackHeight + trackGap;
-    const t2Bottom = trackHeight * 2 + trackGap;
-    const t3Top = trackHeight * 2 + totalGap;
+    const t2Bottom = isSplit ? height : trackHeight * 2 + trackGap;
+    const t3Top = isSplit ? height : trackHeight * 2 + totalGap;
     const t3Bottom = height;
 
-    const padLeft = 48;
+    // Check if dynamic adaptive scales expanded, and re-render background if changed
+    const scales = getDynamicScales();
+    if (
+      scales.effPMax !== lastScalesRef.current.effPMax ||
+      scales.effFMax !== lastScalesRef.current.effFMax ||
+      scales.effVMax !== lastScalesRef.current.effVMax
+    ) {
+      lastScalesRef.current = scales;
+      renderBackground();
+    }
+    const { effPMax, effFMax, effVMax } = lastScalesRef.current;
+
+    const padLeft = 52;
     const padRight = 16;
     const chartW = width - padLeft - padRight;
 
-    const pZeroY = t1Bottom - 18;
-    const pScale = (trackHeight - 44) / pressureMax;
+    const topSafety = 24;
+    const bottomSafety = 12;
+    const usableH = Math.max(30, trackHeight - topSafety - bottomSafety);
 
-    const fZeroY = t2Top + (t2Bottom - t2Top) / 2;
-    const fScale = (trackHeight / 2 - 20) / flowMax;
+    const pZeroY = t1Bottom - bottomSafety;
+    const pScale = usableH / effPMax;
 
-    const vZeroY = t3Bottom - 18;
-    const vScale = (trackHeight - 44) / volumeMax;
+    const fZeroY = t2Top + trackHeight / 2;
+    const usableFHalf = Math.max(20, trackHeight / 2 - 18);
+    const fScale = usableFHalf / effFMax;
+
+    const vZeroY = t3Bottom - bottomSafety;
+    const vScale = usableH / effVMax;
 
     // Real-Time Telemetry Badges in each track
     const drawTrackTelemetry = (
@@ -879,104 +938,44 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
     };
 
-    // 1. Draw Paw Waveform (Cyan)
+    // 1. Draw Paw Waveform (Cyan) with track boundary clipping
+    backCtx.save();
+    backCtx.beginPath();
+    backCtx.rect(padLeft, t1Top + 2, chartW, (t1Bottom - t1Top) - 4);
+    backCtx.clip();
     drawSmoothWaveformChannel(
-      (s) => Math.max(t1Top + 6, Math.min(t1Bottom - 6, pZeroY - s.pressure * pScale)),
+      (s) => pZeroY - s.pressure * pScale,
       isLight ? '#0284c7' : '#00e5ff',
       'rgba(0, 229, 255, 0.65)',
       'paw'
     );
+    backCtx.restore();
 
-    // 2. Draw Flow Waveform (Emerald)
+    // 2. Draw Flow Waveform (Emerald) with track boundary clipping
+    backCtx.save();
+    backCtx.beginPath();
+    backCtx.rect(padLeft, t2Top + 2, chartW, (t2Bottom - t2Top) - 4);
+    backCtx.clip();
     drawSmoothWaveformChannel(
-      (s) => Math.max(t2Top + 6, Math.min(t2Bottom - 6, fZeroY - s.flow * fScale)),
+      (s) => fZeroY - s.flow * fScale,
       isLight ? '#059669' : '#10b981',
       'rgba(16, 185, 129, 0.65)',
       'flow'
     );
+    backCtx.restore();
 
-    // 3. Draw Volume Waveform (Amber) or Split Loops
+    // 3. Draw Volume Waveform (Amber) with track boundary clipping
     if (!isSplit) {
+      backCtx.save();
+      backCtx.beginPath();
+      backCtx.rect(padLeft, t3Top + 2, chartW, (t3Bottom - t3Top) - 4);
+      backCtx.clip();
       drawSmoothWaveformChannel(
-        (s) => Math.max(t3Top + 6, Math.min(t3Bottom - 6, vZeroY - s.volume * vScale)),
+        (s) => vZeroY - s.volume * vScale,
         isLight ? '#d97706' : '#f59e0b',
         'rgba(245, 158, 11, 0.65)',
         'volume'
       );
-    } else {
-      const bTop = availableHeight + 6;
-      const panelGap = 8;
-      const panelW = (width - panelGap) / 2;
-      const p1Left = 0;
-      const p2Left = panelW + panelGap;
-
-      const lpPadL = p1Left + 36;
-      const lpPadR = p1Left + panelW - 12;
-      const lpPadB = height - 16;
-      const lpPadT = bTop + 24;
-      const lpW = lpPadR - lpPadL;
-      const lpH = lpPadB - lpPadT;
-
-      const lfPadL = p2Left + 36;
-      const lfPadR = p2Left + panelW - 12;
-      const lfPadB = height - 16;
-      const lfPadT = bTop + 24;
-      const lfW = lfPadR - lfPadL;
-      const lfH = lfPadB - lfPadT;
-      const lfZeroY = lfPadT + lfH / 2;
-
-      const validSamples = buffer.filter(Boolean);
-      const loopCount = Math.min(validSamples.length, 140);
-      const recentSamples = validSamples.slice(-loopCount);
-
-      if (recentSamples.length > 5) {
-        // P-V loop
-        const pvPoints = recentSamples.map((s) => ({
-          x: Math.max(lpPadL, Math.min(lpPadR, lpPadL + (s.pressure / pressureMax) * lpW)),
-          y: Math.max(lpPadT, Math.min(lpPadB, lpPadB - (s.volume / volumeMax) * lpH)),
-        }));
-
-        backCtx.save();
-        backCtx.beginPath();
-        backCtx.moveTo(pvPoints[0].x, pvPoints[0].y);
-        for (let i = 1; i < pvPoints.length; i++) {
-          backCtx.lineTo(pvPoints[i].x, pvPoints[i].y);
-        }
-        backCtx.closePath();
-        backCtx.fillStyle = isLight ? 'rgba(2, 132, 199, 0.12)' : 'rgba(0, 229, 255, 0.15)';
-        backCtx.fill();
-        backCtx.strokeStyle = isLight ? '#0284c7' : '#00e5ff';
-        backCtx.lineWidth = 2.0;
-        backCtx.stroke();
-        backCtx.restore();
-
-        // F-V loop
-        const fvPoints = recentSamples.map((s) => ({
-          x: Math.max(lfPadL, Math.min(lfPadR, lfPadL + (s.volume / volumeMax) * lfW)),
-          y: Math.max(lfPadT, Math.min(lfPadB, lfZeroY - (s.flow / flowMax) * (lfH / 2))),
-        }));
-
-        backCtx.save();
-        backCtx.beginPath();
-        backCtx.moveTo(fvPoints[0].x, fvPoints[0].y);
-        for (let i = 1; i < fvPoints.length; i++) {
-          backCtx.lineTo(fvPoints[i].x, fvPoints[i].y);
-        }
-        backCtx.closePath();
-        backCtx.fillStyle = isLight ? 'rgba(5, 150, 105, 0.12)' : 'rgba(16, 185, 129, 0.15)';
-        backCtx.fill();
-        backCtx.strokeStyle = isLight ? '#059669' : '#10b981';
-        backCtx.lineWidth = 2.0;
-        backCtx.stroke();
-        backCtx.restore();
-      }
-
-      backCtx.save();
-      backCtx.font = 'bold 9px system-ui, sans-serif';
-      backCtx.fillStyle = isLight ? '#0284c7' : '#00e5ff';
-      backCtx.fillText('Alça P-V', p1Left + 10, bTop + 14);
-      backCtx.fillStyle = isLight ? '#059669' : '#10b981';
-      backCtx.fillText('Alça F-V', p2Left + 10, bTop + 14);
       backCtx.restore();
     }
 
@@ -1325,6 +1324,9 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                 isLight ? 'text-slate-800' : 'text-zinc-200'
               }`}
             >
+              <option value={0} className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
+                Auto Adaptativo
+              </option>
               <option value={30} className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
                 30 cmH₂O
               </option>
@@ -1358,6 +1360,9 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                 isLight ? 'text-slate-800' : 'text-zinc-200'
               }`}
             >
+              <option value={0} className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
+                Auto Adaptativo
+              </option>
               <option value={60} className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
                 ±60 L/min
               </option>
@@ -1388,6 +1393,9 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
                 isLight ? 'text-slate-800' : 'text-zinc-200'
               }`}
             >
+              <option value={0} className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
+                Auto Adaptativo
+              </option>
               <option value={600} className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
                 600 mL
               </option>
@@ -1426,11 +1434,11 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       </div>
 
       {/* Main Dual-Layer Canvas Display Area with Double Buffering */}
-      <div ref={canvasAreaRef} className="relative flex-1 w-full h-full min-h-0 p-1">
+      <div ref={canvasAreaRef} className="relative flex-1 w-full h-full min-h-0 overflow-hidden">
         {/* Layer 1: Static Background Canvas (Grids, Lines, Scale Labels) */}
         <canvas
           ref={bgCanvasRef}
-          className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] block rounded-xl pointer-events-none"
+          className="absolute inset-0 w-full h-full block pointer-events-none"
         />
 
         {/* Layer 2: Dynamic Real-time Front-Buffer (Atomically blitted from Offscreen Back-Buffer) */}
@@ -1438,7 +1446,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           ref={fgCanvasRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] block rounded-xl cursor-crosshair z-10"
+          className="absolute inset-0 w-full h-full block cursor-crosshair z-10"
         />
       </div>
     </div>

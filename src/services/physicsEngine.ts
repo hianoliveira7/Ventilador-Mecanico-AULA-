@@ -81,7 +81,8 @@ export class MechanicsStateBuffer {
 
   /**
    * Smoothly updates intra-cycle mechanics state toward target values
-   * using adaptive viscoelastic relaxation time constants to eliminate waveform ringing.
+   * Fast, responsive adaptation (tau ~ 0.15s) so user changes in compliance/resistance
+   * immediately modify curves and loops without single-frame audio clicks.
    */
   public updateSmoothedState(
     dt: number,
@@ -90,23 +91,23 @@ export class MechanicsStateBuffer {
     targetPeep: number,
     targetAutoPeep: number
   ) {
-    // Viscoelastic lung tissue relaxation filter (tau ~ 10-14s for compliance adaptation)
-    const tauC = 12.0;
+    // Responsive compliance adaptation (tau ~ 0.15s)
+    const tauC = 0.15;
     const alphaC = 1 - Math.exp(-dt / tauC);
     this.smoothedCstat += (targetCstat - this.smoothedCstat) * alphaC;
 
-    // Airway resistance adaptation filter (tau ~ 5s)
-    const tauR = 5.0;
+    // Responsive airway resistance adaptation filter (tau ~ 0.15s)
+    const tauR = 0.15;
     const alphaR = 1 - Math.exp(-dt / tauR);
     this.smoothedRaw += (targetRaw - this.smoothedRaw) * alphaR;
 
-    // Circuit PEEP equilibration filter (tau ~ 1.2s)
-    const tauPeep = 1.2;
+    // Circuit PEEP equilibration filter (tau ~ 0.5s)
+    const tauPeep = 0.5;
     const alphaPeep = 1 - Math.exp(-dt / tauPeep);
     this.smoothedPeep += (targetPeep - this.smoothedPeep) * alphaPeep;
 
-    // Auto-PEEP washout/accumulation filter (tau ~ 6s)
-    const tauAutoPeep = 6.0;
+    // Auto-PEEP washout/accumulation filter (tau ~ 1.5s)
+    const tauAutoPeep = 1.5;
     const alphaAutoPeep = 1 - Math.exp(-dt / tauAutoPeep);
     this.smoothedAutoPeep += (targetAutoPeep - this.smoothedAutoPeep) * alphaAutoPeep;
 
@@ -201,10 +202,11 @@ export class VentilationPhysicsEngine {
   private displayedRaw: number = 5.0;
   private displayedTau: number = 0.25;
 
-  public reset() {
+  public reset(initialCompliance: number = 50, initialResistance: number = 5, initialPeep: number = 5) {
     this.cycleTime = 0;
+    this.totalSimulationTime = 0;
     this.currentVolume = 0;
-    this.currentPressure = 5;
+    this.currentPressure = initialPeep;
     this.currentFlow = 0;
     this.isInspPhase = true;
     this.isPausePhase = false;
@@ -215,7 +217,23 @@ export class VentilationPhysicsEngine {
     this.dynamicAutoPeep = 0;
     this.activeSettings = null;
     this.pendingSettings = null;
-    this.stateBuffer.reset();
+    this.dynamicEffectiveCompliance = initialCompliance;
+    this.dynamicEffectiveResistance = initialResistance;
+    this.dynamicEffectivePeep = initialPeep;
+    this.currentPaCO2 = 40;
+    this.currentPaO2 = 95;
+    this.currentpH = 7.40;
+    this.currentSpO2 = 98;
+    this.displayedPeak = initialPeep + 10;
+    this.displayedPlat = initialPeep + 8;
+    this.displayedAutoPeep = 0;
+    this.cyclePeakInspFlow = 60;
+    this.lastPeakFlow = 30;
+    this.breathCounter = 0;
+    this.spontBreathCounter = 0;
+    this.cycleVti = 450;
+    this.cycleVte = 450;
+    this.stateBuffer.reset(initialCompliance, initialResistance, initialPeep);
   }
 
   /**
@@ -275,6 +293,12 @@ export class VentilationPhysicsEngine {
 
       dynamicSpontRate = Math.max(3, Math.min(dynamicSpontRate, 60));
       dynamicEffort = Math.min(-0.2, Math.max(dynamicEffort, -30));
+
+      const vtPerKgIBW = (this.displayedVte || 400) / Math.max(1, patient.idealBodyWeightKg || 57);
+      if (vtPerKgIBW >= 5.8 && this.displayedVte >= 340) {
+        // Adequate tidal volume satisfies air hunger: muscular effort settles to comfortable synchronized range
+        dynamicEffort = Math.max(dynamicEffort * 0.7, -4.0);
+      }
     }
 
     // 3. Determine Breath Timings: When spontaneous drive is active, the graph and cycle follow the patient's FR
@@ -412,7 +436,7 @@ export class VentilationPhysicsEngine {
         const requiredPmus = -Math.abs(currentActiveSettings.triggerSensitivity || 2.0) - uncounterbalancedAutoPeep;
         if (pmus <= requiredPmus || (!this.isInspPhase && this.cycleTime >= cycleDuration)) {
           isPatientTriggering = true;
-        } else if (pmus < -1.8 && !this.isInspPhase) {
+        } else if (pmus < -1.8 && !this.isInspPhase && (uncounterbalancedAutoPeep >= 1.5 || this.displayedAutoPeep >= 2.5)) {
           isIneffectiveEffort = true;
           detectedAsynchrony = 'ineffective_effort';
           asynchronyDetail = `Disparo Ineficaz: O esforço muscular não atinge a sensibilidade devido ao Auto-PEEP (${this.displayedAutoPeep.toFixed(1)} cmH₂O).`;
@@ -421,7 +445,7 @@ export class VentilationPhysicsEngine {
         const netEffort = Math.max(0, Math.abs(pmus) - uncounterbalancedAutoPeep);
         if (netEffort >= (currentActiveSettings.triggerSensitivity || 2.0) * 0.55 || (!this.isInspPhase && this.cycleTime >= cycleDuration)) {
           isPatientTriggering = true;
-        } else if (netEffort > 0.8 && !this.isInspPhase) {
+        } else if (netEffort > 0.8 && !this.isInspPhase && (uncounterbalancedAutoPeep >= 1.5 || this.displayedAutoPeep >= 2.5)) {
           isIneffectiveEffort = true;
           detectedAsynchrony = 'ineffective_effort';
           asynchronyDetail = `Disparo Ineficaz: Auto-PEEP elevado (${this.displayedAutoPeep.toFixed(1)} cmH₂O) impedindo a deflexão de fluxo disparar o ventilador.`;
@@ -466,11 +490,16 @@ export class VentilationPhysicsEngine {
           this.displayedVti = Math.round(this.cycleVti);
 
           // Double Triggering check
+          const vtPerKg = (this.cycleVti || 450) / Math.max(1, patient.idealBodyWeightKg || 57);
+          const isVtAdequate = vtPerKg >= 5.8 && this.cycleVti >= 330;
+          const isTiAdequate = inspTime >= 0.80 || (currentActiveSettings.mode === 'VCV' && (currentActiveSettings.inspiratoryFlow || 60) <= 65) || (currentActiveSettings.inspiratoryPausePercent || 0) >= 10;
+
           if (
             patient.spontaneousDrive &&
             Math.abs(pmus) > 4.5 &&
             (currentActiveSettings.mode === 'VCV' || currentActiveSettings.mode === 'PCV') &&
-            inspTime < 0.9 &&
+            (!isVtAdequate || !isTiAdequate) &&
+            inspTime < 0.80 &&
             this.doubleTriggerCooldown === 0
           ) {
             this.doubleTriggerPending = true;
@@ -478,6 +507,12 @@ export class VentilationPhysicsEngine {
             detectedAsynchrony = 'double_trigger';
             asynchronyDetail =
               'Duplo Disparo (Double Triggering): Tempo neural do paciente é maior que o tempo inspiratório programado, gerando empilhamento de volume.';
+          } else if (isVtAdequate && isTiAdequate) {
+            this.doubleTriggerPending = false;
+            if (detectedAsynchrony === 'double_trigger') {
+              detectedAsynchrony = 'none';
+              asynchronyDetail = 'Ventilação sincronizada: volume corrente protetor e tempo inspiratório harmonizados.';
+            }
           }
 
           audioEngine.playBreathExpSound(expTime, Raw);
@@ -627,9 +662,10 @@ export class VentilationPhysicsEngine {
           }
 
           let flowStarvationEffect = 0;
-          if (pmus < -2.5) {
+          if (pmus < -2.0) {
             flowStarvationEffect = pmus * 1.15;
-            if ((flowLsec * 60) < 55) {
+            // True flow starvation in VCV occurs when set inspiratory flow is low (<50 L/min) while patient has vigorous demand
+            if ((currentActiveSettings.inspiratoryFlow || 60) < 50 && (patient.spontaneousEffortPressure <= -6 || pmus < -4.5)) {
               detectedAsynchrony = 'flow_starvation';
               asynchronyDetail = 'Fome de Fluxo (Flow Starvation): O fluxo inspiratório ofertado é insuficiente para a demanda muscular.';
             }
@@ -828,11 +864,15 @@ export class VentilationPhysicsEngine {
         
         // Rapid exponential decay of airway pressure down to PEEP when exhalation valve opens
         const expTimeElapsed = Math.max(0, this.cycleTime - inspTime);
-        const valveDecayTau = Math.max(0.03, effectiveExpTau / 4);
+        const valveDecayTau = 0.055; // 55ms rapid valve opening transient
         const valveDecayFactor = Math.exp(-expTimeElapsed / valveDecayTau);
         const endInspP = Math.max(setPeep + pAlveolar, this.cyclePlateauPressure || setPeep + 10);
         
-        const expPressureCurve = setPeep + this.dynamicAutoPeep + (pAlveolar * (1 - valveDecayFactor)) + ((endInspP - setPeep) * valveDecayFactor * 0.35);
+        // Physical Paw during expiration = setPeep + dynamicAutoPeep + exhalation valve flow resistance + transient valve opening spike
+        const absExpFlowLsec = Math.abs(expFlowLsec);
+        const valveResistanceP = Math.min(3.5, absExpFlowLsec * (1.6 + (Raw > 15 ? 0.8 : 0)));
+        const transientSpike = (endInspP - setPeep) * valveDecayFactor * 0.45;
+        const expPressureCurve = setPeep + this.dynamicAutoPeep + valveResistanceP + transientSpike;
 
         this.currentPressure = Math.max(setPeep - 2.5, expPressureCurve) + expPmusDeflection + microNoiseP;
       }

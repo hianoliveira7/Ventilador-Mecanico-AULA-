@@ -176,6 +176,32 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
 
               {/* Action Quick Links for Student */}
               <div className="space-y-2 pt-1">
+                {onOpenAsynchronies && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChooseStudent();
+                      onOpenAsynchronies();
+                    }}
+                    className={`w-full p-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all shadow-md active:scale-98 ${
+                      isLight
+                        ? 'bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-950 border-amber-300 ring-2 ring-amber-400/20'
+                        : 'bg-gradient-to-r from-amber-950/60 to-orange-950/40 hover:from-amber-900/70 hover:to-orange-900/50 text-amber-200 border-amber-600/70 ring-1 ring-amber-500/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-xs">
+                        <Zap className="w-3.5 h-3.5 fill-current animate-pulse" />
+                      </div>
+                      <div className="text-left">
+                        <span className="block font-black text-amber-500 text-[10px] tracking-wider uppercase">NOVO • PRÁTICA CLÍNICA</span>
+                        <span className="text-[11.5px] font-bold">1. Banco de Assincronias (Simular & Resolver)</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
+                  </button>
+                )}
+
                 {onOpenTutorial && (
                   <button
                     type="button"
@@ -191,7 +217,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-cyan-500" />
-                      <span>1. Tutorial Guiado do Estudante</span>
+                      <span>2. Tutorial Guiado do Estudante</span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-cyan-500" />
                   </button>
@@ -212,7 +238,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <Target className="w-4 h-4 text-emerald-500" />
-                      <span>2. Missões Clínicas Desafiadoras</span>
+                      <span>3. Missões Clínicas Desafiadoras</span>
                     </div>
                     <ChevronRight className="w-4 h-4 opacity-70" />
                   </button>
@@ -233,7 +259,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <BookOpen className="w-4 h-4 text-blue-500" />
-                      <span>3. Casos Clínicos & Patologias</span>
+                      <span>4. Casos Clínicos & Patologias</span>
                     </div>
                     <ChevronRight className="w-4 h-4 opacity-70" />
                   </button>
@@ -254,30 +280,9 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   >
                     <div className="flex items-center gap-2">
                       <HelpCircle className="w-4 h-4 text-purple-500" />
-                      <span>4. Quiz de Avaliação Teórico-Prática</span>
+                      <span>5. Quiz de Avaliação Teórico-Prática</span>
                     </div>
                     <ChevronRight className="w-4 h-4 opacity-70" />
-                  </button>
-                )}
-
-                {onOpenAsynchronies && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleChooseStudent();
-                      onOpenAsynchronies();
-                    }}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-amber-50/80 hover:bg-amber-100/80 text-amber-950 border-amber-300 shadow-sm'
-                        : 'bg-amber-950/40 hover:bg-amber-900/50 text-amber-200 border-amber-800/60'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
-                      <span>5. Banco de Dados de Assincronias (Simular & Resolver)</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-amber-400" />
                   </button>
                 )}
               </div>

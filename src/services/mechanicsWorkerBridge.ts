@@ -72,20 +72,7 @@ export class MechanicsWorkerBridge {
       state,
     };
 
-    if (this.isWorkerActive && this.worker) {
-      // Post message to worker thread if ready
-      if (!this.isPending) {
-        this.isPending = true;
-        this.worker.postMessage(input);
-      }
-
-      // If we already have a buffered worker result, return it immediately
-      if (this.lastResult) {
-        return this.lastResult;
-      }
-    }
-
-    // Direct synchronous fallback if worker not ready / active
+    // Immediate zero-latency physiological mechanics computation
     const syncResult = computeRespiratoryMechanics(input);
     this.lastResult = syncResult;
     return syncResult;

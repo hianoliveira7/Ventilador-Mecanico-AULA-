@@ -104,11 +104,12 @@ export function computeRespiratoryMechanics(input: MechanicsWorkerInput): Mechan
   }
 
   // 3. Multi-breath Viscoelastic Relaxation & Mechanics Latency
-  const tauCompliance = setPeep > newEffectivePeep ? 16.0 : 12.0;
+  // Fast, responsive adaptation so user modifications are immediately visible, with smooth 0.25s interpolation
+  const tauCompliance = 0.25;
   const alphaCompliance = 1 - Math.exp(-dt / tauCompliance);
   const newCompliance = state.dynamicEffectiveCompliance + (calcTargetCompliance - state.dynamicEffectiveCompliance) * alphaCompliance;
 
-  const tauResistance = 6.0;
+  const tauResistance = 0.25;
   const alphaResistance = 1 - Math.exp(-dt / tauResistance);
   const newResistance = state.dynamicEffectiveResistance + (calcTargetResistance - state.dynamicEffectiveResistance) * alphaResistance;
 
@@ -193,16 +194,49 @@ export function computeRespiratoryMechanics(input: MechanicsWorkerInput): Mechan
     physiologicalTransitionMessage = 'Equilíbrio cinético de PaCO₂/PaO₂ e acomodação do drive bulbar...';
   }
 
-  // 7. Dynamic Asynchrony Check
+  // 7. Dynamic Asynchrony Check (Mode-specific & physiologically grounded)
   let detectedAsynchrony: MechanicsWorkerOutput['detectedAsynchrony'] = 'none';
   let asynchronyDetail = 'Ventilação sincronizada sem assincronias ativas.';
 
-  if (settings.expiratorySensitivity >= 45 && patient.spontaneousDrive) {
-    detectedAsynchrony = 'premature_cycling';
-    asynchronyDetail = `Ciclagem Prematura: Critério Esens elevado (${settings.expiratorySensitivity}%) interrompe o fluxo antes do término do tempo neural.`;
-  } else if (settings.expiratorySensitivity <= 10 && Raw > 12) {
-    detectedAsynchrony = 'delayed_cycling';
-    asynchronyDetail = 'Ciclagem Tardia: Esens muito baixo prolonga a fase inspiratória em paciente obstrutivo.';
+  const isPsvMode = settings.mode === 'PSV' || settings.mode === 'CPAP';
+  const isObstructivePathology = patient.pathology === 'dpoc' || patient.pathology === 'asma' || patient.resistance >= 16;
+  const isNormalLung = patient.pathology === 'normal' || (patient.compliance >= 50 && patient.resistance <= 8);
+
+  // In PSV mode: cycling is governed by Expiratory Sensitivity (Esens % of peak flow)
+  if (isPsvMode && patient.spontaneousDrive) {
+    if (settings.expiratorySensitivity >= 45) {
+      detectedAsynchrony = 'premature_cycling';
+      asynchronyDetail = `Ciclagem Prematura: Critério Esens elevado (${settings.expiratorySensitivity}%) interrompe o fluxo antes do término do tempo neural.`;
+    } else if (settings.expiratorySensitivity <= 10 && isObstructivePathology && timeConstant > 0.45) {
+      detectedAsynchrony = 'delayed_cycling';
+      asynchronyDetail = `Ciclagem Tardia: Esens de ${settings.expiratorySensitivity}% em paciente obstrutivo com tau prolongado (${timeConstant.toFixed(2)}s) atrasa a abertura expiratória.`;
+    }
+  } else if ((settings.mode === 'VCV' || settings.mode === 'PCV') && patient.spontaneousDrive) {
+    // In VCV or PCV, cycling is controlled by time/volume, NOT by Esens.
+    // In normal lung, a standard inspiratory time (0.8 - 1.4s) is physiological and harmonious.
+    // Delayed cycling in controlled modes ONLY occurs if set mechanical Ti is grossly prolonged
+    // (e.g. Ti > 1.65s in obstructive, or extreme inverted I:E > 2.0s in non-obstructive)
+    // AND Ti must drastically exceed neural Ti.
+    const spontDuty = patient.spontaneousDutyCycle || 0.33;
+    const cycleDuration = 60 / Math.max(patient.spontaneousRate, 5);
+    const neuralTi = cycleDuration * spontDuty;
+
+    let totalMechTi = settings.inspiratoryTimePCV || 1.0;
+    if (settings.mode === 'VCV') {
+      const flowRate = settings.inspiratoryFlow || 60;
+      const vt = settings.tidalVolume || 450;
+      const flowDeliveryTime = settings.flowWaveform === 'decelerating' ? (vt * 0.06) / (0.65 * flowRate) : (vt * 0.06) / flowRate;
+      const pausePercent = settings.inspiratoryPausePercent || 0;
+      const pauseDuration = pausePercent > 0 ? Math.min(0.5, (pausePercent / 100) * (60 / Math.max(settings.respiratoryRate || 15, 6))) : 0;
+      totalMechTi = flowDeliveryTime + pauseDuration;
+    }
+
+    const minDelayedTiThreshold = isNormalLung ? 2.0 : (isObstructivePathology ? 1.65 : 1.85);
+
+    if (totalMechTi >= minDelayedTiThreshold && totalMechTi > neuralTi * 1.85) {
+      detectedAsynchrony = 'delayed_cycling';
+      asynchronyDetail = `Ciclagem Tardia: Tempo inspiratório programado (${totalMechTi.toFixed(2)}s) excede excessivamente o tempo neural (${neuralTi.toFixed(2)}s), gerando esforço expiratório ativo prematuro.`;
+    }
   }
 
   const smoothedBaseExcess = Math.round((baseBicarb - 24.8 + 16.2 * (newpH - 7.40)) * 10) / 10;
