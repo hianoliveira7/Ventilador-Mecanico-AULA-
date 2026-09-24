@@ -38,11 +38,47 @@ import { StudentTutorialModal } from './components/StudentTutorialModal';
 import { TeacherAdminModal } from './components/TeacherAdminModal';
 import { TeacherAuthModal } from './components/TeacherAuthModal';
 import { InteractiveTour } from './components/InteractiveTour';
+import { DebriefingModal } from './components/DebriefingModal';
+import { FlashcardsModal } from './components/FlashcardsModal';
+import { VentilatorAdmissionScreen } from './components/VentilatorAdmissionScreen';
 import { educationalStorage, UserRole } from './services/educationalStorage';
+import {
+  PedagogicalSettings,
+  CaseDebriefingReport,
+  CaseIntervention,
+  FormulaOverlayType,
+} from './types/ventilation';
 import { useTheme } from './context/ThemeContext';
 
 export default function App() {
   const { isLight } = useTheme();
+
+  // Pedagogical & Evaluation Settings
+  const [pedagogicalSettings, setPedagogicalSettings] = useState<PedagogicalSettings>(() =>
+    educationalStorage.getPedagogicalSettings()
+  );
+  const [activeFormulaOverlay, setActiveFormulaOverlay] = useState<FormulaOverlayType>('none');
+  const [isDebriefingOpen, setIsDebriefingOpen] = useState<boolean>(false);
+  const [currentDebriefingReport, setCurrentDebriefingReport] = useState<CaseDebriefingReport | null>(null);
+  const [isFlashcardsOpen, setIsFlashcardsOpen] = useState<boolean>(false);
+
+  // Ventilator Standby / Pre-Ventilation State
+  const [isVentilating, setIsVentilating] = useState<boolean>(false);
+  const isVentilatingRef = useRef(isVentilating);
+  useEffect(() => {
+    isVentilatingRef.current = isVentilating;
+  }, [isVentilating]);
+
+  // Case tracking for After Action Review (AAR)
+  const [caseStartTime, setCaseStartTime] = useState<number>(Date.now());
+  const [caseInterventions, setCaseInterventions] = useState<CaseIntervention[]>([]);
+  const [viliExposureSeconds, setViliExposureSeconds] = useState<number>(0);
+  const [highPlateauSeconds, setHighPlateauSeconds] = useState<number>(0);
+  const [hasDeteriorated, setHasDeteriorated] = useState<boolean>(false);
+  const [deteriorationWarning, setDeteriorationWarning] = useState<string | null>(null);
+  const [deteriorationSecondsCounter, setDeteriorationSecondsCounter] = useState<number>(0);
+  const [currentPhaseIndex, setCurrentPhaseIndex] = useState<number>(0);
+
   // 1. Core Ventilator Settings
   const [settings, setSettings] = useState<VentilatorSettings>({
     mode: 'VCV',
@@ -79,6 +115,28 @@ export default function App() {
 
   const handleConfirmSettings = () => {
     audioEngine.playConfirmBeep();
+
+    // Record clinical interventions for debriefing report
+    if (activeClinicalCase) {
+      const elapsed = Math.max(1, Math.round((Date.now() - caseStartTime) / 1000));
+      const timeStr = `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+      (Object.keys(draftSettings) as (keyof VentilatorSettings)[]).forEach((k) => {
+        if (draftSettings[k] !== settings[k]) {
+          setCaseInterventions((prev) => [
+            ...prev,
+            {
+              id: `int_${Date.now()}_${k}_${Math.random().toString(36).substring(2, 5)}`,
+              timestampSeconds: elapsed,
+              timeString: timeStr,
+              parameterChanged: String(k).toUpperCase(),
+              oldValue: String(settings[k] ?? '-'),
+              newValue: String(draftSettings[k] ?? '-'),
+            },
+          ]);
+        }
+      });
+    }
+
     setSettings(draftSettings);
   };
 
@@ -348,7 +406,7 @@ export default function App() {
   useEffect(() => {
     // Standard ICU heart rate approx 75 bpm = 800ms
     const pulseTimer = setInterval(() => {
-      if (!maneuverStateRef.current.isFrozen && monitored.spo2 > 0) {
+      if (!maneuverStateRef.current.isFrozen && isVentilatingRef.current && monitored.spo2 > 0) {
         audioEngine.playSpO2Pulse(monitored.spo2);
       }
     }, 850);
@@ -375,7 +433,7 @@ export default function App() {
     let lastTime = performance.now();
 
     const interval = setInterval(() => {
-      if (maneuverStateRef.current.isFrozen) return;
+      if (maneuverStateRef.current.isFrozen || !isVentilatingRef.current) return;
 
       const { sample, monitored: newMonitored } = physicsEngine.step(
         dt,
@@ -689,8 +747,198 @@ export default function App() {
     setPatient(selectedCase.patientProfile);
     setSettings(selectedCase.initialSettings);
     setDraftSettings(selectedCase.initialSettings);
-    physicsEngine.reset();
+    setCaseStartTime(Date.now());
+    setCaseInterventions([]);
+    setViliExposureSeconds(0);
+    setHighPlateauSeconds(0);
+    setHasDeteriorated(false);
+    setDeteriorationWarning(null);
+    setDeteriorationSecondsCounter(0);
+    setCurrentPhaseIndex(0);
+
+    // If it's an admission case, starts in Standby so student configures initial parameters from scratch!
+    const shouldStartStandby =
+      selectedCase.id.includes('admissao') ||
+      selectedCase.id === 'admissao-uti-zero-sdra' ||
+      selectedCase.category === 'Emergência';
+    setIsVentilating(!shouldStartStandby);
+
+    physicsEngine.reset(
+      selectedCase.patientProfile.compliance,
+      selectedCase.patientProfile.resistance,
+      selectedCase.initialSettings.peep
+    );
   };
+
+  // Safety tracking, temporal phase progression and physiological dynamic deterioration
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!activeClinicalCase || maneuverStateRef.current.isFrozen) return;
+
+      const elapsedCaseSec = Math.floor((Date.now() - caseStartTime) / 1000);
+
+      // Automatic Temporal Progression across Phases (e.g. Admission -> Worsening/Inflammatory Cascade -> Stabilization)
+      if (activeClinicalCase.phases && activeClinicalCase.phases.length > 1) {
+        const phase2Trigger = pedagogicalSettings.admissionPhase2TimeSeconds || 90;
+        const phase3Trigger = pedagogicalSettings.admissionPhase3TimeSeconds || 200;
+
+        // Trigger Phase 2 (Configurable in Teacher Area)
+        if (currentPhaseIndex === 0 && elapsedCaseSec >= phase2Trigger) {
+          const nextPhase = activeClinicalCase.phases[1];
+          if (nextPhase) {
+            setCurrentPhaseIndex(1);
+            if (nextPhase.patientOverrides) {
+              setPatient((p) => ({ ...p, ...nextPhase.patientOverrides }));
+            }
+            audioEngine.triggerAlarmPattern('medium');
+            setDeteriorationWarning(
+              `⚡ EVOLUÇÃO TEMPORAL: ${nextPhase.name}! A complacência caiu e o shunt aumentou. Reavalie a Driving Pressure imediatamente!`
+            );
+          }
+        }
+        // Trigger Phase 3 (Configurable in Teacher Area)
+        else if (currentPhaseIndex === 1 && elapsedCaseSec >= phase3Trigger) {
+          const nextPhase = activeClinicalCase.phases[2];
+          if (nextPhase) {
+            setCurrentPhaseIndex(2);
+            if (nextPhase.patientOverrides) {
+              setPatient((p) => ({ ...p, ...nextPhase.patientOverrides }));
+            }
+            audioEngine.playConfirmBeep();
+            setDeteriorationWarning(
+              `⚡ FASE FINAL: ${nextPhase.name}! Busque a estabilização gasométrica com proteção alveolar plena.`
+            );
+          }
+        }
+      }
+
+      // VILI Tracking
+      if (monitored.drivingPressure > pedagogicalSettings.dpSafetyThreshold) {
+        setViliExposureSeconds((s) => s + 1);
+      }
+      if (monitored.plateauPressure > pedagogicalSettings.platSafetyThreshold) {
+        setHighPlateauSeconds((s) => s + 1);
+      }
+
+      // Dynamic Physiological Deterioration Trigger
+      if (pedagogicalSettings.deteriorationEnabled && !hasDeteriorated) {
+        const isDangerous =
+          monitored.drivingPressure > pedagogicalSettings.dpSafetyThreshold ||
+          monitored.plateauPressure > pedagogicalSettings.platSafetyThreshold;
+
+        if (isDangerous) {
+          setDeteriorationSecondsCounter((prev) => {
+            const next = prev + 1;
+            if (next >= pedagogicalSettings.deteriorationTimeoutSeconds) {
+              setHasDeteriorated(true);
+              setDeteriorationWarning(
+                `Alerta de Barotrauma: Exposição mantida a pressões hiperdistensivas (ΔP > ${pedagogicalSettings.dpSafetyThreshold} cmH₂O ou Pplat > ${pedagogicalSettings.platSafetyThreshold} cmH₂O). Paciente desenvolveu pneumotórax com perda aguda de complacência!`
+              );
+              setPatient((p) => ({
+                ...p,
+                compliance: Math.max(12, Math.round(p.compliance * 0.55)),
+                resistance: Math.min(26, Math.round(p.resistance * 1.4)),
+              }));
+              audioEngine.triggerAlarmPattern('high');
+              return 0;
+            }
+            return next;
+          });
+        } else {
+          setDeteriorationSecondsCounter(0);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [
+    activeClinicalCase,
+    caseStartTime,
+    currentPhaseIndex,
+    monitored.drivingPressure,
+    monitored.plateauPressure,
+    pedagogicalSettings,
+    hasDeteriorated,
+  ]);
+
+  // Debriefing Report Generator (After Action Review - AAR)
+  const generateDebriefingReport = useCallback((): CaseDebriefingReport | null => {
+    if (!activeClinicalCase) return null;
+    const durationSec = Math.max(5, Math.round((Date.now() - caseStartTime) / 1000));
+    const currentGoals = activeClinicalCase.goals || [];
+    const goalsMet = currentGoals.filter((g) => {
+      try {
+        return g.isMet(monitored, settings, patient);
+      } catch {
+        return false;
+      }
+    }).length;
+
+    let baseScore = Math.round((goalsMet / Math.max(1, currentGoals.length)) * 75);
+    const viliPenalty = Math.min(25, Math.floor(viliExposureSeconds / 4));
+    const platPenalty = Math.min(20, Math.floor(highPlateauSeconds / 3));
+    const deteriorationPenalty = hasDeteriorated ? 30 : 0;
+
+    let finalScore = Math.max(15, Math.min(100, baseScore + 25 - viliPenalty - platPenalty - deteriorationPenalty));
+    if (goalsMet === currentGoals.length && !hasDeteriorated && viliExposureSeconds < 15) {
+      finalScore = 100;
+    }
+
+    const rating: CaseDebriefingReport['rating'] =
+      finalScore >= 85
+        ? 'Excelente (Padrão Ouro)'
+        : finalScore >= 70
+        ? 'Adequado / Seguro'
+        : finalScore >= 50
+        ? 'Risco Moderado'
+        : 'Risco Crítico / Iatrogênico';
+
+    const rep: CaseDebriefingReport = {
+      id: `rep_${Date.now()}`,
+      caseId: activeClinicalCase.id,
+      caseTitle: activeClinicalCase.title,
+      studentName: 'Estudante UTI',
+      completedAt: new Date().toLocaleString('pt-BR'),
+      durationSeconds: durationSec,
+      score: finalScore,
+      rating,
+      goalsCompletedCount: goalsMet,
+      totalGoalsCount: currentGoals.length,
+      safetyMetrics: {
+        timeUnderViliSeconds: viliExposureSeconds,
+        timeHighPlateauSeconds: highPlateauSeconds,
+        autoPeepRiskEvents: monitored.autoPeep > 3 ? 1 : 0,
+        asynchronyEventsCount: activeAsynchrony ? 1 : 0,
+        hadDeterioration: hasDeteriorated,
+      },
+      interventions: caseInterventions,
+      guidelineFeedback: activeClinicalCase.teachingPoints || [
+        'Ventilação protetora com Vt de 4-8 mL/kg de peso predito previne volutrauma e barotrauma.',
+        'Manter Driving Pressure ≤ 14-15 cmH₂O e Pressão de Platô ≤ 30 cmH₂O.',
+      ],
+      recommendations: [
+        hasDeteriorated
+          ? 'Evitar exposição prolongada a pressões de distensão elevadas.'
+          : 'Excelente adesão aos alvos de proteção pulmonar.',
+        'Sempre correlacione os achados das curvas com a gasometria arterial e a mecânica pulmonar.',
+      ],
+    };
+
+    educationalStorage.saveDebriefingReport(rep);
+    setCurrentDebriefingReport(rep);
+    return rep;
+  }, [
+    activeClinicalCase,
+    caseStartTime,
+    monitored,
+    settings,
+    patient,
+    viliExposureSeconds,
+    highPlateauSeconds,
+    hasDeteriorated,
+    caseInterventions,
+    activeAsynchrony,
+  ]);
 
   return (
     <div
@@ -709,6 +957,22 @@ export default function App() {
           currentSettings={settings}
           currentPatient={patient}
         />
+      ) : !isVentilating ? (
+        <VentilatorAdmissionScreen
+          currentCase={activeClinicalCase}
+          patient={patient}
+          initialSettings={settings}
+          onStartVentilation={(configuredSettings) => {
+            setSettings(configuredSettings);
+            setDraftSettings(configuredSettings);
+            setIsVentilating(true);
+            setCaseStartTime(Date.now());
+            physicsEngine.reset(patient.compliance, patient.resistance, configuredSettings.peep);
+            audioEngine.playConfirmBeep();
+          }}
+          onOpenCasesList={() => setCurrentPage('clinical_cases')}
+          onUpdatePatient={setPatient}
+        />
       ) : (
         <>
           {/* 1. Header Bar */}
@@ -718,6 +982,9 @@ export default function App() {
             activeAlarms={activeAlarms}
             userRole={userRole}
             simulationTimeSeconds={0}
+            blindMechanicsActive={pedagogicalSettings.blindMechanicsEnabled}
+            isVentilating={isVentilating}
+            onToggleStandby={() => setIsVentilating(false)}
             onOpenPatientConfig={() => setIsPatientConfigOpen(true)}
             onOpenAlarmsModal={() => setIsAlarmsModalOpen(true)}
             onOpenAudioSettings={() => setIsAudioSettingsOpen(true)}
@@ -731,6 +998,11 @@ export default function App() {
             onOpenGasometry={() => setIsGasometryOpen(true)}
             onOpenMissions={() => setIsMissionsOpen(true)}
             onOpenAsynchronies={() => setIsAsynchroniesOpen(true)}
+            onOpenFlashcards={() => setIsFlashcardsOpen(true)}
+            onOpenDebriefing={() => {
+              generateDebriefingReport();
+              setIsDebriefingOpen(true);
+            }}
           />
 
       {/* Audio Unlock Banner (Minimal & Dismissible if browser suspended AudioContext) */}
@@ -817,6 +1089,8 @@ export default function App() {
                   viewMode={viewMode}
                   onSelectViewMode={setViewMode}
                   monitored={monitored}
+                  formulaOverlay={activeFormulaOverlay}
+                  onSelectFormulaOverlay={setActiveFormulaOverlay}
                 />
               </div>
             )}
@@ -846,6 +1120,8 @@ export default function App() {
                     viewMode={viewMode}
                     onSelectViewMode={setViewMode}
                     monitored={monitored}
+                    formulaOverlay={activeFormulaOverlay}
+                    onSelectFormulaOverlay={setActiveFormulaOverlay}
                   />
                 </div>
                 <div className="min-h-0">
@@ -993,10 +1269,38 @@ export default function App() {
               monitored={monitored}
               patient={patient}
               onOpenGasometry={() => setIsGasometryOpen(true)}
+              blindMechanicsMode={pedagogicalSettings.blindMechanicsEnabled}
+              allowStudentRevealBlind={pedagogicalSettings.allowStudentRevealBlind}
+              onToggleBlindMechanics={() => {
+                setPedagogicalSettings((prev) => {
+                  const updated = {
+                    ...prev,
+                    blindMechanicsEnabled: !prev.blindMechanicsEnabled,
+                  };
+                  educationalStorage.savePedagogicalSettings(updated);
+                  return updated;
+                });
+              }}
             />
           </div>
         )}
       </main>
+
+      {/* Dynamic Deterioration / Barotrauma Warning Toast */}
+      {deteriorationWarning && (
+        <div className="fixed bottom-14 left-1/2 -translate-x-1/2 z-50 max-w-xl w-[90%] bg-red-950/95 border border-red-500 text-red-200 p-3 rounded-2xl shadow-2xl flex items-center justify-between gap-3 animate-bounce">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">⚠️</span>
+            <p className="text-xs font-mono font-bold leading-relaxed">{deteriorationWarning}</p>
+          </div>
+          <button
+            onClick={() => setDeteriorationWarning(null)}
+            className="p-1 rounded-lg bg-red-900/60 hover:bg-red-800 text-white cursor-pointer shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* 3. Bottom Diagnostic Maneuvers & Control Bar (with Dropdown) */}
       <ManeuverBar
@@ -1092,6 +1396,7 @@ export default function App() {
           handleLoadCase(selectedCase);
           setCurrentPage('simulator');
         }}
+        onPedagogicalSettingsChange={(updated) => setPedagogicalSettings(updated)}
       />
 
       <MenuModal
@@ -1114,6 +1419,11 @@ export default function App() {
         onOpenTutorial={() => setIsTutorialOpen(true)}
         onOpenTeacherAdmin={handleOpenTeacherAdmin}
         onOpenAsynchronies={() => setIsAsynchroniesOpen(true)}
+        onOpenFlashcards={() => setIsFlashcardsOpen(true)}
+        onOpenDebriefing={() => {
+          generateDebriefingReport();
+          setIsDebriefingOpen(true);
+        }}
       />
 
       <QuizModal
@@ -1152,6 +1462,25 @@ export default function App() {
         settings={settings}
         patient={patient}
         onOpenCases={() => setCurrentPage('clinical_cases')}
+        currentPhaseIndex={currentPhaseIndex}
+        onNextPhase={() => {
+          if (activeClinicalCase?.phases && currentPhaseIndex < activeClinicalCase.phases.length - 1) {
+            const nextIdx = currentPhaseIndex + 1;
+            const nextPhase = activeClinicalCase.phases[nextIdx];
+            setCurrentPhaseIndex(nextIdx);
+            if (nextPhase.patientOverrides) {
+              setPatient((p) => ({ ...p, ...nextPhase.patientOverrides }));
+            }
+            audioEngine.playConfirmBeep();
+            setDeteriorationWarning(`⚡ Avançou para ${nextPhase.name}! A gravidade pulmonar aumentou.`);
+          }
+        }}
+        hasDeteriorated={hasDeteriorated}
+        deteriorationWarning={deteriorationWarning}
+        onOpenDebriefing={() => {
+          generateDebriefingReport();
+          setIsDebriefingOpen(true);
+        }}
       />
 
       <PatientConfigModal
@@ -1159,6 +1488,8 @@ export default function App() {
         onClose={() => setIsPatientConfigOpen(false)}
         patient={patient}
         onUpdatePatient={setPatient}
+        blindMechanicsActive={pedagogicalSettings.blindMechanicsEnabled}
+        userRole={userRole}
       />
 
       <AlarmManagerModal
@@ -1176,6 +1507,7 @@ export default function App() {
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
         onApplyVt={(targetVt) => setSettings((s) => ({ ...s, tidalVolume: targetVt }))}
+        onSelectFormulaOverlay={setActiveFormulaOverlay}
       />
 
       <AudioSettingsModal
@@ -1194,6 +1526,34 @@ export default function App() {
         isOpen={isTeacherAuthOpen}
         onClose={() => setIsTeacherAuthOpen(false)}
         onSuccess={handleTeacherAuthSuccess}
+      />
+
+      <DebriefingModal
+        isOpen={isDebriefingOpen}
+        onClose={() => setIsDebriefingOpen(false)}
+        report={currentDebriefingReport}
+        onRestartCase={() => {
+          if (activeClinicalCase) {
+            handleLoadCase(activeClinicalCase);
+          }
+        }}
+      />
+
+      <FlashcardsModal
+        isOpen={isFlashcardsOpen}
+        onClose={() => setIsFlashcardsOpen(false)}
+        onApplyPresetToSimulator={(preset) => {
+          if (!preset) return;
+          if (preset.mode) setSettings((s) => ({ ...s, mode: preset.mode! }));
+          if (preset.peep !== undefined) setSettings((s) => ({ ...s, peep: preset.peep! }));
+          if (preset.tidalVolume !== undefined) setSettings((s) => ({ ...s, tidalVolume: preset.tidalVolume! }));
+          if (preset.respiratoryRate !== undefined) setSettings((s) => ({ ...s, respiratoryRate: preset.respiratoryRate! }));
+          if (preset.compliance !== undefined) setPatient((p) => ({ ...p, compliance: preset.compliance! }));
+          if (preset.resistance !== undefined) setPatient((p) => ({ ...p, resistance: preset.resistance! }));
+          if (preset.spontaneousDrive !== undefined) setPatient((p) => ({ ...p, spontaneousDrive: preset.spontaneousDrive! }));
+          audioEngine.playConfirmBeep();
+          setIsFlashcardsOpen(false);
+        }}
       />
     </div>
   );

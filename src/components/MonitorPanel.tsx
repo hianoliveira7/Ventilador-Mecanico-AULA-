@@ -5,6 +5,10 @@ import {
   ShieldCheck,
   FileText,
   SlidersHorizontal,
+  Lock,
+  Eye,
+  EyeOff,
+  HelpCircle,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { PulseOximeterModule } from './PulseOximeterModule';
@@ -15,15 +19,22 @@ interface MonitorPanelProps {
   mode: VentilationMode;
   patient: PatientParameters;
   onOpenGasometry?: () => void;
+  blindMechanicsMode?: boolean;
+  allowStudentRevealBlind?: boolean;
+  onToggleBlindMechanics?: () => void;
 }
 
 export const MonitorPanel: React.FC<MonitorPanelProps> = ({
   monitored,
   patient,
   onOpenGasometry,
+  blindMechanicsMode = false,
+  allowStudentRevealBlind = true,
+  onToggleBlindMechanics,
 }) => {
   const { isLight } = useTheme();
   const [activeTab, setActiveTab] = useState<'vital' | 'mechanics'>('vital');
+  const [revealedBlind, setRevealedBlind] = useState(false);
 
   // Fallbacks to prevent NaN - check both vte/vti/minuteVolume and old naming
   const currentPeak = monitored.peakPressure ?? 0;
@@ -334,16 +345,25 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                 <ShieldCheck className={`w-4 h-4 ${currentDp <= 15 ? 'text-emerald-600' : 'text-amber-600'}`} />
                 <div>
                   <span className={`text-xs font-display font-bold block ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
-                    Driving Pressure (ΔP): {monitored.isPlateauMeasured ? `${monitored.drivingPressure.toFixed(0)} cmH₂O` : 'requer pausa'}
+                    Driving Pressure (ΔP):{' '}
+                    {blindMechanicsMode && !revealedBlind
+                      ? monitored.isPlateauMeasured
+                        ? `Pplat ${currentPlat} (Requer Cálculo ΔP)`
+                        : '🔒 Requer Pausa Insp.'
+                      : monitored.isPlateauMeasured
+                      ? `${monitored.drivingPressure.toFixed(0)} cmH₂O`
+                      : 'requer pausa'}
                   </span>
                   <span className={`text-[10px] font-mono font-medium ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                    Auto-PEEP: {currentAutoPeep.toFixed(1)} cmH₂O • PEEP Tot: {(currentPeep + currentAutoPeep).toFixed(1)}
+                    {blindMechanicsMode && !revealedBlind
+                      ? 'Auto-PEEP: 🔒 Oculto em Modo Cego'
+                      : `Auto-PEEP: ${currentAutoPeep.toFixed(1)} cmH₂O • PEEP Tot: ${(currentPeep + currentAutoPeep).toFixed(1)}`}
                   </span>
                 </div>
               </div>
 
               <span className={`text-[9px] font-mono px-2 py-0.5 rounded border ${dpBadge}`}>
-                {currentDp <= 15 ? 'PROTETORA' : 'AVALIE ΔP'}
+                {blindMechanicsMode && !revealedBlind ? '🔒 CEGA' : currentDp <= 15 ? 'PROTETORA' : 'AVALIE ΔP'}
               </span>
             </div>
 
@@ -364,6 +384,46 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
         ) : (
           /* DETAILED MECHANICS TAB */
           <div className="space-y-2 animate-fadeIn">
+            {/* Blind Mechanics Assessment Banner if active */}
+            {blindMechanicsMode && (
+              <div
+                className={`p-2 rounded-xl border flex items-center justify-between text-xs ${
+                  isLight
+                    ? 'bg-amber-50/90 border-amber-300 text-amber-950'
+                    : 'bg-amber-950/40 border-amber-700/60 text-amber-200'
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <div className="leading-tight">
+                    <span className="font-display font-bold block text-[10px]">
+                      Modo Avaliação Cega Ativo
+                    </span>
+                    <span className="text-[9px] font-mono opacity-80">
+                      {revealedBlind
+                        ? 'Gabarito revelado temporariamente'
+                        : 'Mecânica mascarada. Execute as pausas para medir.'}
+                    </span>
+                  </div>
+                </div>
+
+                {allowStudentRevealBlind && (
+                  <button
+                    onClick={() => setRevealedBlind(!revealedBlind)}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1 shrink-0 ${
+                      revealedBlind
+                        ? isLight ? 'bg-amber-200 border-amber-400 text-amber-900' : 'bg-amber-900 border-amber-700 text-amber-200'
+                        : isLight ? 'bg-white border-amber-300 text-amber-900 hover:bg-amber-100' : 'bg-[#151724] border-amber-700 text-amber-300 hover:bg-[#1d2032]'
+                    }`}
+                    title={revealedBlind ? 'Ocultar novamente' : 'Revelar mecânica para estudo'}
+                  >
+                    {revealedBlind ? <EyeOff className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
+                    <span>{revealedBlind ? 'Ocultar' : 'Gabarito'}</span>
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Mechanics Grid 1: Compliance & Resistance */}
             <div className="grid grid-cols-2 gap-2">
               {/* Static Compliance */}
@@ -379,12 +439,32 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>mL/cm</span>
                 </div>
                 <div className="flex items-baseline gap-1 my-0.5">
-                  <span className={`text-xl font-bold font-mono ${isLight ? 'text-purple-900' : 'text-purple-300'}`}>
-                    {monitored.isPlateauMeasured ? monitored.staticCompliance : '--'}
+                  <span
+                    className={`text-xl font-bold font-mono ${
+                      blindMechanicsMode && !revealedBlind
+                        ? isLight ? 'text-amber-800 text-sm' : 'text-amber-400 text-sm'
+                        : isLight ? 'text-purple-900' : 'text-purple-300'
+                    }`}
+                  >
+                    {blindMechanicsMode && !revealedBlind
+                      ? monitored.isPlateauMeasured
+                        ? `🔒 Pplat ${currentPlat}`
+                        : '🔒 Pausa Insp.'
+                      : monitored.isPlateauMeasured
+                      ? monitored.staticCompliance
+                      : '--'}
                   </span>
-                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>mL/cmH₂O</span>
+                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    {blindMechanicsMode && !revealedBlind ? '' : 'mL/cmH₂O'}
+                  </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Ref: 50 – 80</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  {blindMechanicsMode && !revealedBlind
+                    ? monitored.isPlateauMeasured
+                      ? 'Calcule: Vt / (Pplat - PEEP)'
+                      : 'Execute Pausa Insp. no rodapé'
+                    : 'Ref: 50 – 80'}
+                </span>
               </div>
 
               {/* Dynamic Compliance */}
@@ -400,12 +480,22 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>mL/cm</span>
                 </div>
                 <div className="flex items-baseline gap-1 my-0.5">
-                  <span className={`text-xl font-bold font-mono ${isLight ? 'text-purple-900' : 'text-purple-300'}`}>
-                    {cdyn}
+                  <span
+                    className={`text-xl font-bold font-mono ${
+                      blindMechanicsMode && !revealedBlind
+                        ? isLight ? 'text-amber-800 text-sm' : 'text-amber-400 text-sm'
+                        : isLight ? 'text-purple-900' : 'text-purple-300'
+                    }`}
+                  >
+                    {blindMechanicsMode && !revealedBlind ? '🔒 Cega' : cdyn}
                   </span>
-                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>mL/cmH₂O</span>
+                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    {blindMechanicsMode && !revealedBlind ? '' : 'mL/cmH₂O'}
+                  </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Ref: 30 – 50</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  {blindMechanicsMode && !revealedBlind ? 'Calcular: Vt / (Ppico - PEEP)' : 'Ref: 30 – 50'}
+                </span>
               </div>
             </div>
 
@@ -426,18 +516,32 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                 <div className="flex items-baseline gap-1 my-0.5">
                   <span
                     className={`text-xl font-bold font-mono ${
-                      monitored.isPlateauMeasured
+                      blindMechanicsMode && !revealedBlind
+                        ? isLight ? 'text-amber-800 text-sm' : 'text-amber-400 text-sm'
+                        : monitored.isPlateauMeasured
                         ? monitored.airwayResistance > 15
                           ? isLight ? 'text-rose-800 font-black' : 'text-rose-400 font-black'
                           : isLight ? 'text-cyan-800' : 'text-cyan-300'
                         : isLight ? 'text-slate-400' : 'text-zinc-600'
                     }`}
                   >
-                    {monitored.isPlateauMeasured ? monitored.airwayResistance : '--'}
+                    {blindMechanicsMode && !revealedBlind
+                      ? monitored.isPlateauMeasured
+                        ? `🔒 Pplat ${currentPlat}`
+                        : '🔒 Pausa Insp.'
+                      : monitored.isPlateauMeasured
+                      ? monitored.airwayResistance
+                      : '--'}
                   </span>
-                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>cmH₂O/L/s</span>
+                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    {blindMechanicsMode && !revealedBlind ? '' : 'cmH₂O/L/s'}
+                  </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Normal: &le; 10-15</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  {blindMechanicsMode && !revealedBlind
+                    ? 'Calcular: (Ppico - Pplat) / Fluxo'
+                    : 'Normal: ≤ 10-15'}
+                </span>
               </div>
 
               {/* Time Constant Tau */}
@@ -453,12 +557,22 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>seg</span>
                 </div>
                 <div className="flex items-baseline gap-1 my-0.5">
-                  <span className={`text-xl font-bold font-mono ${isLight ? 'text-cyan-800' : 'text-cyan-300'}`}>
-                    {tau}
+                  <span
+                    className={`text-xl font-bold font-mono ${
+                      blindMechanicsMode && !revealedBlind
+                        ? isLight ? 'text-amber-800 text-sm' : 'text-amber-400 text-sm'
+                        : isLight ? 'text-cyan-800' : 'text-cyan-300'
+                    }`}
+                  >
+                    {blindMechanicsMode && !revealedBlind ? '🔒 Cega' : tau}
                   </span>
-                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>s</span>
+                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    {blindMechanicsMode && !revealedBlind ? '' : 's'}
+                  </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>3τ = {(Number(tau) * 3).toFixed(2)}s exp</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  {blindMechanicsMode && !revealedBlind ? 'τ = (Raw × Cst) / 1000' : `3τ = ${(Number(tau) * 3).toFixed(2)}s exp`}
+                </span>
               </div>
             </div>
 
@@ -475,16 +589,34 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                     DRIVING PRESSURE (ΔP)
                   </span>
                   <span className={`text-[8px] font-mono px-1.5 py-0.2 rounded border ${dpBadge}`}>
-                    {currentDp <= 15 ? 'PROTETORA' : 'ELEVADA'}
+                    {blindMechanicsMode && !revealedBlind ? '🔒 CEGA' : currentDp <= 15 ? 'PROTETORA' : 'ELEVADA'}
                   </span>
                 </div>
                 <div className="flex items-baseline gap-1 my-0.5">
-                  <span className={`text-2xl font-bold font-mono ${dpColor}`}>
-                    {monitored.isPlateauMeasured ? monitored.drivingPressure.toFixed(0) : '--'}
+                  <span
+                    className={`text-2xl font-bold font-mono ${
+                      blindMechanicsMode && !revealedBlind
+                        ? isLight ? 'text-amber-800 text-base' : 'text-amber-400 text-base'
+                        : dpColor
+                    }`}
+                  >
+                    {blindMechanicsMode && !revealedBlind
+                      ? monitored.isPlateauMeasured
+                        ? `🔒 Pplat ${currentPlat}`
+                        : '🔒 Requer Pausa'
+                      : monitored.isPlateauMeasured
+                      ? monitored.drivingPressure.toFixed(0)
+                      : '--'}
                   </span>
-                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>cmH₂O</span>
+                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    {blindMechanicsMode && !revealedBlind ? '' : 'cmH₂O'}
+                  </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Alvo: &le; 15 cmH₂O</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  {blindMechanicsMode && !revealedBlind
+                    ? 'Calcule: Pplat - PEEP'
+                    : 'Alvo: ≤ 15 cmH₂O'}
+                </span>
               </div>
 
               {/* Auto-PEEP */}
@@ -502,17 +634,23 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                 <div className="flex items-baseline gap-1 my-0.5">
                   <span
                     className={`text-2xl font-bold font-mono ${
-                      currentAutoPeep > 3
+                      blindMechanicsMode && !revealedBlind
+                        ? isLight ? 'text-amber-700 text-sm' : 'text-amber-400 text-sm'
+                        : currentAutoPeep > 3
                         ? isLight ? 'text-amber-800' : 'text-amber-400'
                         : isLight ? 'text-emerald-800' : 'text-emerald-400'
                     }`}
                   >
-                    {currentAutoPeep.toFixed(1)}
+                    {blindMechanicsMode && !revealedBlind ? '🔒 Cega' : currentAutoPeep.toFixed(1)}
                   </span>
-                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>cmH₂O</span>
+                  <span className={`text-[9px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    {blindMechanicsMode && !revealedBlind ? '' : 'cmH₂O'}
+                  </span>
                 </div>
                 <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                  PEEP Tot: {(currentPeep + currentAutoPeep).toFixed(1)}
+                  {blindMechanicsMode && !revealedBlind
+                    ? 'Execute Pausa Expiratória'
+                    : `PEEP Tot: ${(currentPeep + currentAutoPeep).toFixed(1)}`}
                 </span>
               </div>
             </div>
@@ -533,18 +671,22 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                 <div className="flex items-baseline gap-1 my-0.5">
                   <span
                     className={`text-lg font-bold font-mono ${
-                      monitored.rapidShallowBreathingIndex > 105
+                      blindMechanicsMode && !revealedBlind
+                        ? isLight ? 'text-amber-800 text-sm' : 'text-amber-400 text-sm'
+                        : monitored.rapidShallowBreathingIndex > 105
                         ? isLight ? 'text-rose-800' : 'text-rose-400'
                         : isLight ? 'text-emerald-800' : 'text-emerald-300'
                     }`}
                   >
-                    {monitored.rapidShallowBreathingIndex}
+                    {blindMechanicsMode && !revealedBlind ? '🔒 Cega' : monitored.rapidShallowBreathingIndex}
                   </span>
                   <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                    ciclos/min/L
+                    {blindMechanicsMode && !revealedBlind ? '' : 'ciclos/min/L'}
                   </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Desmame: &lt; 105</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  {blindMechanicsMode && !revealedBlind ? 'Calcule: FR / Vt(L)' : 'Desmame: < 105'}
+                </span>
               </div>
 
               {/* Mechanical Power */}
@@ -561,16 +703,22 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                 <div className="flex items-baseline gap-1 my-0.5">
                   <span
                     className={`text-lg font-bold font-mono ${
-                      Number(mechanicalPower) > 17
+                      blindMechanicsMode && !revealedBlind
+                        ? isLight ? 'text-amber-800 text-sm' : 'text-amber-400 text-sm'
+                        : Number(mechanicalPower) > 17
                         ? isLight ? 'text-amber-800' : 'text-amber-400'
                         : isLight ? 'text-cyan-800' : 'text-cyan-300'
                     }`}
                   >
-                    {mechanicalPower}
+                    {blindMechanicsMode && !revealedBlind ? '🔒 Cega' : mechanicalPower}
                   </span>
-                  <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>J/min</span>
+                  <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    {blindMechanicsMode && !revealedBlind ? '' : 'J/min'}
+                  </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Meta: &lt; 17 J/min</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  {blindMechanicsMode && !revealedBlind ? '0.098 × FR × Vt × (Ppico - 0.5ΔP)' : 'Meta: < 17 J/min'}
+                </span>
               </div>
             </div>
 

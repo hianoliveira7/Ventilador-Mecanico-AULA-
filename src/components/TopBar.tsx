@@ -19,6 +19,8 @@ import {
   Maximize,
   Minimize,
   Zap,
+  Pause,
+  Play,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -29,6 +31,9 @@ interface TopBarProps {
   activeAlarms: AlarmItem[];
   userRole?: 'student' | 'teacher' | null;
   simulationTimeSeconds?: number;
+  blindMechanicsActive?: boolean;
+  isVentilating?: boolean;
+  onToggleStandby?: () => void;
   onOpenPatientConfig: () => void;
   onOpenAlarmsModal: () => void;
   onOpenAudioSettings: () => void;
@@ -42,6 +47,8 @@ interface TopBarProps {
   onOpenGasometry?: () => void;
   onOpenMissions?: () => void;
   onOpenAsynchronies?: () => void;
+  onOpenFlashcards?: () => void;
+  onOpenDebriefing?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -49,6 +56,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   patient,
   activeAlarms,
   userRole,
+  blindMechanicsActive = false,
+  isVentilating = true,
+  onToggleStandby,
   onOpenPatientConfig,
   onOpenAlarmsModal,
   onOpenAudioSettings,
@@ -58,6 +68,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenTeacherAdmin,
   onOpenClinicalCases,
   onOpenAsynchronies,
+  onOpenFlashcards,
+  onOpenDebriefing,
 }) => {
   const { toggleTheme, isLight } = useTheme();
   const topAlarm = activeAlarms.length > 0 ? activeAlarms[0] : null;
@@ -160,8 +172,8 @@ export const TopBar: React.FC<TopBarProps> = ({
           </button>
         )}
 
-        {/* Current Mode Badge */}
-        <div className="flex items-center shrink-0">
+        {/* Current Mode Badge & Standby Trigger */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <span
             className={`px-2 py-0.5 rounded-md font-mono font-black text-[10px] sm:text-[11px] tracking-wider shadow-xs border ${
               isLight
@@ -171,6 +183,32 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             {mode.replace('_', '-')}
           </span>
+
+          {onToggleStandby && (
+            <button
+              onClick={onToggleStandby}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-md font-mono font-bold text-[10px] border transition-all cursor-pointer shadow-xs ${
+                !isVentilating
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 animate-pulse'
+                  : isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                  : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-zinc-750'
+              }`}
+              title={!isVentilating ? 'Ventilador em Standby (Clique para Iniciar)' : 'Colocar Ventilador em Standby / Tela de Admissão'}
+            >
+              {!isVentilating ? (
+                <>
+                  <Play className="w-3 h-3 fill-current text-amber-400" />
+                  <span className="hidden sm:inline text-amber-300">Standby</span>
+                </>
+              ) : (
+                <>
+                  <Pause className="w-3 h-3 text-zinc-400" />
+                  <span className="hidden sm:inline">Standby</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -240,6 +278,22 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
             <span className="font-display font-black hidden md:inline">Assincronias</span>
+          </button>
+        )}
+
+        {/* Flashcards Curve Recognition Button */}
+        {onOpenFlashcards && (
+          <button
+            onClick={onOpenFlashcards}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
+              isLight
+                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border-emerald-300'
+                : 'bg-emerald-950/60 hover:bg-emerald-900/70 text-emerald-300 border-emerald-700/60'
+            }`}
+            title="Treino Rápido de Reconhecimento de Curvas e Assincronias"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="font-display font-black hidden md:inline">Treino Curvas</span>
           </button>
         )}
 

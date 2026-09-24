@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap } from 'lucide-react';
+import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap, Sparkles, Award } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 
@@ -20,6 +20,8 @@ interface MenuModalProps {
   onOpenTutorial?: () => void;
   onOpenTeacherAdmin?: () => void;
   onOpenAsynchronies?: () => void;
+  onOpenFlashcards?: () => void;
+  onOpenDebriefing?: () => void;
 }
 
 export const MenuModal: React.FC<MenuModalProps> = ({
@@ -39,6 +41,8 @@ export const MenuModal: React.FC<MenuModalProps> = ({
   onOpenTutorial,
   onOpenTeacherAdmin,
   onOpenAsynchronies,
+  onOpenFlashcards,
+  onOpenDebriefing,
 }) => {
   const { theme, toggleTheme, isLight } = useTheme();
 
@@ -236,6 +240,62 @@ export const MenuModal: React.FC<MenuModalProps> = ({
                 <span className="block text-sm font-display font-bold">Banco de Dados de Assincronias</span>
                 <span className={`text-xs ${isLight ? 'text-amber-800/80' : 'text-amber-300/80'}`}>
                   Catálogo interativo com 7 tipos de assincronias para simular e resolver
+                </span>
+              </div>
+            </button>
+          )}
+
+          {onOpenFlashcards && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenFlashcards();
+              }}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
+                isLight
+                  ? 'bg-emerald-50/70 hover:bg-emerald-100/90 border-emerald-300 text-emerald-950'
+                  : 'bg-emerald-950/40 hover:bg-emerald-900/50 border-emerald-800/80 text-emerald-200'
+              }`}
+            >
+              <div
+                className={`p-2.5 rounded-lg ${
+                  isLight ? 'bg-emerald-200 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300 group-hover:bg-emerald-500/30'
+                }`}
+              >
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="block text-sm font-display font-bold">Treino Rápido de Curvas (Flashcards)</span>
+                <span className={`text-xs ${isLight ? 'text-emerald-800/80' : 'text-emerald-300/80'}`}>
+                  Reconhecimento de assincronias em traçados com setas e justificativas
+                </span>
+              </div>
+            </button>
+          )}
+
+          {onOpenDebriefing && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenDebriefing();
+              }}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
+                isLight
+                  ? 'bg-purple-50/70 hover:bg-purple-100/90 border-purple-300 text-purple-950'
+                  : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-800/80 text-purple-200'
+              }`}
+            >
+              <div
+                className={`p-2.5 rounded-lg ${
+                  isLight ? 'bg-purple-200 text-purple-800' : 'bg-purple-500/20 text-purple-300 group-hover:bg-purple-500/30'
+                }`}
+              >
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="block text-sm font-display font-bold">Relatório de Debriefing (AAR)</span>
+                <span className={`text-xs ${isLight ? 'text-purple-800/80' : 'text-purple-300/80'}`}>
+                  After Action Review do caso ativo com linha do tempo de intervenções e score
                 </span>
               </div>
             </button>

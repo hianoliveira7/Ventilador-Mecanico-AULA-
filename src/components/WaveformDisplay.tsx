@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { WaveformSample, ManeuverState, MonitoredData } from '../types/ventilation';
+import { WaveformSample, ManeuverState, MonitoredData, FormulaOverlayType } from '../types/ventilation';
 import {
   Pause,
   Play,
   Activity,
   Clock,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -17,6 +19,8 @@ interface WaveformDisplayProps {
   viewMode?: 'waveforms' | 'loops' | 'split';
   onSelectViewMode?: (mode: 'waveforms' | 'loops' | 'split') => void;
   monitored?: MonitoredData;
+  formulaOverlay?: FormulaOverlayType;
+  onSelectFormulaOverlay?: (overlay: FormulaOverlayType) => void;
 }
 
 export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
@@ -28,8 +32,22 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
   viewMode = 'waveforms',
   onSelectViewMode,
   monitored,
+  formulaOverlay = 'none',
+  onSelectFormulaOverlay,
 }) => {
   const { isLight } = useTheme();
+  const [internalOverlay, setInternalOverlay] = useState<FormulaOverlayType>(formulaOverlay);
+
+  useEffect(() => {
+    setInternalOverlay(formulaOverlay);
+  }, [formulaOverlay]);
+
+  const handleOverlayChange = (overlay: FormulaOverlayType) => {
+    setInternalOverlay(overlay);
+    if (onSelectFormulaOverlay) {
+      onSelectFormulaOverlay(overlay);
+    }
+  };
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement | null>(null);
 
@@ -949,6 +967,76 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       'rgba(0, 229, 255, 0.65)',
       'paw'
     );
+
+    // Formula Visualizer Educational Overlay on Pressure Track
+    if (internalOverlay !== 'none') {
+      const effPip = Math.max(peepSet + 3, monitored?.peakPressure ?? 25);
+      const effPlat = monitored?.isPlateauMeasured
+        ? monitored.plateauPressure
+        : Math.max(peepSet + 1, effPip - (monitored?.airwayResistance ?? 8) * 0.8);
+      const effPeep = Math.max(0, peepSet);
+
+      const yZero = pZeroY;
+      const yPeep = pZeroY - effPeep * pScale;
+      const yPlat = pZeroY - effPlat * pScale;
+      const yPip = pZeroY - effPip * pScale;
+
+      // Band 1: Basal PEEP (0 to PEEP) - emerald
+      backCtx.fillStyle = isLight ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.16)';
+      backCtx.fillRect(padLeft, yPeep, chartW, Math.max(2, yZero - yPeep));
+
+      // Band 2: Elastic / Driving Pressure (PEEP to Pplat) - cyan
+      if (internalOverlay === 'equation_of_motion' || internalOverlay === 'compliance' || internalOverlay === 'mechanical_power') {
+        backCtx.fillStyle = isLight ? 'rgba(2, 132, 199, 0.18)' : 'rgba(0, 229, 255, 0.18)';
+        backCtx.fillRect(padLeft, yPlat, chartW, Math.max(2, yPeep - yPlat));
+      }
+
+      // Band 3: Resistive Pressure (Pplat to Pip) - amber
+      if (internalOverlay === 'equation_of_motion' || internalOverlay === 'resistance' || internalOverlay === 'mechanical_power') {
+        backCtx.fillStyle = isLight ? 'rgba(217, 119, 6, 0.18)' : 'rgba(245, 158, 11, 0.18)';
+        backCtx.fillRect(padLeft, yPip, chartW, Math.max(2, yPlat - yPip));
+      }
+
+      // Dashed boundary reference lines
+      backCtx.setLineDash([4, 4]);
+      backCtx.lineWidth = 1;
+
+      // Pplat line
+      backCtx.strokeStyle = isLight ? '#d97706' : '#f59e0b';
+      backCtx.beginPath();
+      backCtx.moveTo(padLeft, yPlat);
+      backCtx.lineTo(padLeft + chartW, yPlat);
+      backCtx.stroke();
+
+      // PEEP line
+      backCtx.strokeStyle = isLight ? '#059669' : '#10b981';
+      backCtx.beginPath();
+      backCtx.moveTo(padLeft, yPeep);
+      backCtx.lineTo(padLeft + chartW, yPeep);
+      backCtx.stroke();
+
+      backCtx.setLineDash([]);
+
+      // Educational Label Badges on Right Margin
+      backCtx.font = 'bold 9px monospace';
+      backCtx.textAlign = 'right';
+
+      // Resistive label
+      if (internalOverlay === 'equation_of_motion' || internalOverlay === 'resistance' || internalOverlay === 'mechanical_power') {
+        backCtx.fillStyle = isLight ? '#b45309' : '#fbbf24';
+        backCtx.fillText(`▲ Presistiva (Raw × Fluxo) = ${(effPip - effPlat).toFixed(0)} cmH₂O`, padLeft + chartW - 8, yPip + (yPlat - yPip) / 2 + 3);
+      }
+
+      // Driving Pressure / Elastic label
+      if (internalOverlay === 'equation_of_motion' || internalOverlay === 'compliance' || internalOverlay === 'mechanical_power') {
+        backCtx.fillStyle = isLight ? '#0369a1' : '#38bdf8';
+        backCtx.fillText(`▲ Pelástica / Driving Pressure (Vt / Cest) = ${(effPlat - effPeep).toFixed(0)} cmH₂O`, padLeft + chartW - 8, yPlat + (yPeep - yPlat) / 2 + 3);
+      }
+
+      // PEEP label
+      backCtx.fillStyle = isLight ? '#047857' : '#34d399';
+      backCtx.fillText(`PEEP Basal = ${effPeep.toFixed(0)} cmH₂O`, padLeft + chartW - 8, yPeep + (yZero - yPeep) / 2 + 3);
+    }
     backCtx.restore();
 
     // 2. Draw Flow Waveform (Emerald) with track boundary clipping
@@ -1404,6 +1492,54 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
               </option>
               <option value={1200} className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
                 1200 mL
+              </option>
+            </select>
+          </div>
+
+          {/* Educational Formula Overlay Pill */}
+          <div
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full border transition-all ${
+              internalOverlay !== 'none'
+                ? isLight
+                  ? 'bg-cyan-50 border-cyan-300 ring-1 ring-cyan-400/40'
+                  : 'bg-cyan-950/60 border-cyan-700/60 ring-1 ring-cyan-500/40'
+                : isLight
+                ? 'bg-slate-100 border-slate-300'
+                : 'bg-[#12141e] border-zinc-700/60'
+            }`}
+            title="Destacar Fórmulas e Componentes Resistivo/Elástico nas Curvas"
+          >
+            <Layers className={`w-3 h-3 ${internalOverlay !== 'none' ? 'text-cyan-400' : 'text-zinc-400'}`} />
+            <span
+              className={`text-[9.5px] font-mono font-bold ${
+                internalOverlay !== 'none'
+                  ? 'text-cyan-400'
+                  : isLight ? 'text-slate-600' : 'text-zinc-400'
+              }`}
+            >
+              Fórmula:
+            </span>
+            <select
+              value={internalOverlay}
+              onChange={(e) => handleOverlayChange(e.target.value as FormulaOverlayType)}
+              className={`bg-transparent text-[10px] font-mono focus:outline-none cursor-pointer ${
+                isLight ? 'text-slate-800' : 'text-zinc-200'
+              }`}
+            >
+              <option value="none" className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
+                Sem Destaque
+              </option>
+              <option value="equation_of_motion" className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
+                Eq. Movimento (Pres + Pelast + PEEP)
+              </option>
+              <option value="compliance" className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
+                Complacência (ΔP = Vt / Cest)
+              </option>
+              <option value="resistance" className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
+                Resistência (Pres = Raw × Fluxo)
+              </option>
+              <option value="mechanical_power" className={isLight ? 'bg-white text-slate-800' : 'bg-[#0e0f14] text-zinc-200'}>
+                Potência Mecânica (Power)
               </option>
             </select>
           </div>

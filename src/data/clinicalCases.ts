@@ -1,6 +1,197 @@
 import { ClinicalCase } from '../types/ventilation';
 
 export const CLINICAL_CASES: ClinicalCase[] = [
+  // 0. Admissão Imediata na UTI do Zero (Cenário de Gravidade Progressiva no Tempo)
+  {
+    id: 'admissao-uti-zero-sdra',
+    title: '0. Admissão do Zero: Choque Séptico & SDRA (Deterioração Temporal Dinâmica)',
+    category: 'Emergência',
+    difficulty: 'Avançado',
+    description:
+      'O paciente acabou de chegar à UTI transferido da sala de emergência recém-intubado por sepse de foco pulmonar e choque. O ventilador mecânico está conectado com ajustes brutos/desregulados (Vt tóxico de 600 mL, FR 10, PEEP 5, FiO₂ 100%). Você deve assumir o paciente do zero e calcular tudo pelo peso predito. Conforme o tempo passa, a fisiopatologia progride dinamicamente (queda da complacência e cascata inflamatória). Se mantiver ventilação lesiva (ΔP > 15 cmH₂O contínua), haverá barotrauma!',
+    patientProfile: {
+      name: 'Carlos Magno (Admissão UTI do Zero)',
+      age: 52,
+      gender: 'male',
+      heightCm: 175,
+      actualWeightKg: 85,
+      idealBodyWeightKg: 70.5,
+      compliance: 28,
+      resistance: 7,
+      pathology: 'sdra',
+      baselineBicarbonate: 18.0,
+      spontaneousDrive: false,
+      spontaneousRate: 0,
+      spontaneousEffortPressure: 0,
+      spontaneousDutyCycle: 0.33,
+      metabolicRateVCO2: 240,
+      metabolicRateVO2: 300,
+      deadSpaceFraction: 0.45,
+      shuntFraction: 32,
+      hemoglobin: 11.5,
+      bodyTemperature: 38.6,
+      secretionsSeverity: 'mild',
+      circuitLeakPercent: 0,
+    },
+    initialSettings: {
+      mode: 'VCV',
+      fio2: 100,
+      peep: 5,
+      triggerType: 'flow',
+      triggerSensitivity: 2.0,
+      tidalVolume: 600, // 8.5 mL/kg IBW - Tóxico!
+      respiratoryRate: 10, // Muito baixa para acidose séptica
+      flowWaveform: 'square',
+      inspiratoryFlow: 40,
+      inspiratoryPausePercent: 0,
+      inspiratoryPressure: 15,
+      inspiratoryTimePCV: 1.0,
+      pressureRiseTime: 0.1,
+      pressureSupport: 10,
+      expiratorySensitivity: 25,
+      backupApneaTime: 20,
+      pHigh: 22,
+      pLow: 0,
+      tHigh: 3.5,
+      tLow: 0.5,
+      simvRate: 12,
+      simvPs: 10,
+    },
+    clinicalHistory:
+      'Masculino, 52 anos, admitido na emergência com quadro de choque séptico e insuficiência respiratória hipoxêmica aguda secundária a pneumonia bacteriana comunitária grave. Intubado há 15 minutos na sala vermelha e transferido imediatamente para a UTI em maca de transporte.',
+    physicalExam:
+      'TOT nº 8.0 fixado em 22 cm na rima labial. Sedado em RASS -5 e curarizado em bomba. Ausculta com crepitações difusas em 2/3 inferiores bilaterais. Extremidades frias sob noradrenalina.',
+    initialABG: {
+      ph: 7.20,
+      paco2: 58,
+      pao2: 60,
+      hco3: 18.2,
+      spo2: 87,
+      fio2: 100,
+    },
+    phases: [
+      {
+        id: 'adm-fase-1',
+        name: 'Fase 1: Admissão Imediata Beira-Leito (0 - 90s)',
+        description: 'Paciente recém-conectado com programação padrão desregulada (Vt 600 mL, PEEP 5, FR 10). Calcule o peso predito (IBW 70.5 kg), reduza o Vt para 6 mL/kg (~420 mL), titule PEEP para 12-14 cmH₂O e corrija a frequência respiratória.',
+        patientOverrides: {
+          compliance: 28,
+          resistance: 7,
+          shuntFraction: 32,
+          deadSpaceFraction: 0.45,
+        },
+        goals: [
+          {
+            id: 'adm-prot-vt',
+            description: 'Reduzir Vt tóxico de 600 mL para Vt protetor (380 a 440 mL = 5.5 a 6.2 mL/kg IBW)',
+            isMet: (_, settings, patient) => {
+              const vtPerKg = settings.tidalVolume / patient.idealBodyWeightKg;
+              return vtPerKg >= 4.5 && vtPerKg <= 6.3;
+            },
+            targetFeedback: 'Carlos mede 175 cm (Peso Predito = 70.5 kg). O Vt inicial de 600 mL gerava volutrauma imediato.',
+          },
+          {
+            id: 'adm-peep-titr',
+            description: 'Titular PEEP de admissão entre 10 e 15 cmH₂O',
+            isMet: (_, settings) => settings.peep >= 10 && settings.peep <= 15,
+            targetFeedback: 'PEEP entre 10 e 15 cmH₂O restaura a capacidade residual funcional e previne o colapso cíclico (atelectrauma).',
+          },
+          {
+            id: 'adm-fr-rr',
+            description: 'Aumentar Frequência Respiratória (20 a 28 rpm) para compensar acidose mista',
+            isMet: (_, settings) => settings.respiratoryRate >= 20 && settings.respiratoryRate <= 28,
+            targetFeedback: 'FR adequada (22-26 rpm) eleva a ventilação minuto e estabiliza o pH sem gerar auto-PEEP.',
+          },
+        ],
+      },
+      {
+        id: 'adm-fase-2',
+        name: 'Fase 2: Cascata Inflamatória & Infiltração Alveolar (90s - 200s)',
+        description: 'A gravidade avança dinamicamente: a complacência cai para 20 mL/cmH₂O e o shunt sobe para 38%. Se você mantiver Driving Pressure > 15 cmH₂O ou Pplat > 30 cmH₂O, o paciente sofrerá barotrauma agudo!',
+        patientOverrides: {
+          compliance: 20,
+          resistance: 8,
+          shuntFraction: 38,
+          deadSpaceFraction: 0.52,
+        },
+        goals: [
+          {
+            id: 'adm-p2-dp',
+            description: 'Manter Driving Pressure (ΔP = Pplat - PEEP) rigorosamente ≤ 14 cmH₂O',
+            isMet: (monitored) => monitored.drivingPressure <= 14.5 && monitored.drivingPressure > 0,
+            targetFeedback: 'Com complacência reduzida (20 mL/cmH₂O), o Vt deve ser refinado para 360-400 mL para manter ΔP segura.',
+          },
+          {
+            id: 'adm-p2-plat',
+            description: 'Manter Pressão de Platô (Pplat) ≤ 30 cmH₂O',
+            isMet: (monitored) => monitored.plateauPressure <= 30.5,
+            targetFeedback: 'Pplat ≤ 30 cmH₂O é o limite superior de segurança contra hiperdistensão alveolar.',
+          },
+          {
+            id: 'adm-p2-fio2',
+            description: 'Desmamar FiO₂ tóxica para ≤ 60% com SpO₂ ≥ 90%',
+            isMet: (monitored, settings) => settings.fio2 <= 60 && monitored.spo2 >= 89,
+            targetFeedback: 'FiO₂ ≤ 60% previne estresse oxidativo e toxicidade por oxigênio.',
+          },
+        ],
+      },
+      {
+        id: 'adm-fase-3',
+        name: 'Fase 3: Estabilização Alveolar & Resgate Gasométrico (> 200s)',
+        description: 'Fase de consolidação: o paciente atinge relação PaO₂/FiO₂ > 150 e pH > 7.25 mantendo ventilação mecânica ultraprotetora sem barotrauma.',
+        patientOverrides: {
+          compliance: 22,
+          resistance: 7,
+          shuntFraction: 34,
+          deadSpaceFraction: 0.48,
+        },
+        goals: [
+          {
+            id: 'adm-p3-pf',
+            description: 'Atingir relação PaO₂/FiO₂ > 150 e SpO₂ 92 a 96%',
+            isMet: (monitored) => monitored.pfRatio >= 150 && monitored.spo2 >= 91,
+            targetFeedback: 'Excelente recuperação da troca gasosa com recrutamento alveolar protetor bem-sucedido.',
+          },
+          {
+            id: 'adm-p3-mech-power',
+            description: 'Manter Mechanical Power seguro (< 17 J/min) e ΔP ≤ 13 cmH₂O',
+            isMet: (monitored) => monitored.mechanicalPower < 17.5 && monitored.drivingPressure <= 13.5,
+            targetFeedback: 'Poder mecânico controlado protege o parênquima pulmonar contra fadiga e VILI.',
+          },
+        ],
+      },
+    ],
+    goals: [
+      {
+        id: 'gen-prot-vt',
+        description: 'Manter Volume Corrente de 4 a 6 mL/kg de Peso Predito (280 a 420 mL)',
+        isMet: (_, settings, patient) => {
+          const vtPerKg = settings.tidalVolume / patient.idealBodyWeightKg;
+          return vtPerKg >= 4.0 && vtPerKg <= 6.3;
+        },
+        targetFeedback: 'Cálculo rigoroso baseado no Peso Predito de 70.5 kg (altura 175 cm).',
+      },
+      {
+        id: 'gen-dp-safe',
+        description: 'Manter Driving Pressure (ΔP) ≤ 14 cmH₂O',
+        isMet: (monitored) => monitored.drivingPressure <= 14.5 && monitored.drivingPressure > 0,
+        targetFeedback: 'Driving pressure controlada é o principal preditor de sobrevida na SDRA.',
+      },
+      {
+        id: 'gen-peep-fio2',
+        description: 'Titular PEEP entre 10 e 15 cmH₂O e desmamar FiO₂ para ≤ 60%',
+        isMet: (monitored, settings) => settings.peep >= 10 && settings.peep <= 15 && settings.fio2 <= 60,
+        targetFeedback: 'PEEP protetora evita colapso expiratório sem causar hiperdistensão.',
+      },
+    ],
+    teachingPoints: [
+      'Na admissão de pacientes em choque séptico com SDRA, nunca use o peso real da balança (85 kg) para calcular o volume corrente — utilize sempre o Peso Predito (IBW = 70.5 kg para 175 cm).',
+      'O volume corrente padrão de emergência (600 mL) em pulmões heterogêneos de SDRA causa volutrauma fulminante devido ao pequeno tamanho do pulmão aerado ("Baby Lung").',
+      'Conforme a cascata inflamatória evolui nas primeiras horas, a complacência cai. A equipe deve recalcular a Driving Pressure a cada alteração de mecânica.',
+      'A exposição sustentada a ΔP > 15 cmH₂O ou Pplat > 30 cmH₂O sob complacência baixa precipita barotrauma (pneumotórax hipertensivo), choque obstrutivo e colapso circulatório.',
+    ],
+  },
+
   // 1. Pulmão Normal
   {
     id: 'pulmao-normal',

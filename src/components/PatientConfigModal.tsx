@@ -22,6 +22,8 @@ interface PatientConfigModalProps {
   onClose: () => void;
   patient: PatientParameters;
   onUpdatePatient: (updated: PatientParameters) => void;
+  blindMechanicsActive?: boolean;
+  userRole?: 'student' | 'teacher' | null;
 }
 
 export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
@@ -29,8 +31,12 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
   onClose,
   patient,
   onUpdatePatient,
+  blindMechanicsActive = false,
+  userRole = 'student',
 }) => {
   if (!isOpen) return null;
+
+  const isBlindStudent = blindMechanicsActive && userRole === 'student';
 
   const update = <K extends keyof PatientParameters>(field: K, value: PatientParameters[K]) => {
     audioEngine.playClick(850);
@@ -319,65 +325,88 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
 
           {/* Section 1: Mecânica Respiratória Primária (Cst e Raw) */}
           <div className="bg-[#0e0f14] p-3.5 rounded-sm border border-zinc-800/80 space-y-3">
-            <span className="font-display font-bold text-cyan-400 uppercase tracking-wider text-[11px] block">
-              1. Mecânica do Sistema Respiratório (Complacência & Resistência)
-            </span>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Compliance Slider */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-zinc-200 text-xs">
-                    Complacência Estática ($C_{'{'}st{'}'}$)
-                  </span>
-                  <span className="font-mono font-bold text-cyan-300 text-sm">
-                    {patient.compliance}{' '}
-                    <span className="text-[10px] text-zinc-500">mL/cmH₂O</span>
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={10}
-                  max={120}
-                  step={1}
-                  value={patient.compliance}
-                  onChange={(e) => update('compliance', Number(e.target.value))}
-                  className="w-full accent-cyan-400 h-1.5 bg-zinc-800 rounded-none cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
-                  <span>10 (SDRA/Pneumotórax)</span>
-                  <span className="text-emerald-400">Normal (50-70)</span>
-                  <span>120 (Enfisema)</span>
-                </div>
-              </div>
-
-              {/* Resistance Slider */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-zinc-200 text-xs">
-                    Resistência de Vias Aéreas ($R_{'{'}aw{'}'}$)
-                  </span>
-                  <span className="font-mono font-bold text-amber-400 text-sm">
-                    {patient.resistance}{' '}
-                    <span className="text-[10px] text-zinc-500">cmH₂O/(L/s)</span>
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min={2}
-                  max={50}
-                  step={1}
-                  value={patient.resistance}
-                  onChange={(e) => update('resistance', Number(e.target.value))}
-                  className="w-full accent-amber-400 h-1.5 bg-zinc-800 rounded-none cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
-                  <span className="text-emerald-400">Normal (4-8)</span>
-                  <span>DPOC (15-25)</span>
-                  <span>Asma Grave (&gt;30)</span>
-                </div>
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="font-display font-bold text-cyan-400 uppercase tracking-wider text-[11px] block">
+                1. Mecânica do Sistema Respiratório (Complacência & Resistência)
+              </span>
+              {isBlindStudent && (
+                <span className="px-2 py-0.5 rounded bg-amber-950/80 border border-amber-600/80 text-amber-300 font-mono font-bold text-[10px] flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-amber-400" />
+                  <span>Modo Avaliação Cega Ativo</span>
+                </span>
+              )}
             </div>
+
+            {isBlindStudent ? (
+              <div className="p-3 bg-amber-950/30 border border-amber-800/50 rounded text-amber-200 text-xs font-mono space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <span>🔒 Parâmetros de Mecânica Mascarados pelo Professor</span>
+                </p>
+                <p className="text-[11px] opacity-80 leading-relaxed font-sans">
+                  Para descobrir a Complacência Estática e a Resistência de Vias Aéreas, execute a manobra de <strong>Pausa Inspiratória</strong> no painel de manobras do simulador e calcule:
+                  <br />
+                  • $C_{'{'}st{'}'} = V_t / (P_{'{'}platô{'}'} - PEEP)$
+                  <br />
+                  • $R_{'{'}aw{'}'} = (P_{'{'}pico{'}'} - P_{'{'}platô{'}'}) / Fluxo$
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Compliance Slider */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-zinc-200 text-xs">
+                      Complacência Estática ($C_{'{'}st{'}'}$)
+                    </span>
+                    <span className="font-mono font-bold text-cyan-300 text-sm">
+                      {patient.compliance}{' '}
+                      <span className="text-[10px] text-zinc-500">mL/cmH₂O</span>
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={10}
+                    max={120}
+                    step={1}
+                    value={patient.compliance}
+                    onChange={(e) => update('compliance', Number(e.target.value))}
+                    className="w-full accent-cyan-400 h-1.5 bg-zinc-800 rounded-none cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+                    <span>10 (SDRA/Pneumotórax)</span>
+                    <span className="text-emerald-400">Normal (50-70)</span>
+                    <span>120 (Enfisema)</span>
+                  </div>
+                </div>
+
+                {/* Resistance Slider */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-zinc-200 text-xs">
+                      Resistência de Vias Aéreas ($R_{'{'}aw{'}'}$)
+                    </span>
+                    <span className="font-mono font-bold text-amber-400 text-sm">
+                      {patient.resistance}{' '}
+                      <span className="text-[10px] text-zinc-500">cmH₂O/(L/s)</span>
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={2}
+                    max={50}
+                    step={1}
+                    value={patient.resistance}
+                    onChange={(e) => update('resistance', Number(e.target.value))}
+                    className="w-full accent-amber-400 h-1.5 bg-zinc-800 rounded-none cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+                    <span className="text-emerald-400">Normal (4-8)</span>
+                    <span>DPOC (15-25)</span>
+                    <span>Asma Grave (&gt;30)</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section 2: Drive Respiratório & Esforço do Paciente */}

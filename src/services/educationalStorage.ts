@@ -1,7 +1,20 @@
-import { ClinicalCase } from '../types/ventilation';
+import { ClinicalCase, PedagogicalSettings, FlashcardItem, CaseDebriefingReport } from '../types/ventilation';
 import { CLINICAL_CASES } from '../data/clinicalCases';
+import { DEFAULT_FLASHCARDS } from '../data/flashcardsData';
 
 export type UserRole = 'student' | 'teacher';
+
+export const DEFAULT_PEDAGOGICAL_SETTINGS: PedagogicalSettings = {
+  blindMechanicsEnabled: false,
+  allowStudentRevealBlind: true,
+  deteriorationEnabled: true,
+  deteriorationTimeoutSeconds: 90,
+  dpSafetyThreshold: 15,
+  platSafetyThreshold: 30,
+  admissionPhase2TimeSeconds: 90,
+  admissionPhase3TimeSeconds: 200,
+  autoOpenDebriefingOnFinish: true,
+};
 
 export interface QuizQuestionItem {
   id: string;
@@ -111,9 +124,13 @@ const STORAGE_KEYS = {
   USER_ROLE: 'vm_sim_user_role', // 'student' | 'teacher' | null
   ACTIVE_QUIZ_QUESTIONS: 'vm_sim_active_quiz_questions',
   CUSTOM_QUIZ_QUESTIONS: 'vm_sim_custom_quiz_questions',
+  ACTIVE_CLINICAL_CASES: 'vm_sim_active_clinical_cases',
   CUSTOM_CLINICAL_CASES: 'vm_sim_custom_clinical_cases',
   TUTORIAL_SEEN: 'vm_sim_tutorial_completed',
   TEACHER_PASSWORD: 'vm_sim_teacher_password',
+  PEDAGOGICAL_SETTINGS: 'vm_sim_pedagogical_settings',
+  ACTIVE_FLASHCARDS: 'vm_sim_active_flashcards',
+  DEBRIEFING_REPORTS: 'vm_sim_debriefing_reports',
 };
 
 const DEFAULT_TEACHER_PASSWORD = '14253697';
@@ -256,12 +273,22 @@ export const educationalStorage = {
     }
   },
 
-  // Clinical Cases management
+  // Clinical Cases management (Supports editing and deleting ANY case: default or custom)
   getAllClinicalCases: (): ClinicalCase[] => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_CLINICAL_CASES);
-      const custom: ClinicalCase[] = raw ? JSON.parse(raw) : [];
-      return [...CLINICAL_CASES, ...custom];
+      const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      // Migrate from old custom cases format if present
+      const oldCustomRaw = localStorage.getItem(STORAGE_KEYS.CUSTOM_CLINICAL_CASES);
+      const oldCustom: ClinicalCase[] = oldCustomRaw ? JSON.parse(oldCustomRaw) : [];
+      const initialList = [...CLINICAL_CASES, ...oldCustom];
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(initialList));
+      return initialList;
     } catch {
       return CLINICAL_CASES;
     }
@@ -269,26 +296,45 @@ export const educationalStorage = {
 
   addClinicalCase: (customCase: ClinicalCase): ClinicalCase => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_CLINICAL_CASES);
-      const custom: ClinicalCase[] = raw ? JSON.parse(raw) : [];
-      custom.push(customCase);
-      localStorage.setItem(STORAGE_KEYS.CUSTOM_CLINICAL_CASES, JSON.stringify(custom));
+      const currentList = educationalStorage.getAllClinicalCases();
+      const updatedList = [customCase, ...currentList.filter((c) => c.id !== customCase.id)];
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(updatedList));
     } catch (e) {
-      console.error('Failed to save custom case', e);
+      console.error('Failed to save clinical case', e);
     }
     return customCase;
   },
 
+  updateClinicalCase: (updatedCase: ClinicalCase): boolean => {
+    try {
+      const currentList = educationalStorage.getAllClinicalCases();
+      const updatedList = currentList.map((c) => (c.id === updatedCase.id ? updatedCase : c));
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(updatedList));
+      return true;
+    } catch (e) {
+      console.error('Failed to update clinical case', e);
+      return false;
+    }
+  },
+
   deleteClinicalCase: (id: string): boolean => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEYS.CUSTOM_CLINICAL_CASES);
-      if (!raw) return false;
-      const custom: ClinicalCase[] = JSON.parse(raw);
-      const filtered = custom.filter((c) => c.id !== id);
-      localStorage.setItem(STORAGE_KEYS.CUSTOM_CLINICAL_CASES, JSON.stringify(filtered));
+      const currentList = educationalStorage.getAllClinicalCases();
+      const filtered = currentList.filter((c) => c.id !== id);
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(filtered));
       return true;
-    } catch {
+    } catch (e) {
+      console.error('Failed to delete clinical case', e);
       return false;
+    }
+  },
+
+  resetClinicalCasesToDefault: (): ClinicalCase[] => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(CLINICAL_CASES));
+      return CLINICAL_CASES;
+    } catch {
+      return CLINICAL_CASES;
     }
   },
 
@@ -306,6 +352,119 @@ export const educationalStorage = {
       localStorage.setItem('vm_fisio_tour_completed', completed ? 'true' : 'false');
     } catch (e) {
       console.error('Failed to set tour completion flag', e);
+    }
+  },
+
+  // Pedagogical & Teacher Evaluation Settings
+  getPedagogicalSettings: (): PedagogicalSettings => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.PEDAGOGICAL_SETTINGS);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return { ...DEFAULT_PEDAGOGICAL_SETTINGS, ...parsed };
+      }
+      return DEFAULT_PEDAGOGICAL_SETTINGS;
+    } catch {
+      return DEFAULT_PEDAGOGICAL_SETTINGS;
+    }
+  },
+
+  savePedagogicalSettings: (settings: Partial<PedagogicalSettings>): PedagogicalSettings => {
+    try {
+      const current = educationalStorage.getPedagogicalSettings();
+      const updated = { ...current, ...settings };
+      localStorage.setItem(STORAGE_KEYS.PEDAGOGICAL_SETTINGS, JSON.stringify(updated));
+      return updated;
+    } catch (e) {
+      console.error('Failed to save pedagogical settings', e);
+      return DEFAULT_PEDAGOGICAL_SETTINGS;
+    }
+  },
+
+  // Flashcards Management (Curve Recognition)
+  getAllFlashcards: (): FlashcardItem[] => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_FLASHCARDS);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_FLASHCARDS, JSON.stringify(DEFAULT_FLASHCARDS));
+      return DEFAULT_FLASHCARDS;
+    } catch {
+      return DEFAULT_FLASHCARDS;
+    }
+  },
+
+  addFlashcard: (card: Omit<FlashcardItem, 'id' | 'createdBy'>): FlashcardItem => {
+    const newCard: FlashcardItem = {
+      ...card,
+      id: `teacher_fc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      createdBy: 'teacher',
+    };
+    try {
+      const current = educationalStorage.getAllFlashcards();
+      const updated = [newCard, ...current];
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_FLASHCARDS, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to add flashcard', e);
+    }
+    return newCard;
+  },
+
+  deleteFlashcard: (id: string): boolean => {
+    try {
+      const current = educationalStorage.getAllFlashcards();
+      const filtered = current.filter((c) => c.id !== id);
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_FLASHCARDS, JSON.stringify(filtered));
+      return true;
+    } catch (e) {
+      console.error('Failed to delete flashcard', e);
+      return false;
+    }
+  },
+
+  resetFlashcardsToDefault: (): FlashcardItem[] => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_FLASHCARDS, JSON.stringify(DEFAULT_FLASHCARDS));
+      return DEFAULT_FLASHCARDS;
+    } catch {
+      return DEFAULT_FLASHCARDS;
+    }
+  },
+
+  // Debriefing Reports (After Action Review)
+  getAllDebriefingReports: (): CaseDebriefingReport[] => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.DEBRIEFING_REPORTS);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveDebriefingReport: (report: CaseDebriefingReport): void => {
+    try {
+      const current = educationalStorage.getAllDebriefingReports();
+      // Keep up to 50 most recent reports
+      const updated = [report, ...current.filter((r) => r.id !== report.id)].slice(0, 50);
+      localStorage.setItem(STORAGE_KEYS.DEBRIEFING_REPORTS, JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save debriefing report', e);
+    }
+  },
+
+  clearDebriefingReports: (): void => {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.DEBRIEFING_REPORTS);
+    } catch (e) {
+      console.error('Failed to clear debriefing reports', e);
     }
   },
 };

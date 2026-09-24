@@ -192,7 +192,97 @@ export interface ClinicalCaseGoal {
   description: string;
   isMet: (monitored: MonitoredData, settings: VentilatorSettings, patient: PatientParameters) => boolean;
   targetFeedback: string;
+  hint?: string;
 }
+
+export interface CasePhase {
+  id: string;
+  name: string; // e.g. "Fase 1: Admissão & Titulação Inicial"
+  description: string;
+  patientOverrides?: Partial<PatientParameters>;
+  settingsOverrides?: Partial<VentilatorSettings>;
+  goals: ClinicalCaseGoal[];
+  deteriorationTrigger?: {
+    conditionMessage: string;
+    secondsThreshold: number;
+    deterioratedPatientOverrides: Partial<PatientParameters>;
+    consequenceDescription: string;
+  };
+}
+
+export interface CaseIntervention {
+  id: string;
+  timestampSeconds: number;
+  timeString: string;
+  parameterChanged: string;
+  oldValue: string | number;
+  newValue: string | number;
+  clinicalImpactNotes?: string;
+}
+
+export interface CaseDebriefingReport {
+  id: string;
+  caseId: string;
+  caseTitle: string;
+  studentName?: string;
+  completedAt: string;
+  durationSeconds: number;
+  score: number; // 0 - 100
+  rating: 'Excelente (Padrão Ouro)' | 'Adequado / Seguro' | 'Risco Moderado' | 'Risco Crítico / Iatrogênico';
+  goalsCompletedCount: number;
+  totalGoalsCount: number;
+  safetyMetrics: {
+    timeUnderViliSeconds: number;
+    timeHighPlateauSeconds: number;
+    autoPeepRiskEvents: number;
+    asynchronyEventsCount: number;
+    hadDeterioration: boolean;
+  };
+  interventions: CaseIntervention[];
+  guidelineFeedback: string[];
+  recommendations: string[];
+}
+
+export interface PedagogicalSettings {
+  blindMechanicsEnabled: boolean;
+  allowStudentRevealBlind: boolean;
+  deteriorationEnabled: boolean;
+  deteriorationTimeoutSeconds: number;
+  dpSafetyThreshold: number;
+  platSafetyThreshold: number;
+  admissionPhase2TimeSeconds: number;
+  admissionPhase3TimeSeconds: number;
+  autoOpenDebriefingOnFinish: boolean;
+}
+
+export interface FlashcardItem {
+  id: string;
+  title: string;
+  difficulty: 'Iniciante' | 'Intermediário' | 'Avançado';
+  asynchronyOrPattern: string;
+  category: 'Disparo' | 'Fluxo' | 'Ciclagem' | 'Misto' | 'Mecânica';
+  clinicalContext: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  immediateAction: string;
+  waveformPreset: {
+    mode: VentilationMode;
+    settings: Partial<VentilatorSettings>;
+    patient: Partial<PatientParameters>;
+  };
+  annotations: {
+    track: 'pressure' | 'flow' | 'volume';
+    xPercent: number;
+    yPercent: number;
+    text: string;
+    arrowDirection: 'up' | 'down' | 'left' | 'right';
+  }[];
+  createdBy?: 'system' | 'teacher';
+}
+
+export type FormulaOverlayType = 'none' | 'equation_of_motion' | 'compliance' | 'resistance' | 'mechanical_power';
 
 export interface ClinicalCase {
   id: string;
@@ -222,5 +312,6 @@ export interface ClinicalCase {
     fio2: number;
   };
   goals: ClinicalCaseGoal[];
+  phases?: CasePhase[];
   teachingPoints: string[];
 }

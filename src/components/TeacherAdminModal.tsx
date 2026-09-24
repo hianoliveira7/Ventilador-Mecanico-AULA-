@@ -3,6 +3,7 @@ import {
   X,
   Plus,
   Trash2,
+  Pencil,
   BookOpen,
   HelpCircle,
   FilePlus,
@@ -26,29 +27,38 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Clock,
+  Printer,
+  FileText,
+  Sliders,
+  Settings,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 import { educationalStorage, QuizQuestionItem } from '../services/educationalStorage';
-import { ClinicalCase, VentilationMode } from '../types/ventilation';
+import { ClinicalCase, VentilationMode, PedagogicalSettings, CaseDebriefingReport } from '../types/ventilation';
 
 interface TeacherAdminModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoadCaseInSimulator?: (clinicalCase: ClinicalCase) => void;
+  onPedagogicalSettingsChange?: (settings: PedagogicalSettings) => void;
 }
 
 export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   isOpen,
   onClose,
   onLoadCaseInSimulator,
+  onPedagogicalSettingsChange,
 }) => {
   const { isLight } = useTheme();
-  const [activeTab, setActiveTab] = useState<'quiz' | 'cases' | 'new_quiz' | 'new_case' | 'password'>('quiz');
+  const [activeTab, setActiveTab] = useState<'quiz' | 'cases' | 'new_quiz' | 'new_case' | 'pedagogy' | 'reports' | 'password'>('quiz');
 
   // Quiz Questions state
   const [questions, setQuestions] = useState<QuizQuestionItem[]>([]);
   const [cases, setCases] = useState<ClinicalCase[]>([]);
+  const [reports, setReports] = useState<CaseDebriefingReport[]>([]);
+  const [pedagogicalSettings, setPedagogicalSettings] = useState<PedagogicalSettings>(educationalStorage.getPedagogicalSettings());
   const [notification, setNotification] = useState<string | null>(null);
 
   // Password Management state
@@ -71,7 +81,8 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const [qCategory, setQCategory] = useState('Geral');
   const [qDifficulty, setQDifficulty] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Intermediário');
 
-  // Form for New Clinical Case
+  // Form for Clinical Case (Create or Edit)
+  const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [caseTitle, setCaseTitle] = useState('');
   const [caseCategory, setCaseCategory] = useState('SDRA');
   const [caseDifficulty, setCaseDifficulty] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Intermediário');
@@ -139,6 +150,18 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const loadData = () => {
     setQuestions(educationalStorage.getAllQuizQuestions());
     setCases(educationalStorage.getAllClinicalCases());
+    setReports(educationalStorage.getAllDebriefingReports());
+    setPedagogicalSettings(educationalStorage.getPedagogicalSettings());
+  };
+
+  const handleUpdatePedagogicalSettings = (updated: Partial<PedagogicalSettings>) => {
+    const saved = educationalStorage.savePedagogicalSettings(updated);
+    setPedagogicalSettings(saved);
+    if (onPedagogicalSettingsChange) {
+      onPedagogicalSettingsChange(saved);
+    }
+    audioEngine.playConfirmBeep();
+    showFeedback('Configurações pedagógicas atualizadas com sucesso!');
   };
 
   useEffect(() => {
@@ -201,6 +224,99 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     }
   };
 
+  const handleStartNewCase = () => {
+    setEditingCaseId(null);
+    setCaseTitle('');
+    setCaseCategory('SDRA');
+    setCaseDifficulty('Intermediário');
+    setCaseDescription('');
+    setCaseHistory('');
+    setCasePhysicalExam('Tórax simétrico, sedado e adaptado à ventilação mecânica, hemodinamicamente estável com suporte habitual.');
+    setPatientName('Novo Paciente UTI');
+    setPatientAge(55);
+    setPatientGender('male');
+    setPatientHeight(170);
+    setPatientWeight(70);
+    setPatientCompliance(25);
+    setPatientResistance(10);
+    setRecruitmentPotential('high');
+    setShuntFraction(25);
+    setDeadSpaceFraction(45);
+    setBaselineBicarbonate(24);
+    setMetabolicRateVCO2(200);
+    setHemoglobin(12.0);
+    setBodyTemperature(37.0);
+    setHasSpontaneousDrive(false);
+    setSpontaneousRate(18);
+    setSpontaneousEffortPressure(-5);
+    setSpontaneousDutyCycle(0.33);
+    setSecretionsSeverity('none');
+    setCircuitLeakPercent(0);
+    setEndotrachealTubeSize(8.0);
+    setInitialMode('VCV');
+    setInitialFiO2(60);
+    setInitialPEEP(10);
+    setInitialRR(16);
+    setInitialVt(420);
+    setInitialPinsp(18);
+    setAbgPH(7.30);
+    setAbgPaCO2(52);
+    setAbgPaO2(68);
+    setAbgHCO3(24);
+    setAbgSpO2(91);
+    setGoalDescription1('Manter Volume Protetor ≤ 6 mL/kg e Pplatô ≤ 30 cmH₂O');
+    setGoalDescription2('Normalizar oxigenação (PaO₂/FiO₂ > 200) com PEEP adequada');
+    setTeachingPointsText('Avaliar o Peso Predito (IBW) para cálculo de volume protetor.\nMonitorar rigorosamente a Driving Pressure (ΔP ≤ 14 cmH₂O).');
+    setActiveTab('new_case');
+  };
+
+  const handleStartEditCase = (c: ClinicalCase) => {
+    setEditingCaseId(c.id);
+    setCaseTitle(c.title);
+    setCaseCategory(c.category);
+    setCaseDifficulty(c.difficulty);
+    setCaseDescription(c.description);
+    setCaseHistory(c.clinicalHistory || c.description);
+    setCasePhysicalExam(c.physicalExam || '');
+    setPatientName(c.patientProfile.name);
+    setPatientAge(c.patientProfile.age);
+    setPatientGender(c.patientProfile.gender);
+    setPatientHeight(c.patientProfile.heightCm);
+    setPatientWeight(c.patientProfile.actualWeightKg);
+    setPatientCompliance(c.patientProfile.compliance);
+    setPatientResistance(c.patientProfile.resistance);
+    setRecruitmentPotential(c.patientProfile.recruitmentPotential || 'high');
+    setShuntFraction(c.patientProfile.shuntFraction ?? 20);
+    setDeadSpaceFraction(Math.round((c.patientProfile.deadSpaceFraction ?? 0.4) * 100));
+    setBaselineBicarbonate(c.patientProfile.baselineBicarbonate ?? 24);
+    setMetabolicRateVCO2(c.patientProfile.metabolicRateVCO2 ?? 200);
+    setHemoglobin(c.patientProfile.hemoglobin ?? 12.0);
+    setBodyTemperature(c.patientProfile.bodyTemperature ?? 37.0);
+    setHasSpontaneousDrive(c.patientProfile.spontaneousDrive ?? false);
+    setSpontaneousRate(c.patientProfile.spontaneousRate ?? 18);
+    setSpontaneousEffortPressure(c.patientProfile.spontaneousEffortPressure ?? -5);
+    setSpontaneousDutyCycle(c.patientProfile.spontaneousDutyCycle ?? 0.33);
+    setSecretionsSeverity(c.patientProfile.secretionsSeverity ?? 'none');
+    setCircuitLeakPercent(c.patientProfile.circuitLeakPercent ?? 0);
+    setEndotrachealTubeSize(c.patientProfile.endotrachealTubeSize ?? 8.0);
+    setInitialMode(c.initialSettings.mode || 'VCV');
+    setInitialFiO2(c.initialSettings.fio2 || 60);
+    setInitialPEEP(c.initialSettings.peep || 10);
+    setInitialRR(c.initialSettings.respiratoryRate || 16);
+    setInitialVt(c.initialSettings.tidalVolume || 420);
+    setInitialPinsp(c.initialSettings.inspiratoryPressure || 18);
+    setAbgPH(c.initialABG?.ph ?? 7.30);
+    setAbgPaCO2(c.initialABG?.paco2 ?? 52);
+    setAbgPaO2(c.initialABG?.pao2 ?? 68);
+    setAbgHCO3(c.initialABG?.hco3 ?? 24);
+    setAbgSpO2(c.initialABG?.spo2 ?? 91);
+    setGoalDescription1(c.goals?.[0]?.description || 'Manter Volume Protetor ≤ 6 mL/kg e Pplatô ≤ 30 cmH₂O');
+    setGoalDescription2(c.goals?.[1]?.description || 'Normalizar oxigenação (PaO₂/FiO₂ > 200) com PEEP adequada');
+    setTeachingPointsText(c.teachingPoints ? c.teachingPoints.join('\n') : '');
+    setActiveTab('new_case');
+    audioEngine.playClick(900);
+  };
+
   const handleSaveCase = (e: React.FormEvent) => {
     e.preventDefault();
     if (!caseTitle.trim() || !caseDescription.trim()) {
@@ -208,14 +324,18 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
       return;
     }
 
-    const newCase: ClinicalCase = {
-      id: `teacher_case_${Date.now()}`,
+    const targetId = editingCaseId || `teacher_case_${Date.now()}`;
+    const existingCase = cases.find((c) => c.id === targetId);
+
+    const savedCase: ClinicalCase = {
+      id: targetId,
       title: caseTitle.trim(),
-      category: caseCategory,
+      category: caseCategory as any,
       difficulty: caseDifficulty,
       description: caseDescription.trim(),
       clinicalHistory: caseHistory.trim() || caseDescription.trim(),
       physicalExam: casePhysicalExam.trim(),
+      phases: existingCase?.phases, // Preserve any progressive dynamic phases
       patientProfile: {
         name: patientName.trim() || 'Paciente Cadastrado',
         age: patientAge,
@@ -293,22 +413,34 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
       teachingPoints: teachingPointsText.split('\n').filter((l) => l.trim() !== ''),
     };
 
-    educationalStorage.addClinicalCase(newCase);
+    if (editingCaseId) {
+      educationalStorage.updateClinicalCase(savedCase);
+      showFeedback(`Caso clínico "${savedCase.title}" atualizado com sucesso!`);
+    } else {
+      educationalStorage.addClinicalCase(savedCase);
+      showFeedback(`Novo Caso Clínico "${savedCase.title}" cadastrado com sucesso!`);
+    }
+
     audioEngine.playConfirmBeep();
-    showFeedback('Novo Caso Clínico cadastrado com sucesso!');
-    // Reset
-    setCaseTitle('');
-    setCaseDescription('');
-    setCaseHistory('');
+    setEditingCaseId(null);
     setActiveTab('cases');
     loadData();
   };
 
-  const handleDeleteCase = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este caso clínico?')) {
-      educationalStorage.deleteClinicalCase(id);
+  const handleDeleteCase = (c: ClinicalCase) => {
+    if (confirm(`Tem certeza que deseja excluir o caso clínico "${c.title}"?`)) {
+      educationalStorage.deleteClinicalCase(c.id);
       audioEngine.playClick(750);
-      showFeedback('Caso clínico removido.');
+      showFeedback(`Caso clínico "${c.title}" excluído com sucesso.`);
+      loadData();
+    }
+  };
+
+  const handleResetDefaultCases = () => {
+    if (confirm('Deseja restaurar todos os casos clínicos padrão do sistema? Seus casos criados ou modificados serão redefinidos para os padrões originais.')) {
+      educationalStorage.resetClinicalCasesToDefault();
+      audioEngine.playConfirmBeep();
+      showFeedback('Casos clínicos padrão restaurados.');
       loadData();
     }
   };
@@ -441,6 +573,40 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
             >
               <FilePlus className="w-3.5 h-3.5" />
               <span>+ Novo Caso Clínico</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('pedagogy')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                activeTab === 'pedagogy'
+                  ? isLight
+                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
+                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
+                  : isLight
+                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
+                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Controles Pedagógicos</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('reports')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                activeTab === 'reports'
+                  ? isLight
+                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
+                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
+                  : isLight
+                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
+                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Relatórios da Turma ({reports.length})</span>
             </button>
 
             <button
@@ -723,58 +889,91 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
 
           {/* TAB 3: LIST CLINICAL CASES */}
           {activeTab === 'cases' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h4 className="text-sm font-display font-bold">Casos Clínicos e Cenários Cadastrados ({cases.length})</h4>
                   <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                    Casos disponíveis na biblioteca de estudo para treinamento dos alunos.
+                    Gerencie, edite ou exclua qualquer caso clínico disponível para os estudantes.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('new_case')}
-                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Novo Caso Clínico</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResetDefaultCases}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                      isLight
+                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                        : 'bg-zinc-800/80 hover:bg-zinc-750 text-zinc-300 border-zinc-700'
+                    }`}
+                    title="Restaurar banco original de casos"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Restaurar Padrão</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleStartNewCase}
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Novo Caso Clínico</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {cases.map((c) => {
-                  const isCustom = c.id.startsWith('teacher_');
                   return (
                     <div
                       key={c.id}
                       className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all ${
-                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0f1220] border-zinc-800'
+                        isLight ? 'bg-slate-50 border-slate-200 shadow-xs' : 'bg-[#0f1220] border-zinc-800 shadow-md'
                       }`}
                     >
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
                             {c.category} • {c.difficulty}
                           </span>
-                          {isCustom && (
+                          
+                          <div className="flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => handleDeleteCase(c.id)}
-                              className="p-1 text-rose-500 hover:bg-rose-500/10 rounded cursor-pointer"
-                              title="Excluir caso clínico"
+                              onClick={() => handleStartEditCase(c)}
+                              className={`p-1.5 rounded-lg border text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer ${
+                                isLight
+                                  ? 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
+                                  : 'bg-indigo-950/40 hover:bg-indigo-900/60 border-indigo-800/50'
+                              }`}
+                              title={`Editar caso clínico "${c.title}"`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCase(c)}
+                              className={`p-1.5 rounded-lg border text-rose-500 hover:text-rose-400 transition-colors cursor-pointer ${
+                                isLight
+                                  ? 'bg-rose-50 hover:bg-rose-100 border-rose-200'
+                                  : 'bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/50'
+                              }`}
+                              title={`Excluir caso clínico "${c.title}"`}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                          )}
+                          </div>
                         </div>
 
-                        <h5 className="text-xs font-display font-bold">{c.title}</h5>
+                        <h5 className="text-xs font-display font-bold leading-snug">{c.title}</h5>
                         <p className={`text-[11px] leading-relaxed line-clamp-3 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
                           {c.description}
                         </p>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-inherit flex items-center justify-between">
+                      <div className="mt-3 pt-2 border-t border-inherit flex items-center justify-between gap-2">
                         <span className={`text-[9.5px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
                           Cst: {c.patientProfile.compliance} • Raw: {c.patientProfile.resistance} • Shunt: {c.patientProfile.shuntFraction ?? 10}%
                         </span>
@@ -786,9 +985,9 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                               onLoadCaseInSimulator(c);
                               onClose();
                             }}
-                            className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-[10px] cursor-pointer"
+                            className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-[10px] cursor-pointer shrink-0"
                           >
-                            Carregar no Simulador →
+                            Simulador →
                           </button>
                         )}
                       </div>
@@ -799,14 +998,40 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: CREATE NEW CLINICAL CASE WITH COMPLETE PHYSIOLOGY CONTROLS */}
+          {/* TAB 4: CREATE / EDIT CLINICAL CASE WITH COMPLETE PHYSIOLOGY CONTROLS */}
           {activeTab === 'new_case' && (
             <form onSubmit={handleSaveCase} className="space-y-5 max-w-3xl mx-auto">
-              <div>
-                <h4 className="text-base font-display font-bold">Cadastrar Novo Caso Clínico</h4>
-                <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                  Configure a fisiopatologia completa: Mecânica (Cst, Raw), Troca Gasosa (Shunt, Espaço Morto), Drive Respiratório e Gasometria.
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-base font-display font-bold flex items-center gap-2">
+                    {editingCaseId ? (
+                      <>
+                        <Pencil className="w-4 h-4 text-indigo-400" />
+                        <span>Editar Caso Clínico ({caseTitle || 'Sem título'})</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 text-emerald-400" />
+                        <span>Cadastrar Novo Caso Clínico</span>
+                      </>
+                    )}
+                  </h4>
+                  <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    Configure a fisiopatologia completa: Mecânica (Cst, Raw), Troca Gasosa (Shunt, Espaço Morto), Drive Respiratório e Gasometria.
+                  </p>
+                </div>
+
+                {editingCaseId && (
+                  <button
+                    type="button"
+                    onClick={handleStartNewCase}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold cursor-pointer ${
+                      isLight ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-zinc-800 border-zinc-700 text-zinc-300'
+                    }`}
+                  >
+                    + Criar Novo em vez de Editar
+                  </button>
+                )}
               </div>
 
               {/* 1. Informações Básicas do Caso */}
@@ -1261,7 +1486,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                   className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
                 >
                   <Save className="w-4 h-4" />
-                  <span>Cadastrar Caso Clínico Completo</span>
+                  <span>{editingCaseId ? 'Salvar Alterações do Caso Clínico' : 'Cadastrar Caso Clínico Completo'}</span>
                 </button>
               </div>
             </form>
@@ -1440,6 +1665,334 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* TAB 6: PEDAGOGICAL CONTROLS & BLIND ASSESSMENT */}
+          {activeTab === 'pedagogy' && (
+            <div className="space-y-5 animate-fadeIn max-w-3xl">
+              <div>
+                <h4 className="text-sm font-display font-bold flex items-center gap-2 text-cyan-400">
+                  <Sliders className="w-4 h-4" />
+                  <span>Controles Pedagógicos & Modos de Avaliação</span>
+                </h4>
+                <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  Configure o nível de desafio dos alunos, o comportamento da simulação cega e os gatilhos de deterioração clínica.
+                </p>
+              </div>
+
+              {/* 1. Avaliação Cega de Mecânica */}
+              <div
+                className={`p-4 rounded-2xl border space-y-3 ${
+                  isLight ? 'bg-amber-50/70 border-amber-200' : 'bg-amber-950/20 border-amber-800/60'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-amber-500" />
+                      <span className="text-xs font-display font-bold">
+                        Modo "Avaliação Cega de Mecânica" (Blind Mechanics)
+                      </span>
+                    </div>
+                    <p className={`text-xs leading-relaxed ${isLight ? 'text-amber-950' : 'text-amber-200/90'}`}>
+                      Oculta complacência estática (Cst), resistência de vias aéreas (Raw), Auto-PEEP e constante de tempo do painel lateral. O aluno deve obrigatoriamente executar as manobras de pausa inspiratória e expiratória para obter a Pplatô e calcular os parâmetros.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdatePedagogicalSettings({
+                        blindMechanicsEnabled: !pedagogicalSettings.blindMechanicsEnabled,
+                      })
+                    }
+                    className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold border transition-all cursor-pointer shrink-0 ${
+                      pedagogicalSettings.blindMechanicsEnabled
+                        ? 'bg-amber-600 border-amber-500 text-white shadow-md'
+                        : isLight
+                        ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                        : 'bg-[#151928] border-zinc-700 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {pedagogicalSettings.blindMechanicsEnabled ? 'ATIVADO' : 'DESATIVADO'}
+                  </button>
+                </div>
+
+                <div className="pt-2 border-t border-amber-600/30 flex items-center justify-between text-xs">
+                  <span className="opacity-90">Permitir que o estudante visualize o botão "Gabarito" durante a prova:</span>
+                  <input
+                    type="checkbox"
+                    checked={pedagogicalSettings.allowStudentRevealBlind}
+                    onChange={(e) =>
+                      handleUpdatePedagogicalSettings({
+                        allowStudentRevealBlind: e.target.checked,
+                      })
+                    }
+                    className="accent-amber-500 w-4 h-4 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* 2. Deterioração Fisiológica Dinâmica & Progressão Temporal */}
+              <div
+                className={`p-4 rounded-2xl border space-y-3.5 ${
+                  isLight ? 'bg-rose-50/70 border-rose-200' : 'bg-rose-950/20 border-rose-800/60'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-500" />
+                      <span className="text-xs font-display font-bold">
+                        Deterioração Temporal & Eventos Adversos Fisiológicos
+                      </span>
+                    </div>
+                    <p className={`text-xs leading-relaxed ${isLight ? 'text-rose-950' : 'text-rose-200/90'}`}>
+                      Se o aluno submeter o paciente a Driving Pressure acima de {pedagogicalSettings.dpSafetyThreshold || 15} cmH₂O ou Pplatô acima de 30 cmH₂O de forma contínua, o simulador evolui para barotrauma (pneumotórax, choque e perda de complacência). Além disso, nos casos com fases (como Admissão do Zero), a gravidade progride dinamicamente no tempo.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUpdatePedagogicalSettings({
+                        deteriorationEnabled: !pedagogicalSettings.deteriorationEnabled,
+                      })
+                    }
+                    className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold border transition-all cursor-pointer shrink-0 ${
+                      pedagogicalSettings.deteriorationEnabled
+                        ? 'bg-rose-600 border-rose-500 text-white shadow-md'
+                        : isLight
+                        ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                        : 'bg-[#151928] border-zinc-700 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {pedagogicalSettings.deteriorationEnabled ? 'ATIVADO' : 'DESATIVADO'}
+                  </button>
+                </div>
+
+                {pedagogicalSettings.deteriorationEnabled && (
+                  <div className="pt-2 border-t border-rose-600/30 space-y-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                          ⏱️ Tolerância sob Ventilação Lesiva antes de Barotrauma:
+                        </label>
+                        <select
+                          value={pedagogicalSettings.deteriorationTimeoutSeconds || 90}
+                          onChange={(e) =>
+                            handleUpdatePedagogicalSettings({
+                              deteriorationTimeoutSeconds: Number(e.target.value),
+                            })
+                          }
+                          className={`w-full px-3 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                            isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#121626] border-zinc-700 text-white'
+                          }`}
+                        >
+                          <option value={30}>30 segundos (Ultra Rápido - Alta Pressão)</option>
+                          <option value={45}>45 segundos (Muito Rápido)</option>
+                          <option value={60}>60 segundos (Rápido - 1 minuto)</option>
+                          <option value={90}>90 segundos (Padrão Recomendado)</option>
+                          <option value={120}>120 segundos (Moderado - 2 minutos)</option>
+                          <option value={180}>180 segundos (Lento - 3 minutos)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-mono text-zinc-400 mb-1">
+                          🛡️ Limite Crítico de Driving Pressure (ΔP):
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min={12}
+                            max={22}
+                            value={pedagogicalSettings.dpSafetyThreshold || 15}
+                            onChange={(e) =>
+                              handleUpdatePedagogicalSettings({
+                                dpSafetyThreshold: Number(e.target.value),
+                              })
+                            }
+                            className="flex-1 accent-rose-500 cursor-pointer"
+                          />
+                          <span className="font-mono font-bold text-rose-400 text-xs">
+                            {pedagogicalSettings.dpSafetyThreshold || 15} cmH₂O
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Temporal Phase Progression for Admission Cases */}
+                    <div className={`p-3 rounded-xl border space-y-2.5 ${isLight ? 'bg-amber-50/50 border-amber-200' : 'bg-amber-950/20 border-amber-800/40'}`}>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="font-display font-bold text-[11px] text-amber-400 uppercase tracking-wider">
+                          Gatilhos Temporais de Admissão & Fases Fisiológicas
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10.5px] font-mono mb-1 text-zinc-300">
+                            Tempo para Fase 2 (Piora Inflamatória & Queda de Cst):
+                          </label>
+                          <select
+                            value={pedagogicalSettings.admissionPhase2TimeSeconds || 90}
+                            onChange={(e) =>
+                              handleUpdatePedagogicalSettings({
+                                admissionPhase2TimeSeconds: Number(e.target.value),
+                              })
+                            }
+                            className={`w-full px-2.5 py-1.5 rounded-lg border text-xs font-mono outline-none ${
+                              isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                            }`}
+                          >
+                            <option value={30}>30 segundos (Rápido)</option>
+                            <option value={45}>45 segundos</option>
+                            <option value={60}>60 segundos (1 min)</option>
+                            <option value={90}>90 segundos (Padrão)</option>
+                            <option value={120}>120 segundos (2 min)</option>
+                            <option value={180}>180 segundos (3 min)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10.5px] font-mono mb-1 text-zinc-300">
+                            Tempo para Fase 3 (Estabilização Alveolar & Resgate):
+                          </label>
+                          <select
+                            value={pedagogicalSettings.admissionPhase3TimeSeconds || 200}
+                            onChange={(e) =>
+                              handleUpdatePedagogicalSettings({
+                                admissionPhase3TimeSeconds: Number(e.target.value),
+                              })
+                            }
+                            className={`w-full px-2.5 py-1.5 rounded-lg border text-xs font-mono outline-none ${
+                              isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                            }`}
+                          >
+                            <option value={90}>90 segundos (1.5 min)</option>
+                            <option value={120}>120 segundos (2 min)</option>
+                            <option value={150}>150 segundos (2.5 min)</option>
+                            <option value={200}>200 segundos (~3.3 min - Padrão)</option>
+                            <option value={300}>300 segundos (5 min)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Debriefing Pós-Caso Automatizado */}
+              <div
+                className={`p-4 rounded-2xl border space-y-2 ${
+                  isLight ? 'bg-purple-50/70 border-purple-200' : 'bg-purple-950/20 border-purple-800/60'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-purple-400" />
+                    <span className="text-xs font-display font-bold">
+                      Abertura Automática do Relatório de Debriefing (AAR)
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={pedagogicalSettings.autoOpenDebriefingOnFinish}
+                    onChange={(e) =>
+                      handleUpdatePedagogicalSettings({
+                        autoOpenDebriefingOnFinish: e.target.checked,
+                      })
+                    }
+                    className="accent-purple-500 w-4 h-4 cursor-pointer"
+                  />
+                </div>
+                <p className={`text-xs ${isLight ? 'text-purple-950' : 'text-purple-200/90'}`}>
+                  Exibe a janela com a linha do tempo das ações do estudante, índice de VILI e nota assim que todas as metas forem atingidas.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: REPORTS / AFTER ACTION REVIEWS (DEBRIEFING) */}
+          {activeTab === 'reports' && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-display font-bold flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-500" />
+                    <span>Relatórios de Avaliação & Debriefing da Turma ({reports.length})</span>
+                  </h4>
+                  <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    Histórico detalhado de desempenho dos alunos em cada caso clínico resolvido.
+                  </p>
+                </div>
+
+                {reports.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Deseja limpar todos os relatórios de debriefing salvos?')) {
+                        educationalStorage.clearDebriefingReports();
+                        loadData();
+                        showFeedback('Histórico de relatórios limpo com sucesso.');
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-rose-700/60 text-rose-400 hover:bg-rose-950/40 text-xs font-mono font-bold cursor-pointer transition-all flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Limpar Histórico</span>
+                  </button>
+                )}
+              </div>
+
+              {reports.length === 0 ? (
+                <div
+                  className={`p-8 rounded-2xl border text-center font-mono text-xs ${
+                    isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0f1422] border-zinc-800 text-zinc-400'
+                  }`}
+                >
+                  <FileText className="w-8 h-8 mx-auto text-zinc-600 mb-2 opacity-50" />
+                  Nenhum relatório de caso registrado ainda. Conforme os alunos resolverem os casos clínicos, os relatórios aparecerão aqui automaticamente.
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {reports.map((rep) => (
+                    <div
+                      key={rep.id}
+                      className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0f1422] border-zinc-800'
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-display font-black text-cyan-400">
+                            {rep.caseTitle}
+                          </span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded border uppercase bg-cyan-500/10 border-cyan-500/30 text-cyan-300">
+                            Score: {rep.score}/100
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] font-mono text-zinc-400">
+                          <span>{rep.completedAt}</span>
+                          <span>•</span>
+                          <span>Duração: {Math.floor(rep.durationSeconds / 60)}m {rep.durationSeconds % 60}s</span>
+                          <span>•</span>
+                          <span>{rep.interventions.length} intervenções</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                          {rep.rating}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
