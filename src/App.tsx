@@ -240,6 +240,21 @@ export default function App() {
     etco2: 36,
   });
 
+  // Critical Cardiac Arrest (PCR) Emergency Trigger (SpO2 <= 35%)
+  useEffect(() => {
+    if (
+      monitored.spo2 > 0 &&
+      monitored.spo2 <= 35 &&
+      !isCardiacArrestModalOpen &&
+      !hasTriggeredPcrRef.current
+    ) {
+      hasTriggeredPcrRef.current = true;
+      setIsCardiacArrestModalOpen(true);
+    } else if (monitored.spo2 > 40) {
+      hasTriggeredPcrRef.current = false;
+    }
+  }, [monitored.spo2, isCardiacArrestModalOpen]);
+
   // 6. Alarms Engine
   const [activeAlarms, setActiveAlarms] = useState<AlarmItem[]>([]);
   const [alarmHistory, setAlarmHistory] = useState<AlarmItem[]>([]);
@@ -761,13 +776,9 @@ export default function App() {
     setCurrentPhaseIndex(0);
     setIsCardiacArrestModalOpen(false);
     hasTriggeredPcrRef.current = false;
-
-    // If it's an admission case, starts in Standby so student configures initial parameters from scratch!
-    const shouldStartStandby =
-      selectedCase.id.includes('admissao') ||
-      selectedCase.id === 'admissao-uti-zero-sdra' ||
-      selectedCase.category === 'Emergência';
-    setIsVentilating(!shouldStartStandby);
+    
+    // Always return to the admission screen (Início do Caso) on case load/restart
+    setIsVentilating(false);
 
     physicsEngine.reset(
       selectedCase.patientProfile.compliance,
@@ -1587,10 +1598,13 @@ export default function App() {
         onApplyRescueSettings={(rescueSettings) => {
           setSettings(rescueSettings);
           setDraftSettings(rescueSettings);
+          setIsVentilating(true);
+          setIsCardiacArrestModalOpen(false);
           // Rapid stabilization bounce on rescue
           setPatient((p) => ({
             ...p,
             shuntFraction: Math.max(10, Math.round((p.shuntFraction ?? 20) * 0.7)),
+            compliance: Math.max(35, Math.round((p.compliance ?? 30) * 1.2)),
           }));
           audioEngine.playConfirmBeep();
         }}
@@ -1598,8 +1612,9 @@ export default function App() {
           if (activeClinicalCase) {
             handleLoadCase(activeClinicalCase);
           } else {
+            setIsVentilating(false);
             physicsEngine.reset();
-            setSettings({ ...settings, fio2: 60, peep: 8, respiratoryRate: 16 });
+            setSettings({ mode: 'VCV', fio2: 0, peep: 0, respiratoryRate: 0, tidalVolume: 0 });
           }
         }}
         onOpenDebriefing={() => {

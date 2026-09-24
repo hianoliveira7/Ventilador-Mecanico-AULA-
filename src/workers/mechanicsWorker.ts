@@ -151,7 +151,7 @@ export function computeRespiratoryMechanics(input: MechanicsWorkerInput): Mechan
   currentPfRatio = Math.max(35, Math.min(520, currentPfRatio));
   let calcPaO2 = currentPfRatio * effectiveFiO2;
   calcPaO2 = Math.min(pAlveolarO2 - 4, calcPaO2);
-  const targetPaO2 = Math.max(25, Math.round(calcPaO2));
+  const targetPaO2 = Math.max(5, Math.round(calcPaO2));
 
   // Physiological Washout Time Constant (tauABG ~ 22s)
   const tauABG = 22.0;

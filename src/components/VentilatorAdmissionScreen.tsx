@@ -47,28 +47,18 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
 }) => {
   const { isLight } = useTheme();
 
-  // Local drafted settings for admission
-  const [mode, setMode] = useState<VentilationMode>(initialSettings.mode || 'VCV');
-  const [fio2, setFio2] = useState<number>(initialSettings.fio2 || 60);
-  const [peep, setPeep] = useState<number>(initialSettings.peep || 10);
-  const [tidalVolume, setTidalVolume] = useState<number>(initialSettings.tidalVolume || 420);
-  const [respiratoryRate, setRespiratoryRate] = useState<number>(initialSettings.respiratoryRate || 22);
-  const [inspiratoryFlow, setInspiratoryFlow] = useState<number>(initialSettings.inspiratoryFlow || 55);
-  const [flowWaveform, setFlowWaveform] = useState<'decelerating' | 'square'>(
-    initialSettings.flowWaveform || 'decelerating'
-  );
-  const [inspiratoryPressure, setInspiratoryPressure] = useState<number>(
-    initialSettings.inspiratoryPressure || 15
-  );
-  const [inspiratoryTimePCV, setInspiratoryTimePCV] = useState<number>(
-    initialSettings.inspiratoryTimePCV || 0.9
-  );
-  const [pressureSupport, setPressureSupport] = useState<number>(
-    initialSettings.pressureSupport || 12
-  );
-  const [triggerSensitivity, setTriggerSensitivity] = useState<number>(
-    initialSettings.triggerSensitivity || 2.0
-  );
+  // Local drafted settings for admission (all initialized to zero so no pre-filled answers bias the student)
+  const [mode, setMode] = useState<VentilationMode>('VCV');
+  const [fio2, setFio2] = useState<number>(0);
+  const [peep, setPeep] = useState<number>(0);
+  const [tidalVolume, setTidalVolume] = useState<number>(0);
+  const [respiratoryRate, setRespiratoryRate] = useState<number>(0);
+  const [inspiratoryFlow, setInspiratoryFlow] = useState<number>(0);
+  const [flowWaveform, setFlowWaveform] = useState<'decelerating' | 'square'>('decelerating');
+  const [inspiratoryPressure, setInspiratoryPressure] = useState<number>(0);
+  const [inspiratoryTimePCV, setInspiratoryTimePCV] = useState<number>(0);
+  const [pressureSupport, setPressureSupport] = useState<number>(0);
+  const [triggerSensitivity, setTriggerSensitivity] = useState<number>(0);
 
   const ibw = calculateIBW(patient.heightCm, patient.gender);
   const vtPerKg = Number((tidalVolume / ibw).toFixed(1));
@@ -370,9 +360,6 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold border ${vtStatusColor}`}>
-                          {vtPerKg} mL/kg IBW
-                        </span>
                         <span className="text-lg font-mono font-bold text-cyan-400">
                           {tidalVolume} <span className="text-xs text-zinc-400">mL</span>
                         </span>
@@ -381,14 +368,14 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => setTidalVolume((v) => Math.max(150, v - 10))}
+                        onClick={() => setTidalVolume((v) => Math.max(0, v - 10))}
                         className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-mono font-bold text-xs flex items-center justify-center cursor-pointer"
                       >
                         -
                       </button>
                       <input
                         type="range"
-                        min={150}
+                        min={0}
                         max={800}
                         step={10}
                         value={tidalVolume}
@@ -420,7 +407,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                       </div>
                       <input
                         type="range"
-                        min={20}
+                        min={0}
                         max={100}
                         step={5}
                         value={inspiratoryFlow}
@@ -479,7 +466,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                       </div>
                       <input
                         type="range"
-                        min={5}
+                        min={0}
                         max={35}
                         step={1}
                         value={inspiratoryPressure}
@@ -501,7 +488,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                       </div>
                       <input
                         type="range"
-                        min={0.4}
+                        min={0}
                         max={2.5}
                         step={0.05}
                         value={inspiratoryTimePCV}
@@ -529,7 +516,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                   </div>
                   <input
                     type="range"
-                    min={8}
+                    min={0}
                     max={40}
                     step={1}
                     value={respiratoryRate}
@@ -555,16 +542,13 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                   </div>
                   <input
                     type="range"
-                    min={3}
+                    min={0}
                     max={24}
                     step={1}
                     value={peep}
                     onChange={(e) => setPeep(Number(e.target.value))}
                     className="w-full accent-emerald-400 h-1.5 bg-zinc-800 cursor-pointer"
                   />
-                  <span className="text-[9px] font-mono text-zinc-500 block">
-                    Alvo SDRA: 10 - 15 cmH₂O
-                  </span>
                 </div>
 
                 {/* FiO2 */}
@@ -581,16 +565,13 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                   </div>
                   <input
                     type="range"
-                    min={21}
+                    min={0}
                     max={100}
                     step={1}
                     value={fio2}
                     onChange={(e) => setFio2(Number(e.target.value))}
                     className="w-full accent-rose-400 h-1.5 bg-zinc-800 cursor-pointer"
                   />
-                  <span className="text-[9px] font-mono text-zinc-500 block">
-                    Alvo SpO₂: 92 - 96%
-                  </span>
                 </div>
               </div>
             </div>
@@ -602,7 +583,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                   ✓ Configuração de Admissão Pronta
                 </span>
                 <span className="text-[11px] text-zinc-400">
-                  Modo {mode} • Vt {tidalVolume} mL ({vtPerKg} mL/kg) • FR {respiratoryRate} • PEEP {peep} • FiO₂ {fio2}%
+                  Modo {mode} • Vt {tidalVolume} mL • FR {respiratoryRate} rpm • PEEP {peep} cmH₂O • FiO₂ {fio2}%
                 </span>
               </div>
 
