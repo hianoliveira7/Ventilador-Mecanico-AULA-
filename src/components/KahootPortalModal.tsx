@@ -20,6 +20,7 @@ import {
 interface KahootPortalModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userRole?: 'student' | 'teacher' | null;
   onStartKahootSession: (
     studentName: string,
     room: KahootRoom,
@@ -30,9 +31,11 @@ interface KahootPortalModalProps {
 export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   isOpen,
   onClose,
+  userRole = 'student',
   onStartKahootSession,
 }) => {
   const { isLight } = useTheme();
+  const isTeacher = userRole === 'teacher';
   const [activeTab, setActiveTab] = useState<'student' | 'professor' | 'history'>('student');
 
   // Student Form
@@ -142,19 +145,21 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
             }`}
           >
             <UserCheck className="w-4 h-4" />
-            <span>ÁREA DO ALUNO (ENTRAR)</span>
+            <span>ÁREA DO ALUNO (ENTRAR COM PIN)</span>
           </button>
-          <button
-            onClick={() => { setActiveTab('professor'); setErrorMsg(''); setRoomCreatedSuccess(''); }}
-            className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-all cursor-pointer ${
-              activeTab === 'professor'
-                ? isLight ? 'bg-white text-indigo-600 border-b-2 border-indigo-600 font-black' : 'bg-[#12162b] text-indigo-300 border-b-2 border-indigo-400'
-                : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>PAINEL DO PROFESSOR (CRIAR SALA)</span>
-          </button>
+          {isTeacher && (
+            <button
+              onClick={() => { setActiveTab('professor'); setErrorMsg(''); setRoomCreatedSuccess(''); }}
+              className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'professor'
+                  ? isLight ? 'bg-white text-indigo-600 border-b-2 border-indigo-600 font-black' : 'bg-[#12162b] text-indigo-300 border-b-2 border-indigo-400'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>PAINEL DO PROFESSOR (CRIAR SALA)</span>
+            </button>
+          )}
           <button
             onClick={() => { setActiveTab('history'); setErrorMsg(''); }}
             className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-all cursor-pointer ${
@@ -164,7 +169,7 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
             }`}
           >
             <History className="w-4 h-4" />
-            <span>HISTÓRICO DE DESEMPENHO</span>
+            <span>RANKING & PLACAR DE LÍDERES</span>
           </button>
         </div>
 

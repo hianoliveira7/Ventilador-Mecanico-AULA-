@@ -245,8 +245,10 @@ export default function App() {
   });
 
   // Critical Cardiac Arrest (PCR) Emergency Trigger (SpO2 <= 35%)
+  const [isPatientDeceased, setIsPatientDeceased] = useState<boolean>(false);
+
   useEffect(() => {
-    if (!isVentilating) return;
+    if (!isVentilating || isPatientDeceased || isDebriefingOpen) return;
     if (
       monitored.spo2 > 0 &&
       monitored.spo2 <= 35 &&
@@ -258,7 +260,7 @@ export default function App() {
     } else if (monitored.spo2 > 40) {
       hasTriggeredPcrRef.current = false;
     }
-  }, [monitored.spo2, isCardiacArrestModalOpen, isVentilating]);
+  }, [monitored.spo2, isCardiacArrestModalOpen, isVentilating, isPatientDeceased, isDebriefingOpen]);
 
   // 6. Alarms Engine
   const [activeAlarms, setActiveAlarms] = useState<AlarmItem[]>([]);
@@ -350,14 +352,10 @@ export default function App() {
   }, [activeKahootSession?.remainingSeconds, activeKahootSession === null, handleFinishKahootSession]);
 
   const handleSelectRole = (role: UserRole) => {
-    if (role === 'teacher') {
-      setIsTeacherAuthOpen(true);
-      setIsRolePortalOpen(false);
-      return;
+    setUserRole(role);
+    if (role) {
+      educationalStorage.setUserRole(role);
     }
-    setUserRole('student');
-    educationalStorage.setUserRole('student');
-    setIsRolePortalOpen(false);
   };
 
   const handleLoadAsynchronyScenario = (
@@ -858,6 +856,7 @@ export default function App() {
     setCurrentPhaseIndex(0);
     setIsCardiacArrestModalOpen(false);
     hasTriggeredPcrRef.current = false;
+    setIsPatientDeceased(false);
     
     // Always return to the admission screen (Início do Caso) on case load/restart
     setIsVentilating(false);
@@ -922,6 +921,9 @@ export default function App() {
       // Critical Cardiac Arrest (PCR) Trigger: SpO2 <= 35% in any case
       if (
         !maneuverStateRef.current.isFrozen &&
+        isVentilating &&
+        !isDebriefingOpen &&
+        !isPatientDeceased &&
         monitored.spo2 > 0 &&
         monitored.spo2 <= 35 &&
         !isCardiacArrestModalOpen &&
@@ -975,48 +977,67 @@ export default function App() {
   ]);
 
   // Debriefing Report Generator (After Action Review - AAR)
-  const generateDebriefingReport = useCallback((): CaseDebriefingReport | null => {
-    if (!activeClinicalCase) return null;
+  const generateDebriefingReport = useCallback((deceased: boolean = false): CaseDebriefingReport => {
+    const caseId = activeClinicalCase?.id || 'ventilacao-livre';
+    const caseTitle = activeClinicalCase?.title || 'Sessão de Ventilação Prática / Treinamento Geral';
+    const studentName = localStorage.getItem('simulador_student_name') || 'Estudante UTI';
     const durationSec = Math.max(5, Math.round((Date.now() - caseStartTime) / 1000));
-    const currentGoals = activeClinicalCase.goals || [];
-    const goalsMet = currentGoals.filter((g) => {
-      try {
-        return g.isMet(monitored, settings, patient);
-      } catch {
-        return false;
-      }
-    }).length;
+    const currentGoals = activeClinicalCase?.goals || [];
 
-    let baseScore = Math.round((goalsMet / Math.max(1, currentGoals.length)) * 75);
+    let goalsMet = 0;
+    if (currentGoals.length > 0) {
+      goalsMet = currentGoals.filter((g) => {
+        try {
+          return g.isMet(monitored, settings, patient);
+        } catch {
+          return false;
+        }
+      }).length;
+    } else {
+      // Protective ventilation metrics in free mode
+      const isDpSafe = monitored.drivingPressure <= 15;
+      const isPlatSafe = monitored.plateauPressure <= 30;
+      const isVtSafe = monitored.vte > 0 && (monitored.vte / Math.max(1, patient.idealBodyWeightKg)) <= 8.0;
+      const isSpo2Safe = monitored.spo2 >= 90;
+      goalsMet = [isDpSafe, isPlatSafe, isVtSafe, isSpo2Safe].filter(Boolean).length;
+    }
+
+    const totalGoals = currentGoals.length > 0 ? currentGoals.length : 4;
+    let baseScore = Math.round((goalsMet / Math.max(1, totalGoals)) * 75);
     const viliPenalty = Math.min(25, Math.floor(viliExposureSeconds / 4));
     const platPenalty = Math.min(20, Math.floor(highPlateauSeconds / 3));
     const deteriorationPenalty = hasDeteriorated ? 30 : 0;
 
     let finalScore = Math.max(15, Math.min(100, baseScore + 25 - viliPenalty - platPenalty - deteriorationPenalty));
-    if (goalsMet === currentGoals.length && !hasDeteriorated && viliExposureSeconds < 15) {
+    if (goalsMet === totalGoals && !hasDeteriorated && viliExposureSeconds < 15) {
       finalScore = 100;
     }
 
-    const rating: CaseDebriefingReport['rating'] =
-      finalScore >= 85
-        ? 'Excelente (Padrão Ouro)'
-        : finalScore >= 70
-        ? 'Adequado / Seguro'
-        : finalScore >= 50
-        ? 'Risco Moderado'
-        : 'Risco Crítico / Iatrogênico';
+    if (deceased) {
+      finalScore = 15;
+    }
+
+    const rating: CaseDebriefingReport['rating'] = deceased
+      ? 'Risco Crítico / Iatrogênico'
+      : finalScore >= 85
+      ? 'Excelente (Padrão Ouro)'
+      : finalScore >= 70
+      ? 'Adequado / Seguro'
+      : finalScore >= 50
+      ? 'Risco Moderado'
+      : 'Risco Crítico / Iatrogênico';
 
     const rep: CaseDebriefingReport = {
       id: `rep_${Date.now()}`,
-      caseId: activeClinicalCase.id,
-      caseTitle: activeClinicalCase.title,
-      studentName: 'Estudante UTI',
+      caseId,
+      caseTitle,
+      studentName,
       completedAt: new Date().toLocaleString('pt-BR'),
       durationSeconds: durationSec,
       score: finalScore,
       rating,
       goalsCompletedCount: goalsMet,
-      totalGoalsCount: currentGoals.length,
+      totalGoalsCount: totalGoals,
       safetyMetrics: {
         timeUnderViliSeconds: viliExposureSeconds,
         timeHighPlateauSeconds: highPlateauSeconds,
@@ -1025,9 +1046,10 @@ export default function App() {
         hadDeterioration: hasDeteriorated,
       },
       interventions: caseInterventions,
-      guidelineFeedback: activeClinicalCase.teachingPoints || [
+      guidelineFeedback: activeClinicalCase?.teachingPoints || [
         'Ventilação protetora com Vt de 4-8 mL/kg de peso predito previne volutrauma e barotrauma.',
         'Manter Driving Pressure ≤ 14-15 cmH₂O e Pressão de Platô ≤ 30 cmH₂O.',
+        'Evitar hiperóxia mantendo FiO₂ titulada para alvos de SpO₂ de 92-96%.',
       ],
       recommendations: [
         hasDeteriorated
@@ -1076,11 +1098,22 @@ export default function App() {
           patient={patient}
           initialSettings={settings}
           onStartVentilation={(configuredSettings) => {
-            setSettings(configuredSettings);
-            setDraftSettings(configuredSettings);
+            const safeSettings = { ...configuredSettings };
+            if (!safeSettings.inspiratoryTimePCV || safeSettings.inspiratoryTimePCV <= 0) {
+              if (safeSettings.mode === 'VCV' || safeSettings.mode === 'SIMV_VC') {
+                const calcFactor = safeSettings.flowWaveform === 'decelerating' ? 0.65 : 1.0;
+                const flow = safeSettings.inspiratoryFlow || 45;
+                const vt = safeSettings.tidalVolume || 420;
+                safeSettings.inspiratoryTimePCV = Number(((vt * 0.06) / (flow * calcFactor)).toFixed(2));
+              } else {
+                safeSettings.inspiratoryTimePCV = 1.0;
+              }
+            }
+            setSettings(safeSettings);
+            setDraftSettings(safeSettings);
             setIsVentilating(true);
             setCaseStartTime(Date.now());
-            physicsEngine.reset(patient.compliance, patient.resistance, configuredSettings.peep);
+            physicsEngine.reset(patient.compliance, patient.resistance, safeSettings.peep);
             audioEngine.playConfirmBeep();
             if (!educationalStorage.hasCompletedTour()) {
               setIsInteractiveTourOpen(true);
@@ -1703,6 +1736,9 @@ export default function App() {
           audioEngine.playConfirmBeep();
         }}
         onRestartCase={() => {
+          setIsPatientDeceased(false);
+          hasTriggeredPcrRef.current = false;
+          setIsCardiacArrestModalOpen(false);
           if (activeClinicalCase) {
             handleLoadCase(activeClinicalCase);
           } else {
@@ -1712,7 +1748,13 @@ export default function App() {
           }
         }}
         onOpenDebriefing={() => {
-          generateDebriefingReport();
+          hasTriggeredPcrRef.current = true;
+          setIsPatientDeceased(true);
+          maneuverStateRef.current.isFrozen = true;
+          setIsVentilating(false);
+          setIsCardiacArrestModalOpen(false);
+          const rep = generateDebriefingReport(true);
+          setCurrentDebriefingReport(rep);
           setIsDebriefingOpen(true);
         }}
       />
@@ -1720,6 +1762,7 @@ export default function App() {
       <KahootPortalModal
         isOpen={isKahootPortalOpen}
         onClose={() => setIsKahootPortalOpen(false)}
+        userRole={userRole}
         onStartKahootSession={handleStartKahootSession}
       />
 

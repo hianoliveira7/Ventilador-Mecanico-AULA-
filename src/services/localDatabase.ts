@@ -415,6 +415,56 @@ class LocalDatabaseService {
     this.saveResult(result);
     return result;
   }
+
+  public deleteRoom(code: string) {
+    const rooms = this.getRooms().filter((r) => r.code !== code);
+    localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+  }
+
+  public toggleRoomActive(code: string) {
+    const rooms = this.getRooms().map((r) => {
+      if (r.code === code) {
+        return { ...r, active: !r.active };
+      }
+      return r;
+    });
+    localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+  }
+
+  public deleteResult(id: string) {
+    const results = this.getResults().filter((res) => res.id !== id);
+    localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(results));
+  }
+
+  public clearResults() {
+    localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify([]));
+  }
+
+  public async fetchCloudResults(): Promise<StudentGameResult[]> {
+    try {
+      const snap = await getDocs(collection(db, 'results'));
+      const cloudResults: StudentGameResult[] = [];
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() as StudentGameResult;
+        if (data && data.studentName) {
+          cloudResults.push(data);
+        }
+      });
+      if (cloudResults.length > 0) {
+        // Merge with local results without duplicates
+        const local = this.getResults();
+        const mergedMap = new Map<string, StudentGameResult>();
+        local.forEach((r) => mergedMap.set(r.id, r));
+        cloudResults.forEach((r) => mergedMap.set(r.id, r));
+        const merged = Array.from(mergedMap.values()).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+        localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(merged));
+        return merged;
+      }
+    } catch (err) {
+      console.warn('Using local cache for results:', err);
+    }
+    return this.getResults();
+  }
 }
 
 export const localDatabase = new LocalDatabaseService();

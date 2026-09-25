@@ -68,7 +68,41 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
   const calculatedTiVCV =
     inspiratoryFlow > 0 && tidalVolume > 0
       ? Number(((tidalVolume * 0.06) / (inspiratoryFlow * calcFactor)).toFixed(2))
-      : 0;
+      : (inspiratoryTimePCV > 0 ? inspiratoryTimePCV : 0);
+
+  // Synchronize inspiratoryTimePCV when flow, Vt, or waveform change
+  const handleFlowChange = (newFlow: number) => {
+    setInspiratoryFlow(newFlow);
+    if (newFlow > 0 && tidalVolume > 0) {
+      const ti = Number(((tidalVolume * 0.06) / (newFlow * calcFactor)).toFixed(2));
+      setInspiratoryTimePCV(ti);
+    }
+  };
+
+  const handleVtChange = (newVt: number) => {
+    setTidalVolume(newVt);
+    if (inspiratoryFlow > 0 && newVt > 0) {
+      const ti = Number(((newVt * 0.06) / (inspiratoryFlow * calcFactor)).toFixed(2));
+      setInspiratoryTimePCV(ti);
+    }
+  };
+
+  const handleWaveformChange = (newWaveform: 'decelerating' | 'square') => {
+    setFlowWaveform(newWaveform);
+    const newFactor = newWaveform === 'decelerating' ? 0.65 : 1.0;
+    if (inspiratoryFlow > 0 && tidalVolume > 0) {
+      const ti = Number(((tidalVolume * 0.06) / (inspiratoryFlow * newFactor)).toFixed(2));
+      setInspiratoryTimePCV(ti);
+    }
+  };
+
+  const handleTiChangeInVCV = (newTi: number) => {
+    setInspiratoryTimePCV(newTi);
+    if (newTi > 0 && tidalVolume > 0) {
+      const requiredFlow = Math.max(10, Math.min(120, Math.round((tidalVolume * 0.06) / (newTi * calcFactor))));
+      setInspiratoryFlow(requiredFlow);
+    }
+  };
 
   // Determine safety color for Vt
   const vtStatusColor =
@@ -83,24 +117,42 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
   const handleApplyPresetVt = (targetMlPerKg: number) => {
     audioEngine.playClick(880);
     const newVt = Math.round(ibw * targetMlPerKg);
-    setTidalVolume(newVt);
+    handleVtChange(newVt);
   };
 
   const handleConfirmAndStart = () => {
     audioEngine.playConfirmBeep();
+    const currentCalcFactor = flowWaveform === 'decelerating' ? 0.65 : 1.0;
+    const computedTi =
+      inspiratoryFlow > 0 && tidalVolume > 0
+        ? Number(((tidalVolume * 0.06) / (inspiratoryFlow * currentCalcFactor)).toFixed(2))
+        : 1.0;
+
+    const finalTi =
+      mode === 'VCV' || mode === 'SIMV_VC'
+        ? (computedTi > 0 ? computedTi : (inspiratoryTimePCV > 0 ? inspiratoryTimePCV : 1.0))
+        : (inspiratoryTimePCV > 0 ? inspiratoryTimePCV : 1.0);
+
+    const finalFlow =
+      inspiratoryFlow > 0
+        ? inspiratoryFlow
+        : (tidalVolume > 0 && finalTi > 0
+            ? Math.max(10, Math.min(120, Math.round((tidalVolume * 0.06) / (finalTi * currentCalcFactor))))
+            : 45);
+
     const finalSettings: VentilatorSettings = {
       ...initialSettings,
       mode,
-      fio2,
+      fio2: Math.max(21, fio2),
       peep,
       tidalVolume,
       respiratoryRate,
-      inspiratoryFlow,
+      inspiratoryFlow: finalFlow,
       flowWaveform,
       inspiratoryPressure,
-      inspiratoryTimePCV,
+      inspiratoryTimePCV: finalTi,
       pressureSupport,
-      triggerSensitivity,
+      triggerSensitivity: triggerSensitivity > 0 ? triggerSensitivity : 2.0,
     };
     onStartVentilation(finalSettings);
   };
@@ -375,7 +427,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => setTidalVolume((v) => Math.max(0, v - 10))}
+                        onClick={() => handleVtChange(Math.max(0, tidalVolume - 10))}
                         className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-mono font-bold text-xs flex items-center justify-center cursor-pointer"
                       >
                         -
@@ -386,12 +438,12 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         max={800}
                         step={10}
                         value={tidalVolume}
-                        onChange={(e) => setTidalVolume(Number(e.target.value))}
+                        onChange={(e) => handleVtChange(Number(e.target.value))}
                         className="flex-1 accent-cyan-400 h-2 bg-zinc-800 rounded-none cursor-pointer"
                       />
                       <button
                         type="button"
-                        onClick={() => setTidalVolume((v) => Math.min(800, v + 10))}
+                        onClick={() => handleVtChange(Math.min(800, tidalVolume + 10))}
                         className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-mono font-bold text-xs flex items-center justify-center cursor-pointer"
                       >
                         +
@@ -423,9 +475,29 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         max={100}
                         step={5}
                         value={inspiratoryFlow}
-                        onChange={(e) => setInspiratoryFlow(Number(e.target.value))}
+                        onChange={(e) => handleFlowChange(Number(e.target.value))}
                         className="w-full accent-cyan-400 h-2 bg-zinc-800 cursor-pointer"
                       />
+                      <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 pt-1 border-t border-zinc-800/60">
+                        <span>Ajuste rápido de Ti:</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleTiChangeInVCV(Math.max(0.4, Number((calculatedTiVCV - 0.1).toFixed(2))))}
+                            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-bold cursor-pointer"
+                          >
+                            -0.1s
+                          </button>
+                          <span className="text-emerald-400 font-bold px-1">{calculatedTiVCV > 0 ? `${calculatedTiVCV}s` : '1.0s'}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleTiChangeInVCV(Math.min(3.0, Number((calculatedTiVCV + 0.1).toFixed(2))))}
+                            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-bold cursor-pointer"
+                          >
+                            +0.1s
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
                     <div
@@ -437,7 +509,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                       <div className="grid grid-cols-2 gap-1.5 font-mono text-xs">
                         <button
                           type="button"
-                          onClick={() => setFlowWaveform('decelerating')}
+                          onClick={() => handleWaveformChange('decelerating')}
                           className={`py-1.5 rounded-xl border transition-colors cursor-pointer ${
                             flowWaveform === 'decelerating'
                               ? 'bg-cyan-600 border-cyan-400 text-white font-bold shadow-md'
@@ -448,7 +520,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         </button>
                         <button
                           type="button"
-                          onClick={() => setFlowWaveform('square')}
+                          onClick={() => handleWaveformChange('square')}
                           className={`py-1.5 rounded-xl border transition-colors cursor-pointer ${
                             flowWaveform === 'square'
                               ? 'bg-cyan-600 border-cyan-400 text-white font-bold shadow-md'

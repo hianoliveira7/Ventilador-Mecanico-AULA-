@@ -71,7 +71,7 @@ export const DebriefingModal: React.FC<DebriefingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-5 animate-fade-in overflow-y-auto print:p-0 print:bg-white">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-5 animate-fade-in overflow-y-auto print:p-0 print:bg-white">
       <div
         className={`w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transition-colors print:max-h-none print:shadow-none print:border-none ${
           isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#0a0d16] border-zinc-800 text-zinc-100'

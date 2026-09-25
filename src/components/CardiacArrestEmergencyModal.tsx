@@ -32,8 +32,6 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
   onRestartCase,
   onOpenDebriefing,
 }) => {
-  if (!isOpen) return null;
-
   // 20-second countdown timer
   const [secondsRemaining, setSecondsRemaining] = useState<number>(20);
   const [hasDied, setHasDied] = useState<boolean>(false);
@@ -52,40 +50,56 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
   const timerRef = useRef<number | null>(null);
 
   // Start 20-second countdown when opened
+  const prevIsOpenRef = useRef<boolean>(false);
+
   useEffect(() => {
-    setSecondsRemaining(20);
-    setHasDied(false);
-    setHasSucceeded(false);
-    setAttemptError(null);
-    setFio2(currentSettings.fio2 || 60);
-    setPeep(currentSettings.peep || 8);
-    setRespiratoryRate(currentSettings.respiratoryRate || 18);
-    setTidalVolume(currentSettings.tidalVolume || 420);
-    setMode(currentSettings.mode === 'PCV' ? 'PCV' : 'VCV');
+    if (!isOpen) {
+      prevIsOpenRef.current = false;
+      if (timerRef.current) clearInterval(timerRef.current);
+      audioEngine.stopFlatlineTone();
+      return;
+    }
 
-    audioEngine.triggerAlarmPattern('high');
+    // Only restart timer and reset flags when modal transitions from closed to open
+    if (!prevIsOpenRef.current) {
+      prevIsOpenRef.current = true;
+      setSecondsRemaining(20);
+      setHasDied(false);
+      setHasSucceeded(false);
+      setAttemptError(null);
+      setFio2(currentSettings.fio2 || 60);
+      setPeep(currentSettings.peep || 8);
+      setRespiratoryRate(currentSettings.respiratoryRate || 18);
+      setTidalVolume(currentSettings.tidalVolume || 420);
+      setMode(currentSettings.mode === 'PCV' ? 'PCV' : 'VCV');
 
-    timerRef.current = window.setInterval(() => {
-      setSecondsRemaining((prev) => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          setHasDied(true);
-          audioEngine.stopAlarm();
-          audioEngine.playFlatlineTone();
-          return 0;
-        }
-        if (prev <= 6) {
-          audioEngine.playErrorBeep();
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      audioEngine.triggerAlarmPattern('high');
+
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = window.setInterval(() => {
+        setSecondsRemaining((prev) => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            setHasDied(true);
+            audioEngine.stopAlarm();
+            audioEngine.playFlatlineTone();
+            return 0;
+          }
+          if (prev <= 6) {
+            audioEngine.playErrorBeep();
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       audioEngine.stopFlatlineTone();
     };
   }, [isOpen]);
+
+  if (!isOpen) return null;
 
   // Medical criteria validation for PCR resuscitation
   // 1. FiO2 == 100%
@@ -216,9 +230,9 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                     onClose();
                     onOpenDebriefing();
                   }}
-                  className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-mono font-bold text-xs flex items-center gap-2 cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-mono font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg transition-colors"
                 >
-                  <FileText className="w-4 h-4" />
+                  <FileText className="w-4 h-4 text-cyan-400" />
                   <span>Relatório de Debriefing</span>
                 </button>
               </div>

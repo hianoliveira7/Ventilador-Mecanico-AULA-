@@ -15,6 +15,7 @@ import {
   User,
   Scale,
   Zap,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface PatientConfigModalProps {
@@ -36,6 +37,7 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const isTeacher = userRole === 'teacher';
   const isBlindStudent = blindMechanicsActive && userRole === 'student';
 
   const update = <K extends keyof PatientParameters>(field: K, value: PatientParameters[K]) => {
@@ -243,171 +245,222 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
 
         {/* Modal Body (Scrollable) */}
         <div className="p-4 overflow-y-auto space-y-4 font-sans text-xs">
-          {/* Quick Presets */}
-          <div className="bg-[#0e0f14] p-3 rounded-sm border border-zinc-800/80 space-y-2">
-            <span className="font-display font-bold text-zinc-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>10 Perfis Fisiopatológicos Realistas (UTI)</span>
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 font-mono text-[11px]">
-              <button
-                onClick={() => applyPreset('normal')}
-                className="p-2 bg-[#121824] hover:bg-[#1a2336] border border-cyan-800/60 text-cyan-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                1. Pulmão Normal
-                <span className="block font-normal text-[9px] text-zinc-400">C: 60 • Raw: 5</span>
-              </button>
-              <button
-                onClick={() => applyPreset('sdra')}
-                className="p-2 bg-[#221216] hover:bg-[#30161d] border border-rose-800/60 text-rose-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                2. SDRA Grave
-                <span className="block font-normal text-[9px] text-zinc-400">C: 20 • Shunt 38%</span>
-              </button>
-              <button
-                onClick={() => applyPreset('dpoc')}
-                className="p-2 bg-[#221c10] hover:bg-[#332714] border border-amber-800/60 text-amber-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                3. DPOC
-                <span className="block font-normal text-[9px] text-zinc-400">Raw: 26 • AutoPEEP</span>
-              </button>
-              <button
-                onClick={() => applyPreset('asma')}
-                className="p-2 bg-[#221422] hover:bg-[#331c33] border border-purple-800/60 text-purple-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                4. Asma Grave
-                <span className="block font-normal text-[9px] text-zinc-400">Raw: 35 cmH2O/L/s</span>
-              </button>
-              <button
-                onClick={() => applyPreset('pneumotorax')}
-                className="p-2 bg-[#241212] hover:bg-[#361818] border border-red-800/60 text-red-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                5. Pneumotórax
-                <span className="block font-normal text-[9px] text-zinc-400">C: 14 • PIP alto</span>
-              </button>
-              <button
-                onClick={() => applyPreset('edema')}
-                className="p-2 bg-[#121c22] hover:bg-[#182732] border border-teal-800/60 text-teal-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                6. Edema Pulmonar
-                <span className="block font-normal text-[9px] text-zinc-400">C: 24 • Shunt 32%</span>
-              </button>
-              <button
-                onClick={() => applyPreset('pos_op')}
-                className="p-2 bg-[#141a24] hover:bg-[#1c2636] border border-blue-800/60 text-blue-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                7. Pós-Op Abdominal
-                <span className="block font-normal text-[9px] text-zinc-400">C: 32 • PEEP 8-10</span>
-              </button>
-              <button
-                onClick={() => applyPreset('obeso')}
-                className="p-2 bg-[#181622] hover:bg-[#242032] border border-indigo-800/60 text-indigo-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                8. Obeso (IMC 44)
-                <span className="block font-normal text-[9px] text-zinc-400">C: 26 • IBW 68kg</span>
-              </button>
-              <button
-                onClick={() => applyPreset('neuro')}
-                className="p-2 bg-[#1c1824] hover:bg-[#282236] border border-fuchsia-800/60 text-fuchsia-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                9. TCE / Neuro
-                <span className="block font-normal text-[9px] text-zinc-400">PaCO2 35-38 alvo</span>
-              </button>
-              <button
-                onClick={() => applyPreset('neuromuscular')}
-                className="p-2 bg-[#16201c] hover:bg-[#202e28] border border-emerald-800/60 text-emerald-300 rounded-sm text-left transition-all cursor-pointer font-bold"
-              >
-                10. Neuromuscular
-                <span className="block font-normal text-[9px] text-zinc-400">Pmus fraco • PSV</span>
-              </button>
-            </div>
-          </div>
+          {!isTeacher ? (
+            /* Student View: Read-only Clinical Chart & Educational Lock Banner */
+            <div className="space-y-4">
+              <div className="p-4 bg-indigo-950/30 border border-indigo-700/60 rounded-xl space-y-2 text-indigo-200">
+                <div className="flex items-center gap-2 font-display font-bold text-sm text-indigo-300">
+                  <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                  <span>Prontuário Fisiopatológico do Paciente (Modo Aluno)</span>
+                </div>
+                <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                  As propriedades biológicas intrínsecas do pulmão (Complacência Estática, Resistência de Vias Aéreas, Shunt intrapulmonar e Espaço Morto) são <strong>fixadas pelo caso clínico e pelo professor</strong>.
+                </p>
+                <div className="p-2.5 bg-black/40 rounded-lg border border-indigo-800/40 text-[11px] font-mono text-cyan-300">
+                  💡 <strong>Conduta do Aluno:</strong> Utilize o painel de controles ventilatórios na parte inferior do simulador para ajustar Modo (VCV, PCV, PSV), PEEP, FiO₂, Volume Corrente ($V_t$), Pressão Inspiratória ($P_{'{'}insp{'}'}$) e Frequência Respiratória de acordo com as metas de ventilação protetora.
+                </div>
+              </div>
 
-          {/* Section 1: Mecânica Respiratória Primária (Cst e Raw) */}
-          <div className="bg-[#0e0f14] p-3.5 rounded-sm border border-zinc-800/80 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-display font-bold text-cyan-400 uppercase tracking-wider text-[11px] block">
-                1. Mecânica do Sistema Respiratório (Complacência & Resistência)
-              </span>
-              {isBlindStudent && (
-                <span className="px-2 py-0.5 rounded bg-amber-950/80 border border-amber-600/80 text-amber-300 font-mono font-bold text-[10px] flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-amber-400" />
-                  <span>Modo Avaliação Cega Ativo</span>
+              {/* Patient Profile Demographics */}
+              <div className="p-4 bg-[#0e0f14] rounded-xl border border-zinc-800 space-y-3 font-mono">
+                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                  <span className="font-display font-bold text-sm text-zinc-100 flex items-center gap-2">
+                    <User className="w-4 h-4 text-cyan-400" />
+                    <span>{patient.name}</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-bold">
+                    Caso: {patient.pathology.toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-2.5 bg-black/30 rounded-lg border border-zinc-800/80">
+                    <span className="text-[10px] text-zinc-500 uppercase block">Idade / Sexo</span>
+                    <strong className="text-zinc-200">{patient.age} anos • {patient.gender === 'male' ? 'Masculino' : 'Feminino'}</strong>
+                  </div>
+                  <div className="p-2.5 bg-black/30 rounded-lg border border-zinc-800/80">
+                    <span className="text-[10px] text-zinc-500 uppercase block">Altura Real</span>
+                    <strong className="text-cyan-400">{patient.heightCm} cm</strong>
+                  </div>
+                  <div className="p-2.5 bg-black/30 rounded-lg border border-zinc-800/80">
+                    <span className="text-[10px] text-zinc-500 uppercase block">Peso Real</span>
+                    <strong className="text-zinc-200">{patient.actualWeightKg} kg</strong>
+                  </div>
+                  <div className="p-2.5 bg-black/30 rounded-lg border border-zinc-800/80">
+                    <span className="text-[10px] text-zinc-500 uppercase block">Peso Predito (IBW)</span>
+                    <strong className="text-emerald-400">{patient.idealBodyWeightKg} kg</strong>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-black/40 rounded-lg border border-zinc-800/80 space-y-1.5">
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                    Alvos de Ventilação Protetora para este Paciente (IBW: {patient.idealBodyWeightKg} kg):
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+                    <div>• 4 mL/kg: <strong className="text-cyan-300">{(patient.idealBodyWeightKg * 4).toFixed(0)} mL</strong></div>
+                    <div>• 6 mL/kg (Padrão): <strong className="text-emerald-400 font-bold">{(patient.idealBodyWeightKg * 6).toFixed(0)} mL</strong></div>
+                    <div>• 8 mL/kg: <strong className="text-amber-400">{(patient.idealBodyWeightKg * 8).toFixed(0)} mL</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Teacher View: Full Unlocked Access to Archetypes & Biological Parameters */
+            <>
+              <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-600/70 text-amber-300 font-mono text-xs flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-bold">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>MODO DOCENTE ATIVO: Acesso irrestrito a todos os parâmetros e perfis pulmonares</span>
                 </span>
-              )}
-            </div>
-
-            {isBlindStudent ? (
-              <div className="p-3 bg-amber-950/30 border border-amber-800/50 rounded text-amber-200 text-xs font-mono space-y-1">
-                <p className="font-bold flex items-center gap-1.5">
-                  <span>🔒 Parâmetros de Mecânica Mascarados pelo Professor</span>
-                </p>
-                <p className="text-[11px] opacity-80 leading-relaxed font-sans">
-                  Para descobrir a Complacência Estática e a Resistência de Vias Aéreas, execute a manobra de <strong>Pausa Inspiratória</strong> no painel de manobras do simulador e calcule:
-                  <br />
-                  • $C_{'{'}st{'}'} = V_t / (P_{'{'}platô{'}'} - PEEP)$
-                  <br />
-                  • $R_{'{'}aw{'}'} = (P_{'{'}pico{'}'} - P_{'{'}platô{'}'}) / Fluxo$
-                </p>
+                <span className="text-[10px] bg-amber-400 text-slate-950 font-black px-2 py-0.5 rounded">
+                  PROFESSOR
+                </span>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Compliance Slider */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-zinc-200 text-xs">
-                      Complacência Estática ($C_{'{'}st{'}'}$)
-                    </span>
-                    <span className="font-mono font-bold text-cyan-300 text-sm">
-                      {patient.compliance}{' '}
-                      <span className="text-[10px] text-zinc-500">mL/cmH₂O</span>
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={10}
-                    max={120}
-                    step={1}
-                    value={patient.compliance}
-                    onChange={(e) => update('compliance', Number(e.target.value))}
-                    className="w-full accent-cyan-400 h-1.5 bg-zinc-800 rounded-none cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
-                    <span>10 (SDRA/Pneumotórax)</span>
-                    <span className="text-emerald-400">Normal (50-70)</span>
-                    <span>120 (Enfisema)</span>
-                  </div>
+
+              {/* Quick Presets */}
+              <div className="bg-[#0e0f14] p-3 rounded-sm border border-zinc-800/80 space-y-2">
+                <span className="font-display font-bold text-zinc-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>10 Perfis Fisiopatológicos Realistas (UTI)</span>
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 font-mono text-[11px]">
+                  <button
+                    onClick={() => applyPreset('normal')}
+                    className="p-2 bg-[#121824] hover:bg-[#1a2336] border border-cyan-800/60 text-cyan-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    1. Pulmão Normal
+                    <span className="block font-normal text-[9px] text-zinc-400">C: 60 • Raw: 5</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('sdra')}
+                    className="p-2 bg-[#221216] hover:bg-[#30161d] border border-rose-800/60 text-rose-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    2. SDRA Grave
+                    <span className="block font-normal text-[9px] text-zinc-400">C: 20 • Shunt 38%</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('dpoc')}
+                    className="p-2 bg-[#221c10] hover:bg-[#332714] border border-amber-800/60 text-amber-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    3. DPOC
+                    <span className="block font-normal text-[9px] text-zinc-400">Raw: 26 • AutoPEEP</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('asma')}
+                    className="p-2 bg-[#221422] hover:bg-[#331c33] border border-purple-800/60 text-purple-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    4. Asma Grave
+                    <span className="block font-normal text-[9px] text-zinc-400">Raw: 35 cmH2O/L/s</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('pneumotorax')}
+                    className="p-2 bg-[#241212] hover:bg-[#361818] border border-red-800/60 text-red-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    5. Pneumotórax
+                    <span className="block font-normal text-[9px] text-zinc-400">C: 14 • PIP alto</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('edema')}
+                    className="p-2 bg-[#121c22] hover:bg-[#182732] border border-teal-800/60 text-teal-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    6. Edema Pulmonar
+                    <span className="block font-normal text-[9px] text-zinc-400">C: 24 • Shunt 32%</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('pos_op')}
+                    className="p-2 bg-[#141a24] hover:bg-[#1c2636] border border-blue-800/60 text-blue-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    7. Pós-Op Abdominal
+                    <span className="block font-normal text-[9px] text-zinc-400">C: 32 • PEEP 8-10</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('obeso')}
+                    className="p-2 bg-[#181622] hover:bg-[#242032] border border-indigo-800/60 text-indigo-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    8. Obeso (IMC 44)
+                    <span className="block font-normal text-[9px] text-zinc-400">C: 26 • IBW 68kg</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('neuro')}
+                    className="p-2 bg-[#1c1824] hover:bg-[#282236] border border-fuchsia-800/60 text-fuchsia-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    9. TCE / Neuro
+                    <span className="block font-normal text-[9px] text-zinc-400">PaCO2 35-38 alvo</span>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('neuromuscular')}
+                    className="p-2 bg-[#16201c] hover:bg-[#202e28] border border-emerald-800/60 text-emerald-300 rounded-sm text-left transition-all cursor-pointer font-bold"
+                  >
+                    10. Neuromuscular
+                    <span className="block font-normal text-[9px] text-zinc-400">Pmus fraco • PSV</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Section 1: Mecânica Respiratória Primária (Cst e Raw) */}
+              <div className="bg-[#0e0f14] p-3.5 rounded-sm border border-zinc-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-display font-bold text-cyan-400 uppercase tracking-wider text-[11px] block">
+                    1. Mecânica do Sistema Respiratório (Complacência & Resistência)
+                  </span>
                 </div>
 
-                {/* Resistance Slider */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-zinc-200 text-xs">
-                      Resistência de Vias Aéreas ($R_{'{'}aw{'}'}$)
-                    </span>
-                    <span className="font-mono font-bold text-amber-400 text-sm">
-                      {patient.resistance}{' '}
-                      <span className="text-[10px] text-zinc-500">cmH₂O/(L/s)</span>
-                    </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Compliance Slider */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-zinc-200 text-xs">
+                        Complacência Estática ($C_{'{'}st{'}'}$)
+                      </span>
+                      <span className="font-mono font-bold text-cyan-300 text-sm">
+                        {patient.compliance}{' '}
+                        <span className="text-[10px] text-zinc-500">mL/cmH₂O</span>
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={10}
+                      max={120}
+                      step={1}
+                      value={patient.compliance}
+                      onChange={(e) => update('compliance', Number(e.target.value))}
+                      className="w-full accent-cyan-400 h-1.5 bg-zinc-800 rounded-none cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+                      <span>10 (SDRA/Pneumotórax)</span>
+                      <span className="text-emerald-400">Normal (50-70)</span>
+                      <span>120 (Enfisema)</span>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min={2}
-                    max={50}
-                    step={1}
-                    value={patient.resistance}
-                    onChange={(e) => update('resistance', Number(e.target.value))}
-                    className="w-full accent-amber-400 h-1.5 bg-zinc-800 rounded-none cursor-pointer"
-                  />
-                  <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
-                    <span className="text-emerald-400">Normal (4-8)</span>
-                    <span>DPOC (15-25)</span>
-                    <span>Asma Grave (&gt;30)</span>
+
+                  {/* Resistance Slider */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-zinc-200 text-xs">
+                        Resistência de Vias Aéreas ($R_{'{'}aw{'}'}$)
+                      </span>
+                      <span className="font-mono font-bold text-amber-400 text-sm">
+                        {patient.resistance}{' '}
+                        <span className="text-[10px] text-zinc-500">cmH₂O/(L/s)</span>
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={2}
+                      max={50}
+                      step={1}
+                      value={patient.resistance}
+                      onChange={(e) => update('resistance', Number(e.target.value))}
+                      className="w-full accent-amber-400 h-1.5 bg-zinc-800 rounded-none cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-zinc-500 font-mono">
+                      <span className="text-emerald-400">Normal (4-8)</span>
+                      <span>DPOC (15-25)</span>
+                      <span>Asma Grave (&gt;30)</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
 
           {/* Section 2: Drive Respiratório & Esforço do Paciente */}
           <div className="bg-[#0e0f14] p-3.5 rounded-sm border border-zinc-800/80 space-y-3">
@@ -596,6 +649,8 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
               </div>
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* Modal Footer */}

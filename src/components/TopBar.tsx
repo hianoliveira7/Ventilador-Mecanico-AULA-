@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { VentilationMode, PatientParameters, AlarmItem } from '../types/ventilation';
 import {
   Bell,
@@ -23,6 +23,10 @@ import {
   Play,
   Trophy,
   ChevronDown,
+  HelpCircle,
+  Target,
+  BookOpen,
+  ShieldCheck,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -70,7 +74,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenTutorial,
   onOpenTeacherAdmin,
   onOpenClinicalCases,
+  onOpenQuiz,
   onOpenKahoot,
+  onOpenEducational,
+  onOpenMissions,
   onOpenAsynchronies,
   onOpenFlashcards,
   onOpenDebriefing,
@@ -80,6 +87,21 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [isEstudosOpen, setIsEstudosOpen] = useState<boolean>(false);
+  const estudosRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (estudosRef.current && !estudosRef.current.contains(e.target as Node)) {
+        setIsEstudosOpen(false);
+      }
+    };
+    if (isEstudosOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isEstudosOpen]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -110,7 +132,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   return (
     <header
       id="tour-topbar"
-      className={`px-3 py-1.5 flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 select-none shrink-0 shadow-sm border-b whitespace-nowrap overflow-x-hidden transition-colors ${
+      className={`px-3 py-1.5 flex flex-nowrap items-center justify-between gap-1.5 sm:gap-2 select-none shrink-0 shadow-sm border-b whitespace-nowrap relative z-30 transition-colors ${
         isLight
           ? 'bg-white border-slate-200 text-slate-900'
           : 'bg-[#06070b] border-zinc-800/90 text-white'
@@ -271,95 +293,158 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Right: Essential Action Controls */}
       <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
         {/* Consolidated "Estudos" Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={estudosRef}>
           <button
+            type="button"
             onClick={() => {
               audioEngine.playClick(950);
               setIsEstudosOpen((prev) => !prev);
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-md shrink-0 ${
-              isLight
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-md shrink-0 active:scale-95 ${
+              isEstudosOpen
+                ? 'bg-indigo-700 text-white border-indigo-400 ring-2 ring-indigo-400/50'
+                : isLight
                 ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500'
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400'
             }`}
-            title="Abrir Menu de Estudos (Desafios Kahoot, Casos, Quiz, Assincronias e Treino de Curvas)"
+            title="Menu de Estudos: Desafios Kahoot, Casos Clínicos, Quiz, Assincronias e Treino de Curvas"
           >
-            <GraduationCap className="w-3.5 h-3.5 text-amber-300" />
-            <span className="font-display font-black">Estudos</span>
-            <ChevronDown className={`w-3 h-3 transition-transform ${isEstudosOpen ? 'rotate-180' : ''}`} />
+            <GraduationCap className="w-4 h-4 text-amber-300" />
+            <span className="font-display font-black tracking-wide">Estudos</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isEstudosOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {isEstudosOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setIsEstudosOpen(false)} />
-              <div className={`absolute right-0 mt-2 w-56 rounded-2xl border shadow-2xl z-50 p-1.5 space-y-1 font-mono text-xs animate-fadeIn ${
-                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0d101d] border-indigo-900/80 text-zinc-100 shadow-indigo-950/50'
-              }`}>
-                {onOpenKahoot && (
-                  <button
-                    onClick={() => {
-                      setIsEstudosOpen(false);
-                      onOpenKahoot();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-amber-400/20 text-left transition-colors cursor-pointer"
-                  >
-                    <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
-                    <div>
-                      <span className="font-bold block text-amber-400">Desafios Kahoot</span>
-                      <span className="text-[10px] opacity-75">Salas, timer & ranking</span>
-                    </div>
-                  </button>
-                )}
-
-                {onOpenClinicalCases && (
-                  <button
-                    onClick={() => {
-                      setIsEstudosOpen(false);
-                      onOpenClinicalCases();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-cyan-500/20 text-left transition-colors cursor-pointer"
-                  >
-                    <BookOpenCheck className="w-4 h-4 text-cyan-400 shrink-0" />
-                    <div>
-                      <span className="font-bold block text-cyan-300">Casos Clínicos & Quiz</span>
-                      <span className="text-[10px] opacity-75">Casos práticos e testes</span>
-                    </div>
-                  </button>
-                )}
-
-                {onOpenAsynchronies && (
-                  <button
-                    onClick={() => {
-                      setIsEstudosOpen(false);
-                      onOpenAsynchronies();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-amber-500/20 text-left transition-colors cursor-pointer"
-                  >
-                    <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-                    <div>
-                      <span className="font-bold block text-amber-300">Banco de Assincronias</span>
-                      <span className="text-[10px] opacity-75">Simular & resolver</span>
-                    </div>
-                  </button>
-                )}
-
-                {onOpenFlashcards && (
-                  <button
-                    onClick={() => {
-                      setIsEstudosOpen(false);
-                      onOpenFlashcards();
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-emerald-500/20 text-left transition-colors cursor-pointer"
-                  >
-                    <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <div>
-                      <span className="font-bold block text-emerald-300">Treino de Curvas</span>
-                      <span className="text-[10px] opacity-75">Reconhecimento visual</span>
-                    </div>
-                  </button>
-                )}
+            <div
+              className={`absolute right-0 top-full mt-2 w-64 rounded-2xl border shadow-2xl z-50 p-2 space-y-1 font-mono text-xs animate-fadeIn ${
+                isLight
+                  ? 'bg-white border-slate-200 text-slate-800 shadow-xl'
+                  : 'bg-[#0e1222] border-indigo-700/80 text-zinc-100 shadow-2xl shadow-indigo-950/80'
+              }`}
+            >
+              <div className="px-2.5 py-1 text-[10px] font-mono font-black uppercase text-indigo-400 border-b border-indigo-500/20 mb-1">
+                Portal de Estudos & Avaliação
               </div>
-            </>
+
+              {onOpenKahoot && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEstudosOpen(false);
+                    onOpenKahoot();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-amber-400/20 text-left transition-colors cursor-pointer"
+                >
+                  <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block text-amber-400">Desafios Kahoot</span>
+                    <span className="text-[10px] opacity-75">Salas gamificadas & ranking</span>
+                  </div>
+                </button>
+              )}
+
+              {onOpenClinicalCases && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEstudosOpen(false);
+                    onOpenClinicalCases();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-cyan-500/20 text-left transition-colors cursor-pointer"
+                >
+                  <BookOpenCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block text-cyan-300">Casos Clínicos</span>
+                    <span className="text-[10px] opacity-75">Simulações de patologias</span>
+                  </div>
+                </button>
+              )}
+
+              {onOpenQuiz && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEstudosOpen(false);
+                    onOpenQuiz();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-purple-500/20 text-left transition-colors cursor-pointer"
+                >
+                  <HelpCircle className="w-4 h-4 text-purple-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block text-purple-300">Quiz de Avaliação</span>
+                    <span className="text-[10px] opacity-75">Testes teórico-práticos</span>
+                  </div>
+                </button>
+              )}
+
+              {onOpenAsynchronies && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEstudosOpen(false);
+                    onOpenAsynchronies();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-amber-500/20 text-left transition-colors cursor-pointer"
+                >
+                  <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block text-amber-300">Banco de Assincronias</span>
+                    <span className="text-[10px] opacity-75">Simular & resolver ao vivo</span>
+                  </div>
+                </button>
+              )}
+
+              {onOpenFlashcards && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEstudosOpen(false);
+                    onOpenFlashcards();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-emerald-500/20 text-left transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block text-emerald-300">Treino de Curvas</span>
+                    <span className="text-[10px] opacity-75">Reconhecimento visual</span>
+                  </div>
+                </button>
+              )}
+
+              {onOpenMissions && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEstudosOpen(false);
+                    onOpenMissions();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-teal-500/20 text-left transition-colors cursor-pointer"
+                >
+                  <Target className="w-4 h-4 text-teal-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block text-teal-300">Missões Clínicas</span>
+                    <span className="text-[10px] opacity-75">Metas terapêuticas</span>
+                  </div>
+                </button>
+              )}
+
+              {onOpenEducational && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEstudosOpen(false);
+                    onOpenEducational();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-blue-500/20 text-left transition-colors cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4 text-blue-400 shrink-0" />
+                  <div>
+                    <span className="font-bold block text-blue-300">Guia & Fórmulas</span>
+                    <span className="text-[10px] opacity-75">Mecânica respiratória</span>
+                  </div>
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -382,16 +467,19 @@ export const TopBar: React.FC<TopBarProps> = ({
         {userRole === 'teacher' ? (
           onOpenTeacherAdmin && (
             <button
-              onClick={onOpenTeacherAdmin}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
+              onClick={() => {
+                audioEngine.playClick(950);
+                onOpenTeacherAdmin();
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-md shrink-0 ${
                 isLight
-                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600'
-                  : 'bg-indigo-600/80 hover:bg-indigo-500 text-white border-indigo-500'
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-500 ring-2 ring-amber-500/20'
+                  : 'bg-amber-400 hover:bg-amber-300 text-slate-950 border-amber-300 ring-2 ring-amber-400/30'
               }`}
-              title="Painel Administrativo do Docente"
+              title="Acessar Painel Administrativo do Docente (ADM, Kahoot, Turmas e Quizes)"
             >
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">Admin</span>
+              <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
+              <span className="font-display font-black">Painel ADM</span>
             </button>
           )
         ) : (

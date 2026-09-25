@@ -283,15 +283,39 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => handleRequestTeacher(handleEnterDirectly)}
-              className="mt-6 w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all active:scale-[0.99]"
-            >
-              <KeyRound className="w-4 h-4" />
-              <span>ENTRAR COMO PROFESSOR (DIGITAR SENHA)</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="mt-6 space-y-2">
+              <button
+                type="button"
+                onClick={() =>
+                  handleRequestTeacher(() => {
+                    if (onOpenTeacherAdmin) {
+                      onOpenTeacherAdmin();
+                    } else if (onClose) {
+                      onClose();
+                    }
+                  })
+                }
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all active:scale-[0.99]"
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-300" />
+                <span>1. ACESSAR PAINEL ADM (KAHOOT & ALUNOS)</span>
+                <ChevronRight className="w-4 h-4 ml-auto" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleRequestTeacher(handleEnterDirectly)}
+                className={`w-full py-2.5 px-4 rounded-xl border font-mono font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                  isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                    : 'bg-[#15192b] hover:bg-[#1f253e] text-zinc-300 border-zinc-700'
+                }`}
+              >
+                <Activity className="w-4 h-4 text-cyan-400" />
+                <span>2. IR DIRETO PARA O SIMULADOR</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-70" />
+              </button>
+            </div>
           </div>
         </div>
 

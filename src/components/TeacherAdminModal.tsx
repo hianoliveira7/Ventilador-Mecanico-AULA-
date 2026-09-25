@@ -10,6 +10,7 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Sparkles,
   Award,
   Layers,
@@ -32,10 +33,15 @@ import {
   FileText,
   Sliders,
   Settings,
+  Trophy,
+  Users,
+  Copy,
+  RefreshCw,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 import { educationalStorage, QuizQuestionItem } from '../services/educationalStorage';
+import { localDatabase, KahootRoom, StudentGameResult } from '../services/localDatabase';
 import { ClinicalCase, VentilationMode, PedagogicalSettings, CaseDebriefingReport } from '../types/ventilation';
 
 interface TeacherAdminModalProps {
@@ -52,7 +58,19 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   onPedagogicalSettingsChange,
 }) => {
   const { isLight } = useTheme();
-  const [activeTab, setActiveTab] = useState<'quiz' | 'cases' | 'new_quiz' | 'new_case' | 'pedagogy' | 'reports' | 'password'>('quiz');
+  const [activeTab, setActiveTab] = useState<'kahoot' | 'quiz' | 'cases' | 'new_quiz' | 'new_case' | 'pedagogy' | 'reports' | 'password'>('kahoot');
+
+  // Kahoot Live Control state
+  const [kahootRooms, setKahootRooms] = useState<KahootRoom[]>([]);
+  const [kahootResults, setKahootResults] = useState<StudentGameResult[]>([]);
+  const [kahootRoomFilter, setKahootRoomFilter] = useState<string>('all');
+  const [newRoomCode, setNewRoomCode] = useState('');
+  const [newRoomTitle, setNewRoomTitle] = useState('');
+  const [newRoomCaseId, setNewRoomCaseId] = useState('');
+  const [newRoomTimeLimit, setNewRoomTimeLimit] = useState(5);
+  const [newRoomProfName, setNewRoomProfName] = useState('Prof. Orientador');
+  const [isSyncingKahoot, setIsSyncingKahoot] = useState(false);
+  const [copiedPin, setCopiedPin] = useState<string | null>(null);
 
   // Quiz Questions state
   const [questions, setQuestions] = useState<QuizQuestionItem[]>([]);
@@ -161,6 +179,99 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     setCases(educationalStorage.getAllClinicalCases());
     setReports(educationalStorage.getAllDebriefingReports());
     setPedagogicalSettings(educationalStorage.getPedagogicalSettings());
+    const rooms = localDatabase.getRooms();
+    setKahootRooms(rooms);
+    const results = localDatabase.getResults();
+    setKahootResults(results);
+    localDatabase.fetchCloudRooms().then((cloudRooms) => {
+      if (cloudRooms && cloudRooms.length > 0) setKahootRooms(cloudRooms);
+    });
+    localDatabase.fetchCloudResults().then((cloudResults) => {
+      if (cloudResults && cloudResults.length > 0) setKahootResults(cloudResults);
+    });
+  };
+
+  const handleSyncCloudKahoot = async () => {
+    setIsSyncingKahoot(true);
+    audioEngine.playClick(900);
+    try {
+      const [cloudRooms, cloudResults] = await Promise.all([
+        localDatabase.fetchCloudRooms(),
+        localDatabase.fetchCloudResults(),
+      ]);
+      setKahootRooms(cloudRooms);
+      setKahootResults(cloudResults);
+      showFeedback('Sincronização em nuvem do Kahoot concluída!');
+    } catch {
+      showFeedback('Cache local do Kahoot carregado.');
+    } finally {
+      setIsSyncingKahoot(false);
+    }
+  };
+
+  const handleCreateKahootRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoomCode.trim() || !newRoomTitle.trim() || !newRoomCaseId) {
+      showFeedback('Preencha o PIN, o Título e o Caso Clínico para criar a sala.');
+      return;
+    }
+    const cleanCode = newRoomCode.trim().toUpperCase();
+    const newRoom: KahootRoom = {
+      code: cleanCode,
+      title: newRoomTitle.trim(),
+      caseId: newRoomCaseId,
+      timeLimitMinutes: newRoomTimeLimit,
+      createdAt: Date.now(),
+      active: true,
+      professorName: newRoomProfName.trim() || 'Prof. Orientador',
+    };
+    await localDatabase.createRoom(newRoom);
+    audioEngine.playConfirmBeep();
+    showFeedback(`Sala "${cleanCode}" criada com sucesso!`);
+    setNewRoomCode('');
+    setNewRoomTitle('');
+    loadData();
+  };
+
+  const handleToggleRoom = (code: string) => {
+    localDatabase.toggleRoomActive(code);
+    audioEngine.playClick(850);
+    loadData();
+  };
+
+  const handleDeleteRoom = (code: string) => {
+    if (confirm(`Tem certeza que deseja excluir a sala "${code}"?`)) {
+      localDatabase.deleteRoom(code);
+      audioEngine.playClick(750);
+      showFeedback(`Sala "${code}" removida.`);
+      loadData();
+    }
+  };
+
+  const handleDeleteStudentResult = (id: string) => {
+    if (confirm('Deseja excluir este registro de nota do aluno?')) {
+      localDatabase.deleteResult(id);
+      audioEngine.playClick(750);
+      showFeedback('Nota do aluno removida.');
+      loadData();
+    }
+  };
+
+  const handleClearAllResults = () => {
+    if (confirm('ATENÇÃO: Deseja apagar todas as pontuações e registros de alunos do Kahoot? Esta ação não pode ser desfeita.')) {
+      localDatabase.clearResults();
+      audioEngine.playConfirmBeep();
+      showFeedback('Todas as pontuações foram resetadas.');
+      loadData();
+    }
+  };
+
+  const handleCopyPin = (pin: string) => {
+    navigator.clipboard.writeText(pin);
+    audioEngine.playClick(1000);
+    setCopiedPin(pin);
+    showFeedback(`PIN "${pin}" copiado para a área de transferência!`);
+    setTimeout(() => setCopiedPin(null), 2500);
   };
 
   const handleUpdatePedagogicalSettings = (updated: Partial<PedagogicalSettings>) => {
@@ -564,17 +675,32 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-              isLight
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                : 'bg-[#151928] hover:bg-[#20253d] text-zinc-300 border-zinc-700'
-            }`}
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
+                isLight
+                  ? 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-500'
+                  : 'bg-cyan-600/90 hover:bg-cyan-500 text-white border-cyan-500'
+              }`}
+              title="Ir para o Simulador de Ventilação Mecânica"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>Ir para o Simulador</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                isLight
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                  : 'bg-[#151928] hover:bg-[#20253d] text-zinc-300 border-zinc-700'
+              }`}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Tab Selector */}
@@ -584,6 +710,23 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
           }`}
         >
           <div className="flex items-center gap-1.5 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab('kahoot')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                activeTab === 'kahoot'
+                  ? isLight
+                    ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-md font-black'
+                    : 'bg-amber-400 text-slate-950 border-amber-300 shadow-md font-black'
+                  : isLight
+                  ? 'text-amber-800 hover:bg-amber-100/70 border-amber-300/60 font-bold bg-amber-50'
+                  : 'text-amber-300 hover:bg-amber-950/40 border-amber-700/50 font-bold bg-amber-950/20'
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
+              <span>Salas & Alunos Kahoot ({kahootRooms.length})</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('quiz')}
@@ -741,6 +884,475 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
 
         {/* Content Body */}
         <div className="p-4 sm:p-5 overflow-y-auto flex-1">
+          {/* TAB 0: KAHOOT MANAGEMENT & STUDENT PERFORMANCE */}
+          {activeTab === 'kahoot' && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Top Banner KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className={`p-3.5 rounded-2xl border ${
+                  isLight ? 'bg-amber-50/80 border-amber-200 text-amber-950' : 'bg-[#181510] border-amber-900/50 text-amber-200'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold text-amber-500 uppercase">
+                    <span>Salas Criadas</span>
+                    <Trophy className="w-4 h-4" />
+                  </div>
+                  <div className="text-2xl font-black font-display mt-1 text-amber-400">
+                    {kahootRooms.length}
+                  </div>
+                  <span className="text-[10px] opacity-75 font-mono">
+                    {kahootRooms.filter((r) => r.active).length} ativas para alunos
+                  </span>
+                </div>
+
+                <div className={`p-3.5 rounded-2xl border ${
+                  isLight ? 'bg-indigo-50/80 border-indigo-200 text-indigo-950' : 'bg-[#121426] border-indigo-900/50 text-indigo-200'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold text-indigo-500 uppercase">
+                    <span>Alunos Avaliados</span>
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div className="text-2xl font-black font-display mt-1 text-indigo-400">
+                    {kahootResults.length}
+                  </div>
+                  <span className="text-[10px] opacity-75 font-mono">
+                    tentativas registradas
+                  </span>
+                </div>
+
+                <div className={`p-3.5 rounded-2xl border ${
+                  isLight ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-[#0f1c18] border-emerald-900/50 text-emerald-200'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold text-emerald-500 uppercase">
+                    <span>Média da Turma</span>
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div className="text-2xl font-black font-display mt-1 text-emerald-400">
+                    {kahootResults.length > 0
+                      ? `${Math.round(
+                          kahootResults.reduce((acc, r) => acc + (r.score || 0), 0) / kahootResults.length
+                        )} pts`
+                      : '---'}
+                  </div>
+                  <span className="text-[10px] opacity-75 font-mono">
+                    {kahootResults.length > 0
+                      ? `${Math.round(
+                          kahootResults.reduce((acc, r) => acc + (r.gradePercentage || 0), 0) / kahootResults.length
+                        )}% de aproveitamento`
+                      : 'Aguardando submissões'}
+                  </span>
+                </div>
+
+                <div className={`p-3.5 rounded-2xl border ${
+                  isLight ? 'bg-cyan-50/80 border-cyan-200 text-cyan-950' : 'bg-[#0f1726] border-cyan-900/50 text-cyan-200'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold text-cyan-500 uppercase">
+                    <span>Tempo Médio</span>
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div className="text-2xl font-black font-display mt-1 text-cyan-400">
+                    {kahootResults.length > 0
+                      ? `${Math.round(
+                          kahootResults.reduce((acc, r) => acc + (r.completionTimeSeconds || 0), 0) /
+                            kahootResults.length
+                        )}s`
+                      : '---'}
+                  </div>
+                  <span className="text-[10px] opacity-75 font-mono">por desafio concluído</span>
+                </div>
+              </div>
+
+              {/* SECTION: CRIAR NOVA SALA */}
+              <div className={`p-4 sm:p-5 rounded-2xl border ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0f1325] border-zinc-800'
+              }`}>
+                <div className="flex items-center justify-between mb-3 border-b pb-2 border-inherit">
+                  <div className="flex items-center gap-2">
+                    <Plus className="w-4 h-4 text-amber-500" />
+                    <h4 className="text-sm font-display font-bold">Criar Nova Sala de Desafio Kahoot</h4>
+                  </div>
+                  <span className="text-[11px] font-mono text-zinc-400">
+                    Gere o código PIN para compartilhar com os alunos
+                  </span>
+                </div>
+
+                <form onSubmit={handleCreateKahootRoom} className="space-y-3 font-mono text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-bold text-amber-400 mb-1">
+                        1. Código PIN da Sala *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: UTI-TURMA-A"
+                        value={newRoomCode}
+                        onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
+                        required
+                        className={`w-full px-3 py-2 rounded-xl border font-bold uppercase tracking-wider outline-none ${
+                          isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0a0d18] border-zinc-700 text-amber-300'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block font-bold text-zinc-300 mb-1">
+                        2. Título do Desafio Clínico *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Desafio Admissão em SDRA Grave e Titulação de PEEP"
+                        value={newRoomTitle}
+                        onChange={(e) => setNewRoomTitle(e.target.value)}
+                        required
+                        className={`w-full px-3 py-2 rounded-xl border outline-none ${
+                          isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0a0d18] border-zinc-700 text-white'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-bold text-zinc-300 mb-1">
+                        3. Caso Clínico Vinculado *
+                      </label>
+                      <select
+                        value={newRoomCaseId}
+                        onChange={(e) => setNewRoomCaseId(e.target.value)}
+                        required
+                        className={`w-full px-3 py-2 rounded-xl border outline-none text-xs ${
+                          isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0a0d18] border-zinc-700 text-white'
+                        }`}
+                      >
+                        <option value="">Selecione o Caso...</option>
+                        {cases.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.title} ({c.category})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-zinc-300 mb-1">
+                        4. Tempo Limite (Minutos)
+                      </label>
+                      <select
+                        value={newRoomTimeLimit}
+                        onChange={(e) => setNewRoomTimeLimit(Number(e.target.value))}
+                        className={`w-full px-3 py-2 rounded-xl border outline-none ${
+                          isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0a0d18] border-zinc-700 text-white'
+                        }`}
+                      >
+                        <option value={3}>3 minutos (Rápido)</option>
+                        <option value={5}>5 minutos (Padrão)</option>
+                        <option value={7}>7 minutos</option>
+                        <option value={10}>10 minutos</option>
+                        <option value={15}>15 minutos</option>
+                        <option value={20}>20 minutos (Completo)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-zinc-300 mb-1">
+                        5. Nome do Professor
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Prof. Dr. Silva"
+                        value={newRoomProfName}
+                        onChange={(e) => setNewRoomProfName(e.target.value)}
+                        className={`w-full px-3 py-2 rounded-xl border outline-none ${
+                          isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0a0d18] border-zinc-700 text-white'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-mono font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-400/20 cursor-pointer transition-all"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>CRIAR SALA E ATIVAR DESAFIO</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* SECTION: SALAS EXISTENTES */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-display font-bold flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-amber-500" />
+                    <span>Salas Cadastradas ({kahootRooms.length})</span>
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleSyncCloudKahoot}
+                    disabled={isSyncingKahoot}
+                    className={`px-3 py-1 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                      isLight
+                        ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                        : 'bg-[#151928] hover:bg-[#20253d] text-zinc-300 border-zinc-700'
+                    }`}
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingKahoot ? 'animate-spin text-amber-400' : ''}`} />
+                    <span>{isSyncingKahoot ? 'Sincronizando...' : 'Sincronizar Nuvem'}</span>
+                  </button>
+                </div>
+
+                {kahootRooms.length === 0 ? (
+                  <div className={`p-6 rounded-2xl border text-center font-mono text-xs ${
+                    isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0f1422] border-zinc-800 text-zinc-400'
+                  }`}>
+                    Nenhuma sala criada ainda. Utilize o formulário acima para criar uma sala de Kahoot.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {kahootRooms.map((room) => {
+                      const linkedCase = cases.find((c) => c.id === room.caseId);
+                      const roomResults = kahootResults.filter((r) => r.roomCode === room.code);
+                      return (
+                        <div
+                          key={room.code}
+                          className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                            room.active
+                              ? isLight
+                                ? 'bg-white border-amber-300 shadow-sm'
+                                : 'bg-[#0f1325] border-amber-900/60'
+                              : isLight
+                              ? 'bg-slate-50 border-slate-200 opacity-60'
+                              : 'bg-[#0a0d16] border-zinc-800 opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm font-black px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 tracking-wider">
+                                  {room.code}
+                                </span>
+                                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${
+                                  room.active
+                                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                                    : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                                }`}>
+                                  {room.active ? '● Ativa' : 'Pausada'}
+                                </span>
+                              </div>
+                              <h5 className="font-display font-bold text-xs mt-1">
+                                {room.title}
+                              </h5>
+                              <p className="text-[11px] font-mono text-zinc-400">
+                                Caso: {linkedCase?.title || room.caseId} • {room.timeLimitMinutes} min • {room.professorName}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRoom(room.code)}
+                              className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-950/40 border border-rose-900/40 cursor-pointer transition-colors"
+                              title="Excluir Sala"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-2 border-t border-inherit text-xs font-mono">
+                            <span className="text-[11px] text-zinc-400">
+                              {roomResults.length} aluno(s) responderam
+                            </span>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleCopyPin(room.code)}
+                                className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors ${
+                                  copiedPin === room.code
+                                    ? 'bg-emerald-600 text-white border-emerald-500'
+                                    : isLight
+                                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
+                                }`}
+                              >
+                                <Copy className="w-3 h-3" />
+                                <span>{copiedPin === room.code ? 'Copiado!' : 'Copiar PIN'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleToggleRoom(room.code)}
+                                className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold cursor-pointer transition-colors ${
+                                  room.active
+                                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                                }`}
+                              >
+                                {room.active ? 'Pausar Sala' : 'Ativar Sala'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION: PAINEL DE ALUNOS & NOTAS EM TEMPO REAL */}
+              <div className="space-y-3 pt-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-display font-bold flex items-center gap-2">
+                      <Users className="w-4 h-4 text-cyan-400" />
+                      <span>Alunos no Kahoot & Pontuações ({kahootResults.length})</span>
+                    </h4>
+                    <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                      Desempenho individual, notas, tempo de resposta e erros de ventilação mecânica.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {/* Room filter selector */}
+                    <select
+                      value={kahootRoomFilter}
+                      onChange={(e) => setKahootRoomFilter(e.target.value)}
+                      className={`px-3 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                        isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#121626] border-zinc-700 text-white'
+                      }`}
+                    >
+                      <option value="all">Todas as Salas</option>
+                      {kahootRooms.map((r) => (
+                        <option key={r.code} value={r.code}>
+                          Sala: {r.code}
+                        </option>
+                      ))}
+                    </select>
+
+                    {kahootResults.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllResults}
+                        className="px-3 py-1.5 rounded-xl border border-rose-800/60 bg-rose-950/30 text-rose-300 hover:bg-rose-900/50 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                        title="Limpar todos os registros de notas"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Zerar Notas</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Filtered Results List */}
+                {(() => {
+                  const filtered = kahootResults.filter((res) => {
+                    if (kahootRoomFilter === 'all') return true;
+                    return res.roomCode === kahootRoomFilter;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className={`p-8 rounded-2xl border text-center font-mono text-xs ${
+                        isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0f1422] border-zinc-800 text-zinc-400'
+                      }`}>
+                        Nenhum aluno submeteu este desafio ainda. Conforme os alunos finalizarem suas simulações com o PIN correspondente, as notas e erros aparecerão aqui em tempo real.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2.5">
+                      {filtered.map((res, index) => {
+                        const scoreColor =
+                          res.gradePercentage >= 85
+                            ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10'
+                            : res.gradePercentage >= 70
+                            ? 'text-cyan-400 border-cyan-500/30 bg-cyan-500/10'
+                            : res.gradePercentage >= 50
+                            ? 'text-amber-400 border-amber-500/30 bg-amber-500/10'
+                            : 'text-rose-400 border-rose-500/30 bg-rose-500/10';
+
+                        return (
+                          <div
+                            key={res.id}
+                            className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3.5 transition-all ${
+                              isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0f1324] border-zinc-800'
+                            }`}
+                          >
+                            <div className="space-y-1.5 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-mono text-xs font-black text-amber-400">
+                                  #{index + 1}
+                                </span>
+                                <h5 className="font-display font-black text-sm text-slate-900 dark:text-white">
+                                  {res.studentName}
+                                </h5>
+                                <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] uppercase bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                                  Sala: {res.roomCode}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded font-mono font-bold text-[10px] border ${scoreColor}`}>
+                                  {res.score} / {res.maxScore || 1000} Pts ({res.gradePercentage}%)
+                                </span>
+                                <span className="text-[10px] font-mono text-zinc-400">
+                                  {res.rankBadge}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-zinc-400">
+                                <span>Caso: <strong>{res.caseTitle}</strong></span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1 text-cyan-400 font-bold">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {res.completionTimeSeconds}s de {res.timeLimitSeconds}s
+                                </span>
+                                <span>•</span>
+                                <span>{new Date(res.submittedAt).toLocaleTimeString('pt-BR')}</span>
+                              </div>
+
+                              {/* Mistakes Tag Breakdown */}
+                              {res.mistakes && res.mistakes.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                  {res.mistakes.map((m, mIdx) => (
+                                    <span
+                                      key={mIdx}
+                                      className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-300 border border-rose-500/30 text-[10px] font-mono flex items-center gap-1"
+                                      title={m.recommendation}
+                                    >
+                                      <AlertTriangle className="w-3 h-3 text-rose-400" />
+                                      <span>{m.title} (-{m.penaltyPoints}pts)</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="pt-1">
+                                  <span className="text-[10.5px] font-mono text-emerald-400 font-bold flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>Nenhum erro crítico de ventilação mecânica identificado! Padrão Ouro.</span>
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteStudentResult(res.id)}
+                                className="p-2 rounded-xl text-zinc-400 hover:text-rose-400 hover:bg-rose-950/30 border border-transparent hover:border-rose-900/40 cursor-pointer transition-colors"
+                                title="Excluir nota deste aluno"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: LIST QUIZ QUESTIONS (With Full Deletion) */}
           {activeTab === 'quiz' && (
             <div className="space-y-3">
