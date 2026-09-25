@@ -85,22 +85,38 @@ export function computeRespiratoryMechanics(input: MechanicsWorkerInput): Mechan
     calcTargetResistance += 5.5;
   }
 
-  // Alveolar recruitment bonus in restrictive/edematous pathologies (SDRA, EAP, Pós-Op, Obeso)
-  if (
-    patient.recruitmentPotential === 'high' ||
-    patient.pathology === 'sdra' ||
-    patient.pathology === 'edema' ||
-    patient.compliance < 35
-  ) {
-    if (setPeep >= 8 && setPeep <= 18) {
-      // Optimal PEEP zone: open lung concept recruits collapsed alveoli
+  // Alveolar recruitment & hysteresis state
+  const isRestrictive = patient.recruitmentPotential === 'high' || patient.pathology === 'sdra' || patient.pathology === 'edema' || patient.compliance < 35;
+  const isOptimalPeepZone = setPeep >= 10 && setPeep <= 18;
+  const isDerecruitmentZone = setPeep < 9;
+
+  // Alveolar recruitment bonus & PEEP-dependent hysteresis
+  if (isRestrictive) {
+    if (maneuvers.recruitmentManeuverActive || setPeep >= 20) {
+      // High-pressure opening maneuver recruits collapsed lung units
+      const recruitmentGain = Math.min(0.45, (setPeep - 5) * 0.04);
+      calcTargetCompliance *= (1 + recruitmentGain);
+    } else if (isOptimalPeepZone) {
+      // Optimal PEEP sustains open lung concept and prevents end-expiratory collapse
       const recruitmentGain = Math.min(0.35, (setPeep - 5) * 0.035);
       calcTargetCompliance *= (1 + recruitmentGain);
+    } else if (isDerecruitmentZone) {
+      // Derecruitment / Atelectrauma: Low PEEP in ARDS causes alveolar derecruitment
+      const derecruitmentPenalty = Math.min(0.35, (9 - setPeep) * 0.05);
+      calcTargetCompliance *= (1 - derecruitmentPenalty);
     } else if (setPeep > 18) {
       // Overdistension zone: lung is stretched onto the upper flat portion of compliance curve
       const overdistensionPenalty = Math.min(0.4, (setPeep - 18) * 0.04);
       calcTargetCompliance *= (1 - overdistensionPenalty);
     }
+  }
+
+  // Non-linear Volutrauma / Upper Inflection Point (Overdistension) Penalty
+  const ibwKg = patient.idealBodyWeightKg || 60;
+  const vtiPerKg = state.cycleVti / ibwKg;
+  if (vtiPerKg > 8.0) {
+    const volutraumaPenalty = Math.min(0.45, Math.pow((vtiPerKg - 8.0) / 6.0, 2));
+    calcTargetCompliance *= (1 - volutraumaPenalty);
   }
 
   // 3. Multi-breath Viscoelastic Relaxation & Mechanics Latency

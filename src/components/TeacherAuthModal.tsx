@@ -77,7 +77,7 @@ export const TeacherAuthModal: React.FC<TeacherAuthModalProps> = ({
       }, 400);
     } else {
       setAttempts((prev) => prev + 1);
-      setError('Senha incorreta. Verifique a senha ou utilize a senha padrão inicial (14253697).');
+      setError('Senha incorreta. Tente novamente ou verifique suas credenciais.');
       triggerShake();
       audioEngine.playErrorBeep();
     }
@@ -156,7 +156,12 @@ export const TeacherAuthModal: React.FC<TeacherAuthModalProps> = ({
                   setPassword(e.target.value);
                   if (error) setError(null);
                 }}
-                placeholder="Senha de acesso..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSubmit(e);
+                  }
+                }}
+                placeholder="Digite sua senha de acesso..."
                 className={`w-full pl-10 pr-11 py-3 rounded-xl border text-sm font-mono tracking-wide transition-all outline-none ${
                   error
                     ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-500/5'
@@ -194,27 +199,6 @@ export const TeacherAuthModal: React.FC<TeacherAuthModalProps> = ({
                 <span>Credenciais validadas! Entrando no painel docente...</span>
               </div>
             )}
-          </div>
-
-          {/* Quick Helper Badge with default password */}
-          <div
-            className={`p-3 rounded-2xl border flex items-start gap-2.5 text-xs ${
-              isLight
-                ? 'bg-indigo-50/70 border-indigo-200 text-indigo-950'
-                : 'bg-indigo-950/40 border-indigo-800/60 text-indigo-200'
-            }`}
-          >
-            <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-            <div className="space-y-1 leading-relaxed">
-              <span className="font-semibold block">Dica de Acesso Inicial:</span>
-              <p className="font-mono text-[11px]">
-                A senha padrão inicial do sistema é{' '}
-                <strong className="underline underline-offset-2 px-1 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold">
-                  14253697
-                </strong>
-                . Você pode alterar para uma senha personalizada dentro do painel a qualquer momento.
-              </p>
-            </div>
           </div>
 
           {/* Actions */}

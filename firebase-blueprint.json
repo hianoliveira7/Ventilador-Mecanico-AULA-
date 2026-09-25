@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "user": {
+      "title": "User Profile",
+      "description": "User profile with role definition (student or professor)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["student", "professor", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "role"]
+    },
+    "case": {
+      "title": "Clinical Case Scenario",
+      "description": "Clinical case scenario stored in cases collection",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 50 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "difficulty": { "type": "string", "enum": ["Iniciante", "Intermediário", "Avançado", "Desafio"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "title", "category", "description"]
+    },
+    "student": {
+      "title": "Student Registration",
+      "description": "Student profile or temporary registration for Kahoot sessions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentName": { "type": "string", "maxLength": 100 },
+        "roomCode": { "type": "string", "maxLength": 30 },
+        "joinedAt": { "type": "number" }
+      },
+      "required": ["id", "studentName", "roomCode"]
+    },
+    "result": {
+      "title": "Game Result",
+      "description": "Score, mistakes, and evaluation performance for a student in a Kahoot room",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studentName": { "type": "string", "maxLength": 100 },
+        "studentUid": { "type": "string", "maxLength": 128 },
+        "roomCode": { "type": "string", "maxLength": 30 },
+        "caseId": { "type": "string", "maxLength": 128 },
+        "caseTitle": { "type": "string", "maxLength": 200 },
+        "score": { "type": "number" },
+        "maxScore": { "type": "number" },
+        "completionTimeSeconds": { "type": "number" },
+        "timeLimitSeconds": { "type": "number" },
+        "gradePercentage": { "type": "number" },
+        "rankBadge": { "type": "string", "maxLength": 100 },
+        "submittedAt": { "type": "number" }
+      },
+      "required": ["id", "studentName", "roomCode", "caseId", "caseTitle", "score", "gradePercentage", "submittedAt"]
+    },
+    "kahootRoom": {
+      "title": "Kahoot Room",
+      "description": "Gamified room created by a professor for students to join",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 30 },
+        "title": { "type": "string", "maxLength": 200 },
+        "caseId": { "type": "string", "maxLength": 128 },
+        "timeLimitMinutes": { "type": "number" },
+        "active": { "type": "boolean" },
+        "professorName": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["code", "title", "caseId", "timeLimitMinutes", "active", "professorName"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "User profiles"
+    },
+    "/cases/{caseId}": {
+      "schema": "case",
+      "description": "Clinical cases collection"
+    },
+    "/students/{studentId}": {
+      "schema": "student",
+      "description": "Registered students collection"
+    },
+    "/results/{resultId}": {
+      "schema": "result",
+      "description": "Gameplay results collection"
+    },
+    "/kahootRooms/{roomCode}": {
+      "schema": "kahootRoom",
+      "description": "Active Kahoot rooms"
+    }
+  }
+}

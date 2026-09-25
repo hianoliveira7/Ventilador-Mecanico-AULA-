@@ -42,6 +42,10 @@ import { DebriefingModal } from './components/DebriefingModal';
 import { FlashcardsModal } from './components/FlashcardsModal';
 import { VentilatorAdmissionScreen } from './components/VentilatorAdmissionScreen';
 import { CardiacArrestEmergencyModal } from './components/CardiacArrestEmergencyModal';
+import { KahootPortalModal } from './components/KahootPortalModal';
+import { KahootResultModal } from './components/KahootResultModal';
+import { KahootTopBanner } from './components/KahootTopBanner';
+import { localDatabase, KahootRoom, StudentGameResult } from './services/localDatabase';
 import { educationalStorage, UserRole } from './services/educationalStorage';
 import {
   PedagogicalSettings,
@@ -242,6 +246,7 @@ export default function App() {
 
   // Critical Cardiac Arrest (PCR) Emergency Trigger (SpO2 <= 35%)
   useEffect(() => {
+    if (!isVentilating) return;
     if (
       monitored.spo2 > 0 &&
       monitored.spo2 <= 35 &&
@@ -253,7 +258,7 @@ export default function App() {
     } else if (monitored.spo2 > 40) {
       hasTriggeredPcrRef.current = false;
     }
-  }, [monitored.spo2, isCardiacArrestModalOpen]);
+  }, [monitored.spo2, isCardiacArrestModalOpen, isVentilating]);
 
   // 6. Alarms Engine
   const [activeAlarms, setActiveAlarms] = useState<AlarmItem[]>([]);
@@ -271,6 +276,78 @@ export default function App() {
   const [isInteractiveTourOpen, setIsInteractiveTourOpen] = useState<boolean>(false);
   const [isTeacherAdminOpen, setIsTeacherAdminOpen] = useState<boolean>(false);
   const [isTeacherAuthOpen, setIsTeacherAuthOpen] = useState<boolean>(false);
+
+  // Kahoot Gamified Mode State
+  const [isKahootPortalOpen, setIsKahootPortalOpen] = useState<boolean>(false);
+  const [isKahootResultModalOpen, setIsKahootResultModalOpen] = useState<boolean>(false);
+  const [kahootResult, setKahootResult] = useState<StudentGameResult | null>(null);
+  const [activeKahootSession, setActiveKahootSession] = useState<{
+    studentName: string;
+    room: KahootRoom;
+    case: ClinicalCase;
+    remainingSeconds: number;
+    timeLimitSeconds: number;
+  } | null>(null);
+
+  const handleStartKahootSession = (
+    studentName: string,
+    room: KahootRoom,
+    selectedCase: ClinicalCase
+  ) => {
+    handleLoadCase(selectedCase);
+    setIsVentilating(true);
+    setCaseStartTime(Date.now());
+    const timeLimitSeconds = room.timeLimitMinutes * 60;
+    setActiveKahootSession({
+      studentName,
+      room,
+      case: selectedCase,
+      remainingSeconds: timeLimitSeconds,
+      timeLimitSeconds,
+    });
+  };
+
+  const handleFinishKahootSession = useCallback(() => {
+    setActiveKahootSession((currentSession) => {
+      if (!currentSession) return null;
+      const elapsedSeconds = currentSession.timeLimitSeconds - currentSession.remainingSeconds;
+      const result = localDatabase.evaluateStudentPerformance(
+        currentSession.studentName,
+        currentSession.room.code,
+        currentSession.case,
+        monitored,
+        settings,
+        patient,
+        elapsedSeconds,
+        currentSession.timeLimitSeconds
+      );
+      setKahootResult(result);
+      setIsKahootResultModalOpen(true);
+      return null;
+    });
+  }, [monitored, settings, patient]);
+
+  // Live Kahoot Timer Countdown
+  useEffect(() => {
+    if (!activeKahootSession) return;
+
+    if (activeKahootSession.remainingSeconds <= 0) {
+      handleFinishKahootSession();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setActiveKahootSession((prev) => {
+        if (!prev) return null;
+        if (prev.remainingSeconds <= 1) {
+          return { ...prev, remainingSeconds: 0 };
+        }
+        return { ...prev, remainingSeconds: prev.remainingSeconds - 1 };
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [activeKahootSession?.remainingSeconds, activeKahootSession === null, handleFinishKahootSession]);
 
   const handleSelectRole = (role: UserRole) => {
     if (role === 'teacher') {
@@ -471,6 +548,11 @@ export default function App() {
   // Alarm Evaluation Engine (1 Hz)
   useEffect(() => {
     const checkAlarms = () => {
+      if (!isVentilating) {
+        setActiveAlarms([]);
+        audioEngine.stopAlarm();
+        return;
+      }
       const limits = alarmLimitsRef.current;
       const mon = monitored;
       const newAlarms: AlarmItem[] = [];
@@ -591,7 +673,7 @@ export default function App() {
 
     const alarmTimer = setInterval(checkAlarms, 1000);
     return () => clearInterval(alarmTimer);
-  }, [monitored, isSilenceActive, isAudioMuted]);
+  }, [monitored, isSilenceActive, isAudioMuted, isVentilating]);
 
   // Timers countdown for diagnostic maneuvers & alarm silence (1s interval)
   useEffect(() => {
@@ -757,7 +839,7 @@ export default function App() {
   };
 
   const handleManualBreath = () => {
-    physicsEngine.reset();
+    physicsEngine.triggerManualBreath();
   };
 
   // Load a full clinical case
@@ -1009,6 +1091,16 @@ export default function App() {
         />
       ) : (
         <>
+          {activeKahootSession && (
+            <KahootTopBanner
+              studentName={activeKahootSession.studentName}
+              room={activeKahootSession.room}
+              remainingSeconds={activeKahootSession.remainingSeconds}
+              timeLimitSeconds={activeKahootSession.timeLimitSeconds}
+              onFinishKahootSession={handleFinishKahootSession}
+            />
+          )}
+
           {/* 1. Header Bar */}
           <TopBar
             mode={settings.mode}
@@ -1028,6 +1120,7 @@ export default function App() {
             onOpenTeacherAdmin={handleOpenTeacherAdmin}
             onOpenClinicalCases={() => setCurrentPage('clinical_cases')}
             onOpenQuiz={() => setIsQuizOpen(true)}
+            onOpenKahoot={() => setIsKahootPortalOpen(true)}
             onOpenEducational={() => setIsEducationalOpen(true)}
             onOpenGasometry={() => setIsGasometryOpen(true)}
             onOpenMissions={() => setIsMissionsOpen(true)}
@@ -1454,6 +1547,7 @@ export default function App() {
         onOpenTeacherAdmin={handleOpenTeacherAdmin}
         onOpenAsynchronies={() => setIsAsynchroniesOpen(true)}
         onOpenFlashcards={() => setIsFlashcardsOpen(true)}
+        onOpenKahoot={() => setIsKahootPortalOpen(true)}
         onOpenDebriefing={() => {
           generateDebriefingReport();
           setIsDebriefingOpen(true);
@@ -1620,6 +1714,22 @@ export default function App() {
         onOpenDebriefing={() => {
           generateDebriefingReport();
           setIsDebriefingOpen(true);
+        }}
+      />
+
+      <KahootPortalModal
+        isOpen={isKahootPortalOpen}
+        onClose={() => setIsKahootPortalOpen(false)}
+        onStartKahootSession={handleStartKahootSession}
+      />
+
+      <KahootResultModal
+        isOpen={isKahootResultModalOpen}
+        result={kahootResult}
+        onClose={() => setIsKahootResultModalOpen(false)}
+        onRetry={() => {
+          setIsKahootResultModalOpen(false);
+          setIsKahootPortalOpen(true);
         }}
       />
     </div>

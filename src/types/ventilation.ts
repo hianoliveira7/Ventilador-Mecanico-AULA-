@@ -122,6 +122,11 @@ export interface MonitoredData {
   mechanicalPower: number; // J/min
   vtPerKgIBW: number; // mL/kg IBW
   
+  // Weaning Parameters
+  p01: number; // cmH2O (P0.1 - Airway occlusion pressure at 100ms, normal 1.0 - 3.0)
+  nif: number; // cmH2O (NIF / Pimax - Negative Inspiratory Force, normal -20 to -60)
+  pmus: number; // cmH2O (Pmusc / Pmus - Inspiratory muscular pressure effort)
+  
   // Gas Exchange
   pao2: number; // mmHg
   paco2: number; // mmHg

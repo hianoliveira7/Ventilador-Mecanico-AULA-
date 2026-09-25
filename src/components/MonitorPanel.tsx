@@ -9,6 +9,8 @@ import {
   Eye,
   EyeOff,
   HelpCircle,
+  Zap,
+  RotateCcw,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { PulseOximeterModule } from './PulseOximeterModule';
@@ -35,6 +37,7 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
   const { isLight } = useTheme();
   const [activeTab, setActiveTab] = useState<'vital' | 'mechanics'>('vital');
   const [revealedBlind, setRevealedBlind] = useState(false);
+  const [isWeaningEvaluated, setIsWeaningEvaluated] = useState(false);
 
   // Fallbacks to prevent NaN - check both vte/vti/minuteVolume and old naming
   const currentPeak = monitored.peakPressure ?? 0;
@@ -720,6 +723,110 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   {blindMechanicsMode && !revealedBlind ? '0.098 × FR × Vt × (Ppico - 0.5ΔP)' : 'Meta: < 17 J/min'}
                 </span>
               </div>
+            </div>
+
+            {/* Mechanics Grid 5: Weaning Parameters (P0.1, NIF, Pmusc) */}
+            <div className={`p-2.5 rounded-xl border space-y-2 ${
+              isLight ? 'bg-indigo-50/60 border-indigo-200' : 'bg-[#0f111c] border-indigo-900/40'
+            }`}>
+              <div className="flex items-center justify-between border-b pb-1 border-indigo-800/30">
+                <span className={`text-[10px] font-display font-black uppercase tracking-wider ${
+                  isLight ? 'text-indigo-900' : 'text-indigo-300'
+                }`}>
+                  🧠 DESMAME & DRIVE (P0.1, NIF, Pmusc)
+                </span>
+                <span className={`text-[9px] font-mono font-bold ${
+                  patient.spontaneousDrive ? 'text-emerald-400' : 'text-amber-400'
+                }`}>
+                  {patient.spontaneousDrive ? 'DRIVE ATIVO' : 'SEM DRIVE (SEDADO)'}
+                </span>
+              </div>
+
+              {!patient.spontaneousDrive ? (
+                <div className={`p-2 rounded-lg text-center text-[10px] font-mono ${
+                  isLight ? 'bg-amber-100/70 text-amber-900 border border-amber-300' : 'bg-amber-950/40 text-amber-300 border border-amber-800/50'
+                }`}>
+                  🔒 Paciente sem drive respiratório espontâneo ativo. Ative o botão <span className="font-bold underline">Drive Esp</span> no rodapé para permitir a medição de P0.1, NIF e Pmusc.
+                </div>
+              ) : !isWeaningEvaluated ? (
+                <button
+                  type="button"
+                  onClick={() => setIsWeaningEvaluated(true)}
+                  className="w-full py-2 px-3 rounded-xl font-mono font-bold text-xs bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
+                  <span>EFETUAR MEDIÇÃO DE DESMAME (P0.1 / NIF / Pmusc)</span>
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {/* P0.1 */}
+                    <div className={`p-1.5 rounded-lg border flex flex-col justify-between ${
+                      isLight ? 'bg-white border-indigo-100' : 'bg-[#090b12] border-zinc-800'
+                    }`}>
+                      <span className={`text-[8.5px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>P0.1</span>
+                      <div className="my-0.5">
+                        <span className={`text-base font-bold font-mono ${
+                          monitored.p01 > 3.5
+                            ? 'text-rose-400'
+                            : monitored.p01 < 1.0
+                            ? 'text-amber-400'
+                            : 'text-emerald-400'
+                        }`}>
+                          {monitored.p01}
+                        </span>
+                        <span className="text-[8px] font-mono ml-0.5 text-zinc-500">cmH₂O</span>
+                      </div>
+                      <span className="text-[7.5px] font-mono text-zinc-500">Ref: 1.0–3.0</span>
+                    </div>
+
+                    {/* NIF / Pímax */}
+                    <div className={`p-1.5 rounded-lg border flex flex-col justify-between ${
+                      isLight ? 'bg-white border-indigo-100' : 'bg-[#090b12] border-zinc-800'
+                    }`}>
+                      <span className={`text-[8.5px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>NIF (Pímax)</span>
+                      <div className="my-0.5">
+                        <span className={`text-base font-bold font-mono ${
+                          monitored.nif <= -20 ? 'text-emerald-400' : 'text-rose-400'
+                        }`}>
+                          {monitored.nif}
+                        </span>
+                        <span className="text-[8px] font-mono ml-0.5 text-zinc-500">cmH₂O</span>
+                      </div>
+                      <span className="text-[7.5px] font-mono text-zinc-500">Meta: &lt; -20</span>
+                    </div>
+
+                    {/* Pmusc */}
+                    <div className={`p-1.5 rounded-lg border flex flex-col justify-between ${
+                      isLight ? 'bg-white border-indigo-100' : 'bg-[#090b12] border-zinc-800'
+                    }`}>
+                      <span className={`text-[8.5px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>Pmusc</span>
+                      <div className="my-0.5">
+                        <span className={`text-base font-bold font-mono ${
+                          monitored.pmus > 12
+                            ? 'text-rose-400'
+                            : monitored.pmus < 3
+                            ? 'text-amber-400'
+                            : 'text-cyan-300'
+                        }`}>
+                          {monitored.pmus}
+                        </span>
+                        <span className="text-[8px] font-mono ml-0.5 text-zinc-500">cmH₂O</span>
+                      </div>
+                      <span className="text-[7.5px] font-mono text-zinc-500">Ref: 3–10</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsWeaningEvaluated(false)}
+                    className="w-full py-1 text-[10px] font-mono font-bold text-indigo-300 hover:text-indigo-100 flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Ocultar / Refazer Teste</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Pulse Oximeter */}

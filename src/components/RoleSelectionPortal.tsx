@@ -53,11 +53,19 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
   const { isLight } = useTheme();
   const [isTeacherAuthOpen, setIsTeacherAuthOpen] = useState(false);
   const [pendingTeacherAction, setPendingTeacherAction] = useState<(() => void) | null>(null);
+  
+  // Student identification state
+  const [studentName, setStudentName] = useState(() => {
+    return localStorage.getItem('simulador_student_name') || '';
+  });
 
   if (isOpen === false) return null;
 
   const handleChooseStudent = () => {
     audioEngine.playConfirmBeep();
+    if (studentName.trim()) {
+      localStorage.setItem('simulador_student_name', studentName.trim());
+    }
     onSelectRole('student');
   };
 
@@ -132,7 +140,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* PROFILE 1: ALUNO / ESTUDANTE */}
           <div
-            className={`rounded-2xl border p-5 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl ${
+            className={`rounded-3xl border p-6 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl ${
               isLight
                 ? 'bg-white border-cyan-300 shadow-md ring-2 ring-cyan-500/20'
                 : 'bg-[#101526] border-cyan-800/80 hover:border-cyan-600'
@@ -152,11 +160,11 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                     <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-500 block">
                       Perfil Estudante
                     </span>
-                    <h2 className="text-lg font-display font-black">Ambiente do Aluno</h2>
+                    <h2 className="text-xl font-display font-black">Ambiente do Aluno</h2>
                   </div>
                 </div>
                 <span
-                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                  className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
                     currentRole === 'student'
                       ? isLight
                         ? 'bg-cyan-600 text-white border-cyan-600'
@@ -166,125 +174,38 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                       : 'bg-cyan-950/60 text-cyan-300 border-cyan-800'
                   }`}
                 >
-                  {currentRole === 'student' ? 'Perfil Ativo' : 'Desafios Clínicos'}
+                  {currentRole === 'student' ? 'Perfil Ativo' : 'Acesso Livre'}
                 </span>
               </div>
 
               <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-zinc-300'}`}>
-                Desenvolva raciocínio clínico real. Você não receberá receitas prontas: o simulador desafia você a identificar a fisiopatologia, titular o ventilador e alcançar o efeito terapêutico correto com proteção pulmonar.
+                Acesse simulações em tempo real, desafios gamificados e avaliação contínua. Digite sua identificação para registrar suas conquistas e ranking.
               </p>
 
-              {/* Action Quick Links for Student */}
-              <div className="space-y-2 pt-1">
-                {onOpenAsynchronies && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleChooseStudent();
-                      onOpenAsynchronies();
-                    }}
-                    className={`w-full p-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all shadow-md active:scale-98 ${
-                      isLight
-                        ? 'bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 text-amber-950 border-amber-300 ring-2 ring-amber-400/20'
-                        : 'bg-gradient-to-r from-amber-950/60 to-orange-950/40 hover:from-amber-900/70 hover:to-orange-900/50 text-amber-200 border-amber-600/70 ring-1 ring-amber-500/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-xs">
-                        <Zap className="w-3.5 h-3.5 fill-current animate-pulse" />
-                      </div>
-                      <div className="text-left">
-                        <span className="block font-black text-amber-500 text-[10px] tracking-wider uppercase">NOVO • PRÁTICA CLÍNICA</span>
-                        <span className="text-[11.5px] font-bold">1. Banco de Assincronias (Simular & Resolver)</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-amber-400 shrink-0" />
-                  </button>
-                )}
-
-                {onOpenTutorial && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleChooseStudent();
-                      onOpenTutorial();
-                    }}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-cyan-50/80 hover:bg-cyan-100/80 text-cyan-900 border-cyan-300 shadow-sm'
-                        : 'bg-cyan-950/40 hover:bg-cyan-900/50 text-cyan-200 border-cyan-800/60'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-cyan-500" />
-                      <span>2. Tutorial Guiado do Estudante</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-cyan-500" />
-                  </button>
-                )}
-
-                {onOpenMissions && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleChooseStudent();
-                      onOpenMissions();
-                    }}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-emerald-500" />
-                      <span>3. Missões Clínicas Desafiadoras</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 opacity-70" />
-                  </button>
-                )}
-
-                {onOpenCases && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleChooseStudent();
-                      onOpenCases();
-                    }}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-blue-500" />
-                      <span>4. Casos Clínicos & Patologias</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 opacity-70" />
-                  </button>
-                )}
-
-                {onOpenQuiz && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleChooseStudent();
-                      onOpenQuiz();
-                    }}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <HelpCircle className="w-4 h-4 text-purple-500" />
-                      <span>5. Quiz de Avaliação Teórico-Prática</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 opacity-70" />
-                  </button>
-                )}
+              {/* Student Identification Input */}
+              <div className={`p-3.5 rounded-2xl border space-y-2 ${
+                isLight ? 'bg-cyan-50/60 border-cyan-200' : 'bg-[#090d18] border-cyan-900/60'
+              }`}>
+                <label className="text-xs font-mono font-bold uppercase text-cyan-400 block">
+                  1. Sua Identificação (Nome ou Apelido):
+                </label>
+                <input
+                  type="text"
+                  value={studentName}
+                  onChange={(e) => {
+                    setStudentName(e.target.value);
+                    localStorage.setItem('simulador_student_name', e.target.value);
+                  }}
+                  placeholder="Ex: Dra. Mariana Alencar"
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono transition-all outline-none ${
+                    isLight
+                      ? 'bg-white border-slate-300 text-slate-900 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20'
+                      : 'bg-[#121627] border-zinc-700 text-white focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20'
+                  }`}
+                />
+                <span className="text-[10px] font-mono text-cyan-500/80 block">
+                  ✓ Este nome será utilizado para gerar seu relatório e pontuação no Kahoot.
+                </span>
               </div>
             </div>
 
@@ -294,16 +215,16 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                 handleChooseStudent();
                 handleEnterDirectly();
               }}
-              className="mt-5 w-full py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 cursor-pointer transition-all"
+              className="mt-6 w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 cursor-pointer transition-all active:scale-[0.99]"
             >
-              <span>Entrar como Aluno no Simulador</span>
+              <span>CONFIRMAR & ENTRAR COMO ALUNO</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* PROFILE 2: PROFESSOR / DOCENTE */}
           <div
-            className={`rounded-2xl border p-5 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl relative ${
+            className={`rounded-3xl border p-6 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl relative ${
               isLight
                 ? 'bg-white border-indigo-300 shadow-md ring-2 ring-indigo-500/20'
                 : 'bg-[#101526] border-indigo-800/80 hover:border-indigo-600'
@@ -328,11 +249,11 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                         <Lock className="w-2.5 h-2.5" /> Requer Senha
                       </span>
                     </div>
-                    <h2 className="text-lg font-display font-black">Ambiente do Professor</h2>
+                    <h2 className="text-xl font-display font-black">Ambiente do Professor</h2>
                   </div>
                 </div>
                 <span
-                  className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                  className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
                     currentRole === 'teacher'
                       ? isLight
                         ? 'bg-indigo-600 text-white border-indigo-600'
@@ -347,92 +268,28 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
               </div>
 
               <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-zinc-300'}`}>
-                Gerencie todo o conteúdo pedagógico da plataforma. Cadastre novas questões para o Quiz, crie novos casos clínicos com desafios específicos para suas aulas e conduza demonstrações ao vivo.
+                Gerencie o conteúdo pedagógico da plataforma. Crie salas de desafios Kahoot com PIN e tempo limite, cadastre novos casos clínicos e acompanhe o progresso das suas turmas.
               </p>
 
-              {/* Action Quick Links for Teacher */}
-              <div className="space-y-2 pt-1">
-                {onOpenTeacherAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => handleRequestTeacher(onOpenTeacherAdmin)}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-indigo-50/80 hover:bg-indigo-100/80 text-indigo-900 border-indigo-300 shadow-sm'
-                        : 'bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-200 border-indigo-800/60'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
-                      <span>1. Painel Administrativo do Docente</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-indigo-500" />
-                  </button>
-                )}
-
-                {onOpenTeacherAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => handleRequestTeacher(onOpenTeacherAdmin)}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <PlusCircle className="w-4 h-4 text-purple-500" />
-                      <span>2. Cadastrar Novas Questões de Quiz</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 opacity-70" />
-                  </button>
-                )}
-
-                {onOpenTeacherAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => handleRequestTeacher(onOpenTeacherAdmin)}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-                      <span>3. Criar Novos Casos & Desafios</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 opacity-70" />
-                  </button>
-                )}
-
-                {onOpenEducational && (
-                  <button
-                    type="button"
-                    onClick={() => handleRequestTeacher(onOpenEducational)}
-                    className={`w-full p-2.5 rounded-xl border text-xs font-mono font-bold flex items-center justify-between cursor-pointer transition-all ${
-                      isLight
-                        ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200'
-                        : 'bg-[#151a2e] hover:bg-[#1f2642] text-zinc-200 border-zinc-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="w-4 h-4 text-blue-500" />
-                      <span>4. Biblioteca de Guias & Fórmulas</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 opacity-70" />
-                  </button>
-                )}
+              <div className={`p-4 rounded-2xl border space-y-2 text-xs font-mono ${
+                isLight ? 'bg-indigo-50/60 border-indigo-200 text-indigo-950' : 'bg-[#090d18] border-indigo-900/60 text-indigo-200'
+              }`}>
+                <span className="font-bold block text-indigo-400">Recursos de Gestão Docente:</span>
+                <ul className="space-y-1 text-[11px] opacity-90">
+                  <li>• Criação de Salas de Desafio Kahoot</li>
+                  <li>• Cadastro de Questões e Casos Clínicos</li>
+                  <li>• Monitoramento de Notas em Tempo Real</li>
+                </ul>
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => handleRequestTeacher(handleEnterDirectly)}
-              className="mt-5 w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all"
+              className="mt-6 w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all active:scale-[0.99]"
             >
               <KeyRound className="w-4 h-4" />
-              <span>Entrar como Professor no Simulador</span>
+              <span>ENTRAR COMO PROFESSOR (DIGITAR SENHA)</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

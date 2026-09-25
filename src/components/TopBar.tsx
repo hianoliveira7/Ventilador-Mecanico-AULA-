@@ -21,6 +21,8 @@ import {
   Zap,
   Pause,
   Play,
+  Trophy,
+  ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -43,6 +45,7 @@ interface TopBarProps {
   onOpenTeacherAdmin?: () => void;
   onOpenClinicalCases?: () => void;
   onOpenQuiz?: () => void;
+  onOpenKahoot?: () => void;
   onOpenEducational?: () => void;
   onOpenGasometry?: () => void;
   onOpenMissions?: () => void;
@@ -67,6 +70,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenTutorial,
   onOpenTeacherAdmin,
   onOpenClinicalCases,
+  onOpenKahoot,
   onOpenAsynchronies,
   onOpenFlashcards,
   onOpenDebriefing,
@@ -75,6 +79,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   const topAlarm = activeAlarms.length > 0 ? activeAlarms[0] : null;
 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isEstudosOpen, setIsEstudosOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -265,54 +270,98 @@ export const TopBar: React.FC<TopBarProps> = ({
 
       {/* Right: Essential Action Controls */}
       <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
-        {/* Asynchronies Database Button */}
-        {onOpenAsynchronies && (
+        {/* Consolidated "Estudos" Dropdown */}
+        <div className="relative">
           <button
-            onClick={onOpenAsynchronies}
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
+            onClick={() => {
+              audioEngine.playClick(950);
+              setIsEstudosOpen((prev) => !prev);
+            }}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-md shrink-0 ${
               isLight
-                ? 'bg-amber-50 hover:bg-amber-100 text-amber-950 border-amber-300'
-                : 'bg-amber-950/60 hover:bg-amber-900/70 text-amber-300 border-amber-700/60'
+                ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500'
+                : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400'
             }`}
-            title="Abrir Banco de Dados de Assincronias Paciente-Ventilador (Simular & Resolver)"
+            title="Abrir Menu de Estudos (Desafios Kahoot, Casos, Quiz, Assincronias e Treino de Curvas)"
           >
-            <Zap className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            <span className="font-display font-black hidden md:inline">Assincronias</span>
+            <GraduationCap className="w-3.5 h-3.5 text-amber-300" />
+            <span className="font-display font-black">Estudos</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${isEstudosOpen ? 'rotate-180' : ''}`} />
           </button>
-        )}
 
-        {/* Flashcards Curve Recognition Button */}
-        {onOpenFlashcards && (
-          <button
-            onClick={onOpenFlashcards}
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
-              isLight
-                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border-emerald-300'
-                : 'bg-emerald-950/60 hover:bg-emerald-900/70 text-emerald-300 border-emerald-700/60'
-            }`}
-            title="Treino Rápido de Reconhecimento de Curvas e Assincronias"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="font-display font-black hidden md:inline">Treino Curvas</span>
-          </button>
-        )}
+          {isEstudosOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setIsEstudosOpen(false)} />
+              <div className={`absolute right-0 mt-2 w-56 rounded-2xl border shadow-2xl z-50 p-1.5 space-y-1 font-mono text-xs animate-fadeIn ${
+                isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0d101d] border-indigo-900/80 text-zinc-100 shadow-indigo-950/50'
+              }`}>
+                {onOpenKahoot && (
+                  <button
+                    onClick={() => {
+                      setIsEstudosOpen(false);
+                      onOpenKahoot();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-amber-400/20 text-left transition-colors cursor-pointer"
+                  >
+                    <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div>
+                      <span className="font-bold block text-amber-400">Desafios Kahoot</span>
+                      <span className="text-[10px] opacity-75">Salas, timer & ranking</span>
+                    </div>
+                  </button>
+                )}
 
-        {/* Clinical Cases & Quiz Page Button */}
-        {onOpenClinicalCases && (
-          <button
-            id="tour-cases-quiz"
-            onClick={onOpenClinicalCases}
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
-              isLight
-                ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-900 border-cyan-300'
-                : 'bg-cyan-950/70 hover:bg-cyan-900/80 text-cyan-300 border-cyan-700/60'
-            }`}
-            title="Abrir Página de Casos Clínicos & Quiz de Avaliação"
-          >
-            <BookOpenCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="font-display font-black hidden md:inline">Casos & Quiz</span>
-          </button>
-        )}
+                {onOpenClinicalCases && (
+                  <button
+                    onClick={() => {
+                      setIsEstudosOpen(false);
+                      onOpenClinicalCases();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-cyan-500/20 text-left transition-colors cursor-pointer"
+                  >
+                    <BookOpenCheck className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <div>
+                      <span className="font-bold block text-cyan-300">Casos Clínicos & Quiz</span>
+                      <span className="text-[10px] opacity-75">Casos práticos e testes</span>
+                    </div>
+                  </button>
+                )}
+
+                {onOpenAsynchronies && (
+                  <button
+                    onClick={() => {
+                      setIsEstudosOpen(false);
+                      onOpenAsynchronies();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-amber-500/20 text-left transition-colors cursor-pointer"
+                  >
+                    <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                    <div>
+                      <span className="font-bold block text-amber-300">Banco de Assincronias</span>
+                      <span className="text-[10px] opacity-75">Simular & resolver</span>
+                    </div>
+                  </button>
+                )}
+
+                {onOpenFlashcards && (
+                  <button
+                    onClick={() => {
+                      setIsEstudosOpen(false);
+                      onOpenFlashcards();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-emerald-500/20 text-left transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <span className="font-bold block text-emerald-300">Treino de Curvas</span>
+                      <span className="text-[10px] opacity-75">Reconhecimento visual</span>
+                    </div>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Fullscreen Toggle Button */}
         <button

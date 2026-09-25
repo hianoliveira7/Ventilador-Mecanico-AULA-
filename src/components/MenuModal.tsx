@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap, Sparkles, Award } from 'lucide-react';
+import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap, Sparkles, Award, Trophy } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 
@@ -22,6 +22,7 @@ interface MenuModalProps {
   onOpenAsynchronies?: () => void;
   onOpenFlashcards?: () => void;
   onOpenDebriefing?: () => void;
+  onOpenKahoot?: () => void;
 }
 
 export const MenuModal: React.FC<MenuModalProps> = ({
@@ -43,6 +44,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
   onOpenAsynchronies,
   onOpenFlashcards,
   onOpenDebriefing,
+  onOpenKahoot,
 }) => {
   const { theme, toggleTheme, isLight } = useTheme();
 
@@ -216,6 +218,26 @@ export const MenuModal: React.FC<MenuModalProps> = ({
               {isLight ? 'Claro Ativo' : 'Escuro Ativo'}
             </span>
           </button>
+
+          {onOpenKahoot && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenKahoot();
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer bg-amber-400 hover:bg-amber-300 text-slate-950 border-amber-300 shadow-md group"
+            >
+              <div className="p-2.5 rounded-lg bg-slate-950 text-amber-400">
+                <Trophy className="w-5 h-5 animate-bounce" />
+              </div>
+              <div>
+                <span className="block text-sm font-display font-black text-slate-950">Desafios Kahoot Gamificados</span>
+                <span className="text-xs text-slate-900 font-mono font-semibold">
+                  Salas de alunos, timer regressivo e relatório detalhado de erros
+                </span>
+              </div>
+            </button>
+          )}
 
           {onOpenAsynchronies && (
             <button

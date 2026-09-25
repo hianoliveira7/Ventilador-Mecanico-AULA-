@@ -340,7 +340,9 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
 
     if (newMode === 'VCV') {
       updated.tidalVolume = updated.tidalVolume || 420;
-      updated.inspiratoryFlow = updated.inspiratoryFlow || 60;
+      updated.inspiratoryTimePCV = updated.inspiratoryTimePCV || 1.0;
+      const waveFactor = (updated.flowWaveform || 'decelerating') === 'decelerating' ? 0.65 : 1.0;
+      updated.inspiratoryFlow = Math.max(10, Math.min(120, Math.round((updated.tidalVolume * 0.06) / (updated.inspiratoryTimePCV * waveFactor))));
       updated.flowWaveform = updated.flowWaveform || 'decelerating';
     } else if (newMode === 'PCV') {
       updated.inspiratoryPressure = updated.inspiratoryPressure || 15;
@@ -352,16 +354,40 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
       updated.simvRate = updated.simvRate || 10;
       updated.simvPs = updated.simvPs || 10;
       updated.tidalVolume = updated.tidalVolume || 450;
+      updated.inspiratoryTimePCV = updated.inspiratoryTimePCV || 1.0;
     }
 
     onUpdateDraft(updated);
   };
 
   const updateField = (field: keyof VentilatorSettings, val: number) => {
-    onUpdateDraft({
+    const updated: VentilatorSettings = {
       ...draftSettings,
       [field]: val,
-    });
+    };
+
+    const isVcv = updated.mode === 'VCV' || updated.mode === 'SIMV_VC';
+
+    if (isVcv) {
+      const vt = updated.tidalVolume || 420;
+      const waveFactor = updated.flowWaveform === 'decelerating' ? 0.65 : 1.0;
+
+      if (field === 'inspiratoryTimePCV') {
+        const newTi = Math.max(0.3, Math.min(3.0, val));
+        const requiredFlow = Math.max(10, Math.min(120, Math.round((vt * 0.06) / (newTi * waveFactor))));
+        updated.inspiratoryFlow = requiredFlow;
+      } else if (field === 'inspiratoryFlow') {
+        const flow = Math.max(10, Math.min(120, val));
+        const calculatedTi = Math.max(0.3, Math.min(3.0, Number(((vt * 0.06) / (flow * waveFactor)).toFixed(2))));
+        updated.inspiratoryTimePCV = calculatedTi;
+      } else if (field === 'tidalVolume' || field === 'flowWaveform') {
+        const currentTi = updated.inspiratoryTimePCV || 1.0;
+        const requiredFlow = Math.max(10, Math.min(120, Math.round((vt * 0.06) / (currentTi * waveFactor))));
+        updated.inspiratoryFlow = requiredFlow;
+      }
+    }
+
+    onUpdateDraft(updated);
   };
 
   const modes: { id: VentilationMode; label: string; sub: string }[] = [

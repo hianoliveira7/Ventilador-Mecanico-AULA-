@@ -47,9 +47,9 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
 }) => {
   const { isLight } = useTheme();
 
-  // Local drafted settings for admission (all initialized to zero so no pre-filled answers bias the student)
+  // Local drafted settings for admission (FiO2 starts at 21% room air minimum)
   const [mode, setMode] = useState<VentilationMode>('VCV');
-  const [fio2, setFio2] = useState<number>(0);
+  const [fio2, setFio2] = useState<number>(() => Math.max(21, initialSettings.fio2 || 21));
   const [peep, setPeep] = useState<number>(0);
   const [tidalVolume, setTidalVolume] = useState<number>(0);
   const [respiratoryRate, setRespiratoryRate] = useState<number>(0);
@@ -62,6 +62,13 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
 
   const ibw = calculateIBW(patient.heightCm, patient.gender);
   const vtPerKg = Number((tidalVolume / ibw).toFixed(1));
+
+  // Calculate Ti in VCV mode from Vt and Flow
+  const calcFactor = flowWaveform === 'decelerating' ? 0.65 : 1.0;
+  const calculatedTiVCV =
+    inspiratoryFlow > 0 && tidalVolume > 0
+      ? Number(((tidalVolume * 0.06) / (inspiratoryFlow * calcFactor)).toFixed(2))
+      : 0;
 
   // Determine safety color for Vt
   const vtStatusColor =
@@ -157,23 +164,23 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <main className="flex-1 p-4 md:p-8 max-w-[1550px] w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Clinical Context, Anthropometry & IBW (5 cols) */}
-        <div className="lg:col-span-5 space-y-4">
+        <div className="lg:col-span-5 space-y-5">
           {/* Patient Card & Clinical History */}
           <div
-            className={`p-4 rounded-2xl border space-y-3.5 ${
-              isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0f1118] border-zinc-800 shadow-lg'
+            className={`p-5 rounded-3xl border space-y-4 ${
+              isLight ? 'bg-white border-slate-200 shadow-md' : 'bg-[#0f1118] border-zinc-800 shadow-xl'
             }`}
           >
-            <div className="flex items-center justify-between border-b pb-2.5 border-zinc-800/80">
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-cyan-400" />
-                <h2 className="font-display font-bold text-sm">
+            <div className="flex items-center justify-between border-b pb-3 border-zinc-800/80">
+              <div className="flex items-center gap-2.5">
+                <User className="w-5 h-5 text-cyan-400" />
+                <h2 className="font-display font-black text-base">
                   {currentCase?.patientProfile.name || patient.name}
                 </h2>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950/40 border border-cyan-800/50 text-cyan-300 font-bold">
+              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-bold">
                 LEITO 04 - UTI ADULTO
               </span>
             </div>
@@ -392,18 +399,23 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     </div>
                   </div>
 
-                  {/* Flow & Flow Waveform */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Flow, Calculated Ti & Flow Waveform in VCV */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div
-                      className={`p-3 rounded-xl border space-y-1.5 ${
+                      className={`p-3.5 rounded-2xl border space-y-2 ${
                         isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-display font-bold">Fluxo Inspiratório</span>
-                        <span className="font-mono font-bold text-cyan-400 text-sm">
-                          {inspiratoryFlow} <span className="text-[10px] text-zinc-400">L/min</span>
-                        </span>
+                        <span className="text-xs font-display font-bold">Fluxo Inspiratório (VCV)</span>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-cyan-400 text-sm block">
+                            {inspiratoryFlow} <span className="text-[10px] text-zinc-400">L/min</span>
+                          </span>
+                          <span className="text-[10px] font-mono text-emerald-400 font-semibold block">
+                            T_i Resultante: {calculatedTiVCV > 0 ? `${calculatedTiVCV}s` : '--'}
+                          </span>
+                        </div>
                       </div>
                       <input
                         type="range"
@@ -412,23 +424,23 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         step={5}
                         value={inspiratoryFlow}
                         onChange={(e) => setInspiratoryFlow(Number(e.target.value))}
-                        className="w-full accent-cyan-400 h-1.5 bg-zinc-800 cursor-pointer"
+                        className="w-full accent-cyan-400 h-2 bg-zinc-800 cursor-pointer"
                       />
                     </div>
 
                     <div
-                      className={`p-3 rounded-xl border space-y-1.5 ${
+                      className={`p-3.5 rounded-2xl border space-y-2 ${
                         isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
                       <span className="text-xs font-display font-bold block">Forma de Onda de Fluxo</span>
-                      <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
+                      <div className="grid grid-cols-2 gap-1.5 font-mono text-xs">
                         <button
                           type="button"
                           onClick={() => setFlowWaveform('decelerating')}
-                          className={`py-1 rounded border transition-colors cursor-pointer ${
+                          className={`py-1.5 rounded-xl border transition-colors cursor-pointer ${
                             flowWaveform === 'decelerating'
-                              ? 'bg-cyan-600/80 border-cyan-400 text-white font-bold'
+                              ? 'bg-cyan-600 border-cyan-400 text-white font-bold shadow-md'
                               : 'bg-zinc-800 border-zinc-700 text-zinc-400'
                           }`}
                         >
@@ -437,9 +449,9 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         <button
                           type="button"
                           onClick={() => setFlowWaveform('square')}
-                          className={`py-1 rounded border transition-colors cursor-pointer ${
+                          className={`py-1.5 rounded-xl border transition-colors cursor-pointer ${
                             flowWaveform === 'square'
-                              ? 'bg-cyan-600/80 border-cyan-400 text-white font-bold'
+                              ? 'bg-cyan-600 border-cyan-400 text-white font-bold shadow-md'
                               : 'bg-zinc-800 border-zinc-700 text-zinc-400'
                           }`}
                         >
@@ -558,20 +570,23 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-display font-bold">FiO₂</span>
+                    <span className="text-xs font-display font-bold">FiO₂ (Ar Ar)</span>
                     <span className="font-mono font-bold text-rose-400 text-sm">
                       {fio2} <span className="text-[10px] text-zinc-400">%</span>
                     </span>
                   </div>
                   <input
                     type="range"
-                    min={0}
+                    min={21}
                     max={100}
                     step={1}
                     value={fio2}
-                    onChange={(e) => setFio2(Number(e.target.value))}
+                    onChange={(e) => setFio2(Math.max(21, Number(e.target.value)))}
                     className="w-full accent-rose-400 h-1.5 bg-zinc-800 cursor-pointer"
                   />
+                  <span className="text-[9px] font-mono text-zinc-500 block">
+                    Ar ambiente mínimo: 21% FiO₂
+                  </span>
                 </div>
               </div>
             </div>
