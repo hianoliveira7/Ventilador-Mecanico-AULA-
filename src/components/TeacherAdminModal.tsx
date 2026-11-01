@@ -37,10 +37,12 @@ import {
   Users,
   Copy,
   RefreshCw,
+  Search,
+  Filter,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
-import { educationalStorage, QuizQuestionItem } from '../services/educationalStorage';
+import { educationalStorage, QuizQuestionItem, DEFAULT_PEDAGOGICAL_SETTINGS } from '../services/educationalStorage';
 import { localDatabase, KahootRoom, StudentGameResult } from '../services/localDatabase';
 import { ClinicalCase, VentilationMode, PedagogicalSettings, CaseDebriefingReport } from '../types/ventilation';
 
@@ -79,6 +81,17 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const [pedagogicalSettings, setPedagogicalSettings] = useState<PedagogicalSettings>(educationalStorage.getPedagogicalSettings());
   const [notification, setNotification] = useState<string | null>(null);
 
+  // Search & Filter State
+  const [quizSearch, setQuizSearch] = useState('');
+  const [quizCategoryFilter, setQuizCategoryFilter] = useState<string>('all');
+  const [quizDifficultyFilter, setQuizDifficultyFilter] = useState<string>('all');
+
+  const [caseSearch, setCaseSearch] = useState('');
+  const [caseCategoryFilter, setCaseCategoryFilter] = useState<string>('all');
+  const [caseDifficultyFilter, setCaseDifficultyFilter] = useState<string>('all');
+
+  const [reportSearch, setReportSearch] = useState('');
+
   // Password Management state
   const [currentPassInput, setCurrentPassInput] = useState('');
   const [newPassInput, setNewPassInput] = useState('');
@@ -101,6 +114,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const [qDifficulty, setQDifficulty] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Intermediário');
 
   // Form for Clinical Case (Create or Edit)
+  const [caseFormStep, setCaseFormStep] = useState<1 | 2 | 3 | 4>(1);
   const [editingCaseId, setEditingCaseId] = useState<string | null>(null);
   const [caseTitle, setCaseTitle] = useState('');
   const [caseCategory, setCaseCategory] = useState('SDRA');
@@ -390,6 +404,46 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     }
   };
 
+  const handleDuplicateQuestion = (q: QuizQuestionItem) => {
+    educationalStorage.addQuizQuestion({
+      question: `${q.question} (Cópia)`,
+      options: [...q.options],
+      correctIndex: q.correctIndex,
+      explanation: q.explanation,
+      category: q.category,
+      difficulty: q.difficulty,
+    });
+    audioEngine.playConfirmBeep();
+    showFeedback('Questão duplicada com sucesso!');
+    loadData();
+  };
+
+  const handleDuplicateCase = (c: ClinicalCase) => {
+    const cloned: ClinicalCase = {
+      ...c,
+      id: `teacher_case_${Date.now()}`,
+      title: `${c.title} (Cópia)`,
+      patientProfile: {
+        ...c.patientProfile,
+        name: `${c.patientProfile.name} (Cópia)`,
+      },
+    };
+    educationalStorage.addClinicalCase(cloned);
+    audioEngine.playConfirmBeep();
+    showFeedback(`Caso clínico "${c.title}" duplicado com sucesso!`);
+    loadData();
+  };
+
+  const handleResetPedagogicalSettings = () => {
+    if (confirm('Deseja restaurar todas as configurações pedagógicas para os padrões originais de fábrica?')) {
+      const reset = educationalStorage.savePedagogicalSettings(DEFAULT_PEDAGOGICAL_SETTINGS);
+      setPedagogicalSettings(reset);
+      if (onPedagogicalSettingsChange) onPedagogicalSettingsChange(reset);
+      audioEngine.playConfirmBeep();
+      showFeedback('Configurações pedagógicas restauradas para os padrões.');
+    }
+  };
+
   const handleResetDefaultQuestions = () => {
     if (confirm('Deseja restaurar todas as questões padrão do sistema? Suas questões personalizadas serão mantidas no banco ativo.')) {
       educationalStorage.resetQuizQuestionsToDefault();
@@ -400,6 +454,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   };
 
   const handleStartNewCase = () => {
+    setCaseFormStep(1);
     setEditingCaseId(null);
     setCaseTitle('');
     setCaseCategory('SDRA');
@@ -456,6 +511,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   };
 
   const handleStartEditCase = (c: ClinicalCase) => {
+    setCaseFormStep(1);
     setEditingCaseId(c.id);
     setCaseTitle(c.title);
     setCaseCategory(c.category);
@@ -761,42 +817,46 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
         {/* Tab Selector */}
         <div
           className={`px-4 py-2 border-b flex items-center justify-between gap-2 shrink-0 ${
-            isLight ? 'bg-slate-100/70 border-slate-200' : 'bg-[#0e1220] border-zinc-800'
+            isLight ? 'bg-slate-100/80 border-slate-200' : 'bg-[#0e1220] border-zinc-800'
           }`}
         >
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+            {/* Live Kahoot Group */}
             <button
               type="button"
               onClick={() => setActiveTab('kahoot')}
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                 activeTab === 'kahoot'
                   ? isLight
-                    ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-md font-black'
-                    : 'bg-amber-400 text-slate-950 border-amber-300 shadow-md font-black'
+                    ? 'bg-amber-400 text-slate-950 border-amber-500 shadow-sm font-black'
+                    : 'bg-amber-400 text-slate-950 border-amber-300 shadow-sm font-black'
                   : isLight
-                  ? 'text-amber-800 hover:bg-amber-100/70 border-amber-300/60 font-bold bg-amber-50'
+                  ? 'text-amber-800 hover:bg-amber-100/70 border-amber-300/60 font-bold bg-amber-50/70'
                   : 'text-amber-300 hover:bg-amber-950/40 border-amber-700/50 font-bold bg-amber-950/20'
               }`}
             >
               <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
-              <span>Salas & Alunos Kahoot ({kahootRooms.length})</span>
+              <span>Kahoot ({kahootRooms.length})</span>
             </button>
 
+            <span className="text-zinc-600 dark:text-zinc-700 text-xs px-0.5">·</span>
+
+            {/* Content Banks Group */}
             <button
               type="button"
               onClick={() => setActiveTab('quiz')}
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                 activeTab === 'quiz'
                   ? isLight
-                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
-                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
+                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm font-black'
+                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm font-black'
                   : isLight
-                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
-                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
+                  ? 'text-slate-700 hover:bg-slate-200/60 border-slate-200 bg-white/60'
+                  : 'text-zinc-400 hover:bg-[#141829] border-zinc-800 bg-[#101424]/60'
               }`}
             >
-              <HelpCircle className="w-3.5 h-3.5" />
-              <span>Banco de Quiz ({questions.length})</span>
+              <HelpCircle className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Banco Quiz ({questions.length})</span>
             </button>
 
             <button
@@ -805,66 +865,15 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                 activeTab === 'cases'
                   ? isLight
-                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
-                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
+                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm font-black'
+                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm font-black'
                   : isLight
-                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
-                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
+                  ? 'text-slate-700 hover:bg-slate-200/60 border-slate-200 bg-white/60'
+                  : 'text-zinc-400 hover:bg-[#141829] border-zinc-800 bg-[#101424]/60'
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Biblioteca de Casos ({cases.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleStartNewQuestion}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
-                activeTab === 'new_quiz'
-                  ? isLight
-                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
-                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
-                  : isLight
-                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
-                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
-              }`}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+ Nova Questão</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('new_case')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
-                activeTab === 'new_case'
-                  ? isLight
-                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
-                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
-                  : isLight
-                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
-                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
-              }`}
-            >
-              <FilePlus className="w-3.5 h-3.5" />
-              <span>+ Novo Caso Clínico</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('pedagogy')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
-                activeTab === 'pedagogy'
-                  ? isLight
-                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
-                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
-                  : isLight
-                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
-                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
-              }`}
-            >
-              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Controles Pedagógicos</span>
+              <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Casos Clínicos ({cases.length})</span>
             </button>
 
             <button
@@ -873,15 +882,74 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                 activeTab === 'reports'
                   ? isLight
-                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
-                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
+                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm font-black'
+                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm font-black'
                   : isLight
-                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
-                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
+                  ? 'text-slate-700 hover:bg-slate-200/60 border-slate-200 bg-white/60'
+                  : 'text-zinc-400 hover:bg-[#141829] border-zinc-800 bg-[#101424]/60'
               }`}
             >
               <FileText className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Relatórios da Turma ({reports.length})</span>
+              <span>Relatórios ({reports.length})</span>
+            </button>
+
+            <span className="text-zinc-600 dark:text-zinc-700 text-xs px-0.5">·</span>
+
+            {/* Creation Actions Group */}
+            <button
+              type="button"
+              onClick={handleStartNewQuestion}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                activeTab === 'new_quiz'
+                  ? isLight
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm font-black'
+                    : 'bg-indigo-600 text-white border-indigo-500 shadow-sm font-black'
+                  : isLight
+                  ? 'text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 border-indigo-200'
+                  : 'text-indigo-300 bg-indigo-950/40 hover:bg-indigo-900/60 border-indigo-800/60'
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Nova Questão</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                handleStartNewCase();
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                activeTab === 'new_case'
+                  ? isLight
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm font-black'
+                    : 'bg-indigo-600 text-white border-indigo-500 shadow-sm font-black'
+                  : isLight
+                  ? 'text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 border-indigo-200'
+                  : 'text-indigo-300 bg-indigo-950/40 hover:bg-indigo-900/60 border-indigo-800/60'
+              }`}
+            >
+              <FilePlus className="w-3.5 h-3.5" />
+              <span>+ Novo Caso</span>
+            </button>
+
+            <span className="text-zinc-600 dark:text-zinc-700 text-xs px-0.5">·</span>
+
+            {/* Admin Settings Group */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('pedagogy')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                activeTab === 'pedagogy'
+                  ? isLight
+                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm font-black'
+                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm font-black'
+                  : isLight
+                  ? 'text-slate-700 hover:bg-slate-200/60 border-slate-200 bg-white/60'
+                  : 'text-zinc-400 hover:bg-[#141829] border-zinc-800 bg-[#101424]/60'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Pedagógico</span>
             </button>
 
             <button
@@ -897,15 +965,15 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                 activeTab === 'password'
                   ? isLight
-                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm'
-                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm'
+                    ? 'bg-white text-indigo-900 border-indigo-300 shadow-sm font-black'
+                    : 'bg-[#181d33] text-indigo-300 border-indigo-500 shadow-sm font-black'
                   : isLight
-                  ? 'text-slate-700 hover:bg-slate-200/60 border-transparent'
-                  : 'text-zinc-400 hover:bg-[#141829] border-transparent'
+                  ? 'text-slate-700 hover:bg-slate-200/60 border-slate-200 bg-white/60'
+                  : 'text-zinc-400 hover:bg-[#141829] border-zinc-800 bg-[#101424]/60'
               }`}
             >
-              <KeyRound className="w-3.5 h-3.5 text-amber-500" />
-              <span>Alterar Senha</span>
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Senha</span>
             </button>
           </div>
 
@@ -1408,111 +1476,200 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
             </div>
           )}
 
-          {/* TAB 1: LIST QUIZ QUESTIONS (With Full Deletion) */}
+          {/* TAB 1: LIST QUIZ QUESTIONS (With Search, Filter, Duplication & Editing) */}
           {activeTab === 'quiz' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h4 className="text-sm font-display font-bold">Questões de Avaliação Cadastradas ({questions.length})</h4>
+                  <h4 className="text-sm font-display font-bold">Banco de Questões de Avaliação ({questions.length})</h4>
                   <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                    Você pode gerenciar, adicionar e excluir qualquer questão deste banco de dados.
+                    Pesquise, filtre, edite, duplique ou exclua questões da avaliação.
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('new_quiz')}
-                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  onClick={handleStartNewQuestion}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm self-start sm:self-auto"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Adicionar Questão</span>
                 </button>
               </div>
 
-              <div className="space-y-2.5">
-                {questions.map((q, idx) => (
-                  <div
-                    key={q.id}
-                    className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all ${
-                      isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0f1220] border-zinc-800'
+              {/* Search & Filter Toolbar */}
+              <div className={`p-3 rounded-2xl border flex flex-col sm:flex-row items-center gap-2.5 ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e1222] border-zinc-800'
+              }`}>
+                <div className="relative flex-1 w-full">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="text"
+                    value={quizSearch}
+                    onChange={(e) => setQuizSearch(e.target.value)}
+                    placeholder="Pesquisar por enunciado ou justificativa..."
+                    className={`w-full pl-8 pr-3 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                    }`}
+                  />
+                  {quizSearch && (
+                    <button
+                      onClick={() => setQuizSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs font-mono"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <select
+                    value={quizCategoryFilter}
+                    onChange={(e) => setQuizCategoryFilter(e.target.value)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono outline-none flex-1 sm:flex-none ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-                            #{idx + 1} {q.category || 'Geral'}
-                          </span>
-                          <span
-                            className={`text-[9.5px] font-mono px-1.5 py-0.5 rounded border ${
-                              q.createdBy === 'teacher'
-                                ? 'bg-purple-500/20 text-purple-400 border-purple-500/40 font-bold'
-                                : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-                            }`}
-                          >
-                            {q.createdBy === 'teacher' ? 'Criada pelo Professor' : 'Padrão do Sistema'}
-                          </span>
-                        </div>
-                        <p className="text-xs font-semibold leading-snug pt-1">{q.question}</p>
-                      </div>
+                    <option value="all">Todas Categorias</option>
+                    {Array.from(new Set(questions.map((q) => q.category).filter(Boolean))).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
 
-                      {/* Action buttons (Edit & Delete) for ANY question */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleStartEditQuestion(q)}
-                          className={`p-1.5 rounded-lg border text-indigo-400 hover:text-indigo-300 cursor-pointer transition-all ${
-                            isLight
-                              ? 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
-                              : 'bg-indigo-950/40 hover:bg-indigo-900/60 border-indigo-800/50'
-                          }`}
-                          title="Editar esta questão"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteQuestion(q.id)}
-                          className={`p-1.5 rounded-lg border text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all ${
-                            isLight ? 'border-rose-200 bg-rose-50' : 'border-rose-900/50 bg-rose-950/30'
-                          }`}
-                          title="Excluir questão do Quiz"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Options list */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 mt-2.5 pt-2 border-t border-inherit">
-                      {q.options.map((opt, oIdx) => (
-                        <div
-                          key={oIdx}
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-mono flex items-center gap-2 border ${
-                            oIdx === q.correctIndex
-                              ? isLight
-                                ? 'bg-emerald-50 text-emerald-950 border-emerald-300 font-bold'
-                                : 'bg-emerald-950/60 text-emerald-300 border-emerald-600 font-bold'
-                              : isLight
-                              ? 'bg-white text-slate-700 border-slate-200'
-                              : 'bg-[#151928] text-zinc-400 border-zinc-800'
-                          }`}
-                        >
-                          <span className="font-bold">{String.fromCharCode(65 + oIdx)})</span>
-                          <span className="truncate">{opt}</span>
-                          {oIdx === q.correctIndex && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 ml-auto" />}
-                        </div>
-                      ))}
-                    </div>
-
-                    {q.explanation && (
-                      <p className={`text-[10px] font-mono mt-2 pt-1 border-t border-inherit ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                        <strong>Justificativa Clínica:</strong> {q.explanation}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  <select
+                    value={quizDifficultyFilter}
+                    onChange={(e) => setQuizDifficultyFilter(e.target.value)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono outline-none flex-1 sm:flex-none ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                    }`}
+                  >
+                    <option value="all">Todas Dificuldades</option>
+                    <option value="Iniciante">Iniciante</option>
+                    <option value="Intermediário">Intermediário</option>
+                    <option value="Avançado">Avançado</option>
+                  </select>
+                </div>
               </div>
+
+              {/* Questions List */}
+              {(() => {
+                const filteredQuestions = questions.filter((q) => {
+                  const matchSearch =
+                    !quizSearch.trim() ||
+                    q.question.toLowerCase().includes(quizSearch.toLowerCase()) ||
+                    (q.explanation && q.explanation.toLowerCase().includes(quizSearch.toLowerCase()));
+                  const matchCat = quizCategoryFilter === 'all' || q.category === quizCategoryFilter;
+                  const matchDiff = quizDifficultyFilter === 'all' || q.difficulty === quizDifficultyFilter;
+                  return matchSearch && matchCat && matchDiff;
+                });
+
+                if (filteredQuestions.length === 0) {
+                  return (
+                    <div className={`p-8 rounded-2xl border text-center font-mono text-xs ${
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0f1422] border-zinc-800 text-zinc-400'
+                    }`}>
+                      Nenhuma questão encontrada para os filtros selecionados.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2.5">
+                    {filteredQuestions.map((q, idx) => (
+                      <div
+                        key={q.id}
+                        className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0f1220] border-zinc-800'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+                              <span className="font-bold text-indigo-400">#{idx + 1}</span>
+                              <span>·</span>
+                              <span className="text-cyan-400 font-bold">{q.category || 'Geral'}</span>
+                              <span>·</span>
+                              <span>{q.difficulty || 'Intermediário'}</span>
+                              <span>·</span>
+                              <span>{q.createdBy === 'teacher' ? 'Criada pelo Docente' : 'Padrão do Sistema'}</span>
+                            </div>
+                            <p className="text-xs font-semibold leading-snug pt-0.5">{q.question}</p>
+                          </div>
+
+                          {/* Action buttons (Edit, Duplicate & Delete) */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditQuestion(q)}
+                              className={`p-1.5 rounded-lg border text-indigo-400 hover:text-indigo-300 cursor-pointer transition-all ${
+                                isLight
+                                  ? 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
+                                  : 'bg-indigo-950/40 hover:bg-indigo-900/60 border-indigo-800/50'
+                              }`}
+                              title="Editar esta questão"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDuplicateQuestion(q)}
+                              className={`p-1.5 rounded-lg border text-cyan-400 hover:text-cyan-300 cursor-pointer transition-all ${
+                                isLight
+                                  ? 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200'
+                                  : 'bg-cyan-950/40 hover:bg-cyan-900/60 border-cyan-800/50'
+                              }`}
+                              title="Duplicar esta questão"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteQuestion(q.id)}
+                              className={`p-1.5 rounded-lg border text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all ${
+                                isLight ? 'border-rose-200 bg-rose-50' : 'border-rose-900/50 bg-rose-950/30'
+                              }`}
+                              title="Excluir questão do Quiz"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Options list */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 mt-2.5 pt-2 border-t border-inherit">
+                          {q.options.map((opt, oIdx) => (
+                            <div
+                              key={oIdx}
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono flex items-center gap-2 border ${
+                                oIdx === q.correctIndex
+                                  ? isLight
+                                    ? 'bg-emerald-50 text-emerald-950 border-emerald-300 font-bold'
+                                    : 'bg-emerald-950/60 text-emerald-300 border-emerald-600 font-bold'
+                                  : isLight
+                                  ? 'bg-white text-slate-700 border-slate-200'
+                                  : 'bg-[#151928] text-zinc-400 border-zinc-800'
+                              }`}
+                            >
+                              <span className="font-bold">{String.fromCharCode(65 + oIdx)})</span>
+                              <span className="truncate">{opt}</span>
+                              {oIdx === q.correctIndex && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 ml-auto" />}
+                            </div>
+                          ))}
+                        </div>
+
+                        {q.explanation && (
+                          <p className={`text-[10px] font-mono mt-2 pt-1 border-t border-inherit ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                            <strong>Justificativa Clínica:</strong> {q.explanation}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1635,19 +1792,50 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                   ))}
                 </div>
 
-                <div>
-                  <label className="text-xs font-mono font-bold block mb-1">
-                    Justificativa Clínica / Explicação da Resposta
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={qExplanation}
-                    onChange={(e) => setQExplanation(e.target.value)}
-                    placeholder="Explicação pedagógica exibida ao aluno após ele responder a questão..."
-                    className={`w-full px-3 py-2 rounded-xl border text-xs leading-relaxed outline-none ${
-                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#121626] border-zinc-700 text-white'
-                    }`}
-                  />
+                {/* Real-time Student View Preview Card */}
+                <div className={`p-4 rounded-2xl border space-y-2.5 ${
+                  isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-indigo-950/20 border-indigo-800/40'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Pré-visualização em Tempo Real (Visão do Aluno)</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-400">
+                      {qCategory || 'Geral'} • {qDifficulty || 'Intermediário'}
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-semibold leading-relaxed">
+                    {qQuestion.trim() || 'Digite o enunciado da questão acima para visualizar aqui...'}
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                    {[qOption0, qOption1, qOption2, qOption3].map((opt, idx) => (
+                      <div
+                        key={idx}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-mono flex items-center gap-2 border ${
+                          idx === qCorrectIndex
+                            ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 font-bold'
+                            : isLight
+                            ? 'bg-white border-slate-200 text-slate-700'
+                            : 'bg-[#121626] border-zinc-800 text-zinc-400'
+                        }`}
+                      >
+                        <span className="font-bold">{String.fromCharCode(65 + idx)})</span>
+                        <span className="truncate">{opt || `Opção ${String.fromCharCode(65 + idx)}`}</span>
+                        {idx === qCorrectIndex && (
+                          <span className="ml-auto text-[10px] text-emerald-400 font-bold">✓ Correta</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {qExplanation && (
+                    <div className="pt-2 border-t border-indigo-800/20 text-[10.5px] font-mono text-zinc-400">
+                      <strong>Justificativa Exibida ao Aluno:</strong> {qExplanation}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1672,17 +1860,17 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
             </form>
           )}
 
-          {/* TAB 3: LIST CLINICAL CASES */}
+          {/* TAB 3: LIST CLINICAL CASES (With Search, Filter, Duplication & Editing) */}
           {activeTab === 'cases' && (
             <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h4 className="text-sm font-display font-bold">Casos Clínicos e Cenários Cadastrados ({cases.length})</h4>
+                  <h4 className="text-sm font-display font-bold">Biblioteca de Casos Clínicos ({cases.length})</h4>
                   <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                    Gerencie, edite ou exclua qualquer caso clínico disponível para os estudantes.
+                    Pesquise, filtre, edite, duplique ou carregue cenários clínicos diretamente no simulador.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-start sm:self-auto">
                   <button
                     type="button"
                     onClick={handleResetDefaultCases}
@@ -1708,78 +1896,176 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {cases.map((c) => {
-                  return (
-                    <div
-                      key={c.id}
-                      className={`p-3.5 rounded-xl border flex flex-col justify-between transition-all ${
-                        isLight ? 'bg-slate-50 border-slate-200 shadow-xs' : 'bg-[#0f1220] border-zinc-800 shadow-md'
-                      }`}
+              {/* Search & Filter Toolbar */}
+              <div className={`p-3 rounded-2xl border flex flex-col sm:flex-row items-center gap-2.5 ${
+                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e1222] border-zinc-800'
+              }`}>
+                <div className="relative flex-1 w-full">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="text"
+                    value={caseSearch}
+                    onChange={(e) => setCaseSearch(e.target.value)}
+                    placeholder="Pesquisar por título, paciente ou história..."
+                    className={`w-full pl-8 pr-3 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                    }`}
+                  />
+                  {caseSearch && (
+                    <button
+                      onClick={() => setCaseSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs font-mono"
                     >
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                            {c.category} • {c.difficulty}
-                          </span>
-                          
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditCase(c)}
-                              className={`p-1.5 rounded-lg border text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer ${
-                                isLight
-                                  ? 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
-                                  : 'bg-indigo-950/40 hover:bg-indigo-900/60 border-indigo-800/50'
-                              }`}
-                              title={`Editar caso clínico "${c.title}"`}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCase(c)}
-                              className={`p-1.5 rounded-lg border text-rose-500 hover:text-rose-400 transition-colors cursor-pointer ${
-                                isLight
-                                  ? 'bg-rose-50 hover:bg-rose-100 border-rose-200'
-                                  : 'bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/50'
-                              }`}
-                              title={`Excluir caso clínico "${c.title}"`}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <select
+                    value={caseCategoryFilter}
+                    onChange={(e) => setCaseCategoryFilter(e.target.value)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono outline-none flex-1 sm:flex-none ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                    }`}
+                  >
+                    <option value="all">Todas Categorias</option>
+                    {Array.from(new Set(cases.map((c) => c.category).filter(Boolean))).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
 
-                        <h5 className="text-xs font-display font-bold leading-snug">{c.title}</h5>
-                        <p className={`text-[11px] leading-relaxed line-clamp-3 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                          {c.description}
-                        </p>
-                      </div>
+                  <select
+                    value={caseDifficultyFilter}
+                    onChange={(e) => setCaseDifficultyFilter(e.target.value)}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono outline-none flex-1 sm:flex-none ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                    }`}
+                  >
+                    <option value="all">Todas Dificuldades</option>
+                    <option value="Iniciante">Iniciante</option>
+                    <option value="Intermediário">Intermediário</option>
+                    <option value="Avançado">Avançado</option>
+                  </select>
+                </div>
+              </div>
 
-                      <div className="mt-3 pt-2 border-t border-inherit flex items-center justify-between gap-2">
-                        <span className={`text-[9.5px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>
-                          Cst: {c.patientProfile.compliance} • Raw: {c.patientProfile.resistance} • Shunt: {c.patientProfile.shuntFraction ?? 10}%
-                        </span>
+              {/* Cases Grid */}
+              {(() => {
+                const filteredCases = cases.filter((c) => {
+                  const matchSearch =
+                    !caseSearch.trim() ||
+                    c.title.toLowerCase().includes(caseSearch.toLowerCase()) ||
+                    c.description.toLowerCase().includes(caseSearch.toLowerCase()) ||
+                    (c.patientProfile?.name && c.patientProfile.name.toLowerCase().includes(caseSearch.toLowerCase()));
+                  const matchCat = caseCategoryFilter === 'all' || c.category === caseCategoryFilter;
+                  const matchDiff = caseDifficultyFilter === 'all' || c.difficulty === caseDifficultyFilter;
+                  return matchSearch && matchCat && matchDiff;
+                });
 
-                        {onLoadCaseInSimulator && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onLoadCaseInSimulator(c);
-                              onClose();
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-[10px] cursor-pointer shrink-0"
-                          >
-                            Simulador →
-                          </button>
-                        )}
-                      </div>
+                if (filteredCases.length === 0) {
+                  return (
+                    <div className={`p-8 rounded-2xl border text-center font-mono text-xs ${
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0f1422] border-zinc-800 text-zinc-400'
+                    }`}>
+                      Nenhum caso clínico encontrado para os filtros selecionados.
                     </div>
                   );
-                })}
-              </div>
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {filteredCases.map((c) => (
+                      <div
+                        key={c.id}
+                        className={`p-3.5 rounded-2xl border flex flex-col justify-between transition-all ${
+                          isLight ? 'bg-slate-50 border-slate-200 shadow-xs' : 'bg-[#0f1220] border-zinc-800 shadow-md'
+                        }`}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-400">
+                              <span className="text-cyan-400 font-bold">{c.category}</span>
+                              <span>·</span>
+                              <span>{c.difficulty}</span>
+                              <span>·</span>
+                              <span>{c.patientProfile.name || 'Paciente UTI'}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditCase(c)}
+                                className={`p-1.5 rounded-lg border text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer ${
+                                  isLight
+                                    ? 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
+                                    : 'bg-indigo-950/40 hover:bg-indigo-900/60 border-indigo-800/50'
+                                }`}
+                                title={`Editar caso clínico "${c.title}"`}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDuplicateCase(c)}
+                                className={`p-1.5 rounded-lg border text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer ${
+                                  isLight
+                                    ? 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200'
+                                    : 'bg-cyan-950/40 hover:bg-cyan-900/60 border-cyan-800/50'
+                                }`}
+                                title={`Duplicar caso clínico "${c.title}"`}
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteCase(c)}
+                                className={`p-1.5 rounded-lg border text-rose-500 hover:text-rose-400 transition-colors cursor-pointer ${
+                                  isLight
+                                    ? 'bg-rose-50 hover:bg-rose-100 border-rose-200'
+                                    : 'bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/50'
+                                }`}
+                                title={`Excluir caso clínico "${c.title}"`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <h5 className="text-xs font-display font-bold leading-snug">{c.title}</h5>
+                          <p className={`text-[11px] leading-relaxed line-clamp-3 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                            {c.description}
+                          </p>
+                        </div>
+
+                        <div className="mt-3 pt-2 border-t border-inherit flex items-center justify-between gap-2">
+                          <span className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+                            Cst: <strong>{c.patientProfile.compliance}</strong> mL/cm · Raw: <strong>{c.patientProfile.resistance}</strong> · Shunt: <strong>{c.patientProfile.shuntFraction ?? 10}%</strong>
+                          </span>
+
+                          {onLoadCaseInSimulator && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onLoadCaseInSimulator(c);
+                                onClose();
+                              }}
+                              className="px-2.5 py-1 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-[10.5px] cursor-pointer shrink-0 shadow-xs flex items-center gap-1"
+                            >
+                              <span>Simulador</span>
+                              <span>→</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1819,8 +2105,44 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                 )}
               </div>
 
-              {/* 1. Informações Básicas do Caso */}
-              <div className={`p-3.5 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
+              {/* Stepper Navigation Header */}
+              <div className={`p-2 rounded-2xl border flex items-center justify-between gap-1 overflow-x-auto ${
+                isLight ? 'bg-slate-100/80 border-slate-200' : 'bg-[#0e1220] border-zinc-800'
+              }`}>
+                {[
+                  { step: 1, label: '1. Biometria & História', icon: UserCheck },
+                  { step: 2, label: '2. Fisiologia & Mecânica', icon: Wind },
+                  { step: 3, label: '3. Ajustes & Gasometria', icon: Activity },
+                  { step: 4, label: '4. Metas & Deterioração', icon: AlertTriangle },
+                ].map((s) => (
+                  <button
+                    key={s.step}
+                    type="button"
+                    onClick={() => {
+                      setCaseFormStep(s.step as any);
+                      audioEngine.playClick(900);
+                    }}
+                    className={`px-3 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap border flex-1 justify-center ${
+                      caseFormStep === s.step
+                        ? isLight
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-md font-black scale-[1.01]'
+                          : 'bg-indigo-600 text-white border-indigo-500 shadow-md font-black scale-[1.01]'
+                        : isLight
+                        ? 'text-slate-700 bg-white/70 hover:bg-white border-slate-200'
+                        : 'text-zinc-400 bg-[#131728] hover:bg-[#1a2038] border-zinc-800'
+                    }`}
+                  >
+                    <s.icon className={`w-3.5 h-3.5 ${caseFormStep === s.step ? 'text-white' : 'text-indigo-400'}`} />
+                    <span>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* STEP 1: Biometria & História */}
+              {caseFormStep === 1 && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* 1. Informações Básicas do Caso */}
+                  <div className={`p-3.5 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
                 <span className="text-xs font-mono font-bold text-indigo-400 block uppercase tracking-wider">
                   1. Identificação do Cenário
                 </span>
@@ -1958,9 +2280,14 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* 3. Mecânica Pulmonar Fisiológica (Cst, Raw, Recrutamento) */}
-              <div className={`p-3.5 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
+              {/* STEP 2: Fisiologia & Mecânica */}
+              {caseFormStep === 2 && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* 3. Mecânica Pulmonar Fisiológica (Cst, Raw, Recrutamento) */}
+                  <div className={`p-3.5 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
                 <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider block">
                   3. Mecânica Respiratória do Paciente
                 </span>
@@ -2140,9 +2467,14 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* 6. Parâmetros Iniciais do Ventilador & Gasometria */}
-              <div className={`p-3.5 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
+              {/* STEP 3: Ajustes Iniciais & Gasometria */}
+              {caseFormStep === 3 && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* 6. Parâmetros Iniciais do Ventilador & Gasometria */}
+                  <div className={`p-3.5 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
                 <span className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider block">
                   6. Ajustes Iniciais de Entrada no Ventilador
                 </span>
@@ -2210,9 +2542,14 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* 7. Metas e Desafios Pedagógicos */}
-              <div className={`p-3.5 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
+              {/* STEP 4: Metas & Deterioração Pulmonar */}
+              {caseFormStep === 4 && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* 7. Metas e Desafios Pedagógicos */}
+                  <div className={`p-3.5 rounded-xl border space-y-3 ${isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#101424] border-zinc-800'}`}>
                 <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider block">
                   7. Metas Terapêuticas & Pontos de Ensino
                 </span>
@@ -2359,26 +2696,66 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                     </div>
                   </div>
                 )}
+                </div>
               </div>
+            )}
 
-              {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-inherit">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('cases')}
-                  className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer ${
-                    isLight ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-[#151928] text-zinc-300 border-zinc-700'
-                  }`}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{editingCaseId ? 'Salvar Alterações do Caso Clínico' : 'Cadastrar Caso Clínico Completo'}</span>
-                </button>
+              {/* Wizard Form Controls & Navigation */}
+              <div className="flex items-center justify-between pt-4 border-t border-inherit">
+                <div>
+                  {caseFormStep > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCaseFormStep((prev) => (prev - 1) as any);
+                        audioEngine.playClick(850);
+                      }}
+                      className={`px-4 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+                        isLight ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200' : 'bg-[#151928] text-zinc-300 border-zinc-700 hover:bg-[#1d2238]'
+                      }`}
+                    >
+                      ← Passo Anterior
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('cases')}
+                    className={`px-3 py-2 rounded-xl border text-xs font-mono font-bold cursor-pointer transition-all ${
+                      isLight ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-[#151928] text-zinc-300 border-zinc-700'
+                    }`}
+                  >
+                    Cancelar
+                  </button>
+
+                  <span className="text-[11px] font-mono text-zinc-400">
+                    Passo <strong>{caseFormStep}</strong> de 4
+                  </span>
+
+                  {caseFormStep < 4 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCaseFormStep((prev) => (prev + 1) as any);
+                        audioEngine.playClick(900);
+                      }}
+                      className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md transition-all"
+                    >
+                      <span>Próximo Passo</span>
+                      <span>→</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg transition-all"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{editingCaseId ? 'Salvar Alterações do Caso' : 'Cadastrar Caso Clínico Completo'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           )}
@@ -2562,14 +2939,30 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
           {/* TAB 6: PEDAGOGICAL CONTROLS & BLIND ASSESSMENT */}
           {activeTab === 'pedagogy' && (
             <div className="space-y-5 animate-fadeIn max-w-3xl">
-              <div>
-                <h4 className="text-sm font-display font-bold flex items-center gap-2 text-cyan-400">
-                  <Sliders className="w-4 h-4" />
-                  <span>Controles Pedagógicos & Modos de Avaliação</span>
-                </h4>
-                <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                  Configure o nível de desafio dos alunos, o comportamento da simulação cega e os gatilhos de deterioração clínica.
-                </p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-sm font-display font-bold flex items-center gap-2 text-cyan-400">
+                    <Sliders className="w-4 h-4" />
+                    <span>Controles Pedagógicos & Modos de Avaliação</span>
+                  </h4>
+                  <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    Configure o nível de desafio dos alunos, o comportamento da simulação cega e os gatilhos de deterioração clínica.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleResetPedagogicalSettings}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 ${
+                    isLight
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                      : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
+                  }`}
+                  title="Restaurar configurações pedagógicas padrão"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Restaurar Padrões</span>
+                </button>
               </div>
 
               {/* 1. Avaliação Cega de Mecânica */}
@@ -2810,14 +3203,14 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
           {/* TAB 7: REPORTS / AFTER ACTION REVIEWS (DEBRIEFING) */}
           {activeTab === 'reports' && (
             <div className="space-y-4 animate-fadeIn">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h4 className="text-sm font-display font-bold flex items-center gap-2">
                     <FileText className="w-4 h-4 text-emerald-500" />
-                    <span>Relatórios de Avaliação & Debriefing da Turma ({reports.length})</span>
+                    <span>Relatórios de Avaliação & Debriefing ({reports.length})</span>
                   </h4>
                   <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                    Histórico detalhado de desempenho dos alunos em cada caso clínico resolvido.
+                    Acompanhe o desempenho, pontuações e histórico de intervenções dos alunos em tempo real.
                   </p>
                 </div>
 
@@ -2831,7 +3224,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                         showFeedback('Histórico de relatórios limpo com sucesso.');
                       }
                     }}
-                    className="px-3 py-1.5 rounded-xl border border-rose-700/60 text-rose-400 hover:bg-rose-950/40 text-xs font-mono font-bold cursor-pointer transition-all flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-xl border border-rose-700/60 text-rose-400 hover:bg-rose-950/40 text-xs font-mono font-bold cursor-pointer transition-all flex items-center gap-1.5 self-start sm:self-auto"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Limpar Histórico</span>
@@ -2839,61 +3232,141 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                 )}
               </div>
 
-              {reports.length === 0 ? (
-                <div
-                  className={`p-8 rounded-2xl border text-center font-mono text-xs ${
-                    isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0f1422] border-zinc-800 text-zinc-400'
-                  }`}
-                >
-                  <FileText className="w-8 h-8 mx-auto text-zinc-600 mb-2 opacity-50" />
-                  Nenhum relatório de caso registrado ainda. Conforme os alunos resolverem os casos clínicos, os relatórios aparecerão aqui automaticamente.
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {reports.map((rep, index) => (
-                    <div
-                      key={`${rep.id || 'rep'}-${index}`}
-                      className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0f1422] border-zinc-800'
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-display font-black text-cyan-400">
-                            {rep.caseTitle}
-                          </span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded border uppercase bg-cyan-500/10 border-cyan-500/30 text-cyan-300">
-                            Score: {rep.score}/100
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[11px] font-mono text-zinc-400">
-                          <span>{rep.completedAt}</span>
-                          <span>•</span>
-                          <span>Duração: {Math.floor(rep.durationSeconds / 60)}m {rep.durationSeconds % 60}s</span>
-                          <span>•</span>
-                          <span>{rep.interventions.length} intervenções</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-                          {rep.rating}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteDebriefingReport(rep.id)}
-                          className={`p-1.5 rounded-lg border text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all ${
-                            isLight ? 'border-rose-200 bg-rose-50' : 'border-rose-900/50 bg-rose-950/30'
-                          }`}
-                          title="Excluir este relatório"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+              {/* KPI Summary Banner */}
+              {reports.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className={`p-3 rounded-2xl border ${isLight ? 'bg-emerald-50/80 border-emerald-200' : 'bg-[#0f1c18] border-emerald-900/50'}`}>
+                    <span className="text-[10px] font-mono font-bold text-emerald-500 uppercase block">Média da Turma</span>
+                    <div className="text-xl font-black font-display text-emerald-400 mt-0.5">
+                      {Math.round(reports.reduce((acc, r) => acc + (r.score || 0), 0) / reports.length)}/100 Pts
                     </div>
-                  ))}
+                  </div>
+
+                  <div className={`p-3 rounded-2xl border ${isLight ? 'bg-indigo-50/80 border-indigo-200' : 'bg-[#121426] border-indigo-900/50'}`}>
+                    <span className="text-[10px] font-mono font-bold text-indigo-500 uppercase block">Duração Média</span>
+                    <div className="text-xl font-black font-display text-indigo-400 mt-0.5">
+                      {Math.round(reports.reduce((acc, r) => acc + (r.durationSeconds || 0), 0) / reports.length)}s
+                    </div>
+                  </div>
+
+                  <div className={`p-3 rounded-2xl border col-span-2 sm:col-span-1 ${isLight ? 'bg-cyan-50/80 border-cyan-200' : 'bg-[#0f1726] border-cyan-900/50'}`}>
+                    <span className="text-[10px] font-mono font-bold text-cyan-500 uppercase block">Intervenções Totais</span>
+                    <div className="text-xl font-black font-display text-cyan-400 mt-0.5">
+                      {reports.reduce((acc, r) => acc + (r.interventions?.length || 0), 0)} ações
+                    </div>
+                  </div>
                 </div>
               )}
+
+              {/* Search Toolbar */}
+              {reports.length > 0 && (
+                <div className={`p-3 rounded-2xl border flex items-center gap-2.5 ${
+                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e1222] border-zinc-800'
+                }`}>
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={reportSearch}
+                      onChange={(e) => setReportSearch(e.target.value)}
+                      placeholder="Pesquisar por caso clínico ou aluno..."
+                      className={`w-full pl-8 pr-3 py-1.5 rounded-xl border text-xs font-mono outline-none ${
+                        isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#151928] border-zinc-700 text-white'
+                      }`}
+                    />
+                    {reportSearch && (
+                      <button
+                        onClick={() => setReportSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white text-xs font-mono"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Reports List */}
+              {(() => {
+                const filteredReports = reports.filter((rep) => {
+                  if (!reportSearch.trim()) return true;
+                  const kw = reportSearch.toLowerCase();
+                  return (
+                    (rep.caseTitle && rep.caseTitle.toLowerCase().includes(kw)) ||
+                    (rep.studentName && rep.studentName.toLowerCase().includes(kw))
+                  );
+                });
+
+                if (reports.length === 0) {
+                  return (
+                    <div className={`p-8 rounded-2xl border text-center font-mono text-xs ${
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0f1422] border-zinc-800 text-zinc-400'
+                    }`}>
+                      <FileText className="w-8 h-8 mx-auto text-zinc-600 mb-2 opacity-50" />
+                      Nenhum relatório registrado ainda. Conforme os alunos resolverem os casos clínicos, os relatórios aparecerão aqui em tempo real.
+                    </div>
+                  );
+                }
+
+                if (filteredReports.length === 0) {
+                  return (
+                    <div className={`p-8 rounded-2xl border text-center font-mono text-xs ${
+                      isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#0f1422] border-zinc-800 text-zinc-400'
+                    }`}>
+                      Nenhum relatório encontrado para a busca "{reportSearch}".
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2.5">
+                    {filteredReports.map((rep, index) => (
+                      <div
+                        key={`${rep.id || 'rep'}-${index}`}
+                        className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                          isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0f1422] border-zinc-800'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-display font-black text-cyan-400">
+                              {rep.caseTitle}
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded border uppercase bg-cyan-500/10 border-cyan-500/30 text-cyan-300">
+                              Nota: {rep.score}/100
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+                            <span>{rep.studentName || 'Estudante'}</span>
+                            <span>·</span>
+                            <span>{rep.completedAt}</span>
+                            <span>·</span>
+                            <span>Duração: {Math.floor(rep.durationSeconds / 60)}m {rep.durationSeconds % 60}s</span>
+                            <span>·</span>
+                            <span>{rep.interventions.length} intervenções</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                            {rep.rating}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDebriefingReport(rep.id)}
+                            className={`p-1.5 rounded-lg border text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all ${
+                              isLight ? 'border-rose-200 bg-rose-50' : 'border-rose-900/50 bg-rose-950/30'
+                            }`}
+                            title="Excluir este relatório"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
