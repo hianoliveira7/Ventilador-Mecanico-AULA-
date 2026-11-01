@@ -242,6 +242,14 @@ export default function App() {
     alveolarPaO2: 235,
     aaGradient: 140,
     etco2: 36,
+    heartRate: 75,
+    systolicBP: 120,
+    diastolicBP: 80,
+    meanArterialPressure: 93,
+    cardiacOutput: 5.2,
+    cardiacIndex: 2.8,
+    pulsePressureVariation: 8,
+    strokeVolume: 70,
   });
 
   // Critical Cardiac Arrest (PCR) Emergency Trigger (SpO2 <= 35%)

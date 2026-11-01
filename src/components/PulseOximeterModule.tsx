@@ -14,7 +14,7 @@ export const PulseOximeterModule: React.FC<PulseOximeterModuleProps> = ({ monito
   const phaseRef = useRef<number>(0);
 
   const spo2Val = Math.round(monitored.spo2 ?? 98);
-  const heartRate = Math.round(72 + (patient.spontaneousDrive ? 12 : 0) + (spo2Val < 90 ? (90 - spo2Val) * 2.5 : 0));
+  const heartRate = monitored.heartRate ?? Math.round(72 + (patient.spontaneousDrive ? 12 : 0) + (spo2Val < 90 ? (90 - spo2Val) * 2.5 : 0));
 
   // Clinical status badge & colors
   let statusText = 'Normoxemia';

@@ -266,40 +266,40 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
                 <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                   <span className="font-display font-bold text-sm text-zinc-100 flex items-center gap-2">
                     <User className="w-4 h-4 text-cyan-400" />
-                    <span>{patient.name}</span>
+                    <span>{patient.name || 'Paciente'}</span>
                   </span>
                   <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 text-[10px] font-bold">
-                    Caso: {patient.pathology.toUpperCase()}
+                    Caso: {(patient.pathology || 'normal').toUpperCase()}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div className="p-2.5 bg-black/30 rounded-lg border border-zinc-800/80">
                     <span className="text-[10px] text-zinc-500 uppercase block">Idade / Sexo</span>
-                    <strong className="text-zinc-200">{patient.age} anos • {patient.gender === 'male' ? 'Masculino' : 'Feminino'}</strong>
+                    <strong className="text-zinc-200">{(patient.age ?? 45)} anos • {patient.gender === 'female' ? 'Feminino' : 'Masculino'}</strong>
                   </div>
                   <div className="p-2.5 bg-black/30 rounded-lg border border-zinc-800/80">
                     <span className="text-[10px] text-zinc-500 uppercase block">Altura Real</span>
-                    <strong className="text-cyan-400">{patient.heightCm} cm</strong>
+                    <strong className="text-cyan-400">{(patient.heightCm ?? 170)} cm</strong>
                   </div>
                   <div className="p-2.5 bg-black/30 rounded-lg border border-zinc-800/80">
                     <span className="text-[10px] text-zinc-500 uppercase block">Peso Real</span>
-                    <strong className="text-zinc-200">{patient.actualWeightKg} kg</strong>
+                    <strong className="text-zinc-200">{(patient.actualWeightKg ?? 70)} kg</strong>
                   </div>
                   <div className="p-2.5 bg-black/30 rounded-lg border border-zinc-800/80">
                     <span className="text-[10px] text-zinc-500 uppercase block">Peso Predito (IBW)</span>
-                    <strong className="text-emerald-400">{patient.idealBodyWeightKg} kg</strong>
+                    <strong className="text-emerald-400">{(patient.idealBodyWeightKg ?? 68)} kg</strong>
                   </div>
                 </div>
 
                 <div className="p-3 bg-black/40 rounded-lg border border-zinc-800/80 space-y-1.5">
                   <span className="text-[10px] uppercase font-bold text-zinc-400 block">
-                    Alvos de Ventilação Protetora para este Paciente (IBW: {patient.idealBodyWeightKg} kg):
+                    Alvos de Ventilação Protetora para este Paciente (IBW: {(patient.idealBodyWeightKg ?? 68)} kg):
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-                    <div>• 4 mL/kg: <strong className="text-cyan-300">{(patient.idealBodyWeightKg * 4).toFixed(0)} mL</strong></div>
-                    <div>• 6 mL/kg (Padrão): <strong className="text-emerald-400 font-bold">{(patient.idealBodyWeightKg * 6).toFixed(0)} mL</strong></div>
-                    <div>• 8 mL/kg: <strong className="text-amber-400">{(patient.idealBodyWeightKg * 8).toFixed(0)} mL</strong></div>
+                    <div>• 4 mL/kg: <strong className="text-cyan-300">{((patient.idealBodyWeightKg ?? 68) * 4).toFixed(0)} mL</strong></div>
+                    <div>• 6 mL/kg (Padrão): <strong className="text-emerald-400 font-bold">{((patient.idealBodyWeightKg ?? 68) * 6).toFixed(0)} mL</strong></div>
+                    <div>• 8 mL/kg: <strong className="text-amber-400">{((patient.idealBodyWeightKg ?? 68) * 8).toFixed(0)} mL</strong></div>
                   </div>
                 </div>
               </div>
@@ -646,6 +646,91 @@ export const PatientConfigModal: React.FC<PatientConfigModalProps> = ({
                   <span className="text-emerald-400">Normal (25-35%)</span>
                   <span>TEP / SDRA / DPOC (50-70%)</span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Hemodinâmica, Volemia e Interação Coração-Pulmão */}
+          <div className="bg-[#0e0f14] p-3.5 rounded-sm border border-zinc-800/80 space-y-3">
+            <span className="font-display font-bold text-rose-400 uppercase tracking-wider text-[11px] block">
+              5. Hemodinâmica, Volemia & Interação Coração-Pulmão
+            </span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Volume Status */}
+              <div className="space-y-1">
+                <span className="text-zinc-400 text-[10px] block">Status Volêmico (Pré-Carga)</span>
+                <div className="grid grid-cols-3 gap-1 font-mono text-[10px]">
+                  <button
+                    onClick={() => update('volumeStatus', 'hypovolemic')}
+                    className={`py-1 rounded-sm border text-center font-bold transition-all ${
+                      (patient.volumeStatus || 'euvolemic') === 'hypovolemic'
+                        ? 'bg-rose-950 text-rose-300 border-rose-700'
+                        : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                    }`}
+                    title="Alta sensibilidade à elevação de PEEP (queda de débito e PA)"
+                  >
+                    Hipovolêmico
+                  </button>
+                  <button
+                    onClick={() => update('volumeStatus', 'euvolemic')}
+                    className={`py-1 rounded-sm border text-center font-bold transition-all ${
+                      (patient.volumeStatus || 'euvolemic') === 'euvolemic'
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                        : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                    }`}
+                  >
+                    Normovolêmico
+                  </button>
+                  <button
+                    onClick={() => update('volumeStatus', 'hypervolemic')}
+                    className={`py-1 rounded-sm border text-center font-bold transition-all ${
+                      (patient.volumeStatus || 'euvolemic') === 'hypervolemic'
+                        ? 'bg-blue-950 text-blue-300 border-blue-700'
+                        : 'bg-zinc-900 text-zinc-500 border-zinc-800'
+                    }`}
+                  >
+                    Hipervolêmico
+                  </button>
+                </div>
+              </div>
+
+              {/* Baseline Blood Pressure */}
+              <div className="space-y-1">
+                <span className="text-zinc-400 text-[10px] block">PA Basal (PAS / PAD mmHg)</span>
+                <div className="grid grid-cols-2 gap-1.5 font-mono">
+                  <input
+                    type="number"
+                    min={60}
+                    max={220}
+                    value={patient.baselineSystolicBP || 120}
+                    onChange={(e) => update('baselineSystolicBP', Number(e.target.value))}
+                    className="w-full bg-[#161720] border border-zinc-700 rounded-sm p-1 text-white font-mono font-bold text-center"
+                    placeholder="PAS"
+                  />
+                  <input
+                    type="number"
+                    min={30}
+                    max={140}
+                    value={patient.baselineDiastolicBP || 80}
+                    onChange={(e) => update('baselineDiastolicBP', Number(e.target.value))}
+                    className="w-full bg-[#161720] border border-zinc-700 rounded-sm p-1 text-white font-mono font-bold text-center"
+                    placeholder="PAD"
+                  />
+                </div>
+              </div>
+
+              {/* Baseline Heart Rate */}
+              <div className="space-y-1">
+                <span className="text-zinc-400 text-[10px] block">FC Basal (bpm)</span>
+                <input
+                  type="number"
+                  min={35}
+                  max={180}
+                  value={patient.baselineHeartRate || 75}
+                  onChange={(e) => update('baselineHeartRate', Number(e.target.value))}
+                  className="w-full bg-[#161720] border border-zinc-700 rounded-sm p-1 text-white font-mono font-bold text-center"
+                />
               </div>
             </div>
           </div>

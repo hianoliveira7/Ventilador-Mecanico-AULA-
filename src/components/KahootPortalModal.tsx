@@ -393,9 +393,9 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {results.map((res) => (
+                  {results.map((res, index) => (
                     <div
-                      key={res.id}
+                      key={`${res.id || 'res'}-${index}`}
                       className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
                         isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0e1122] border-indigo-900/40'
                       }`}

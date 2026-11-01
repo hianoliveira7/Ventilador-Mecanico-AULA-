@@ -77,6 +77,13 @@ export interface PatientParameters {
   secretionsSeverity?: 'none' | 'mild' | 'moderate' | 'severe'; // Causes sawtooth waveform in flow
   circuitLeakPercent?: number; // 0 - 50% leak
   endotrachealTubeSize?: number; // mm ID (6.5 - 9.0)
+
+  // Hemodynamics Baseline & Heart-Lung Status
+  baselineHeartRate?: number; // bpm (default 75)
+  baselineSystolicBP?: number; // mmHg (default 120)
+  baselineDiastolicBP?: number; // mmHg (default 80)
+  volumeStatus?: 'hypovolemic' | 'euvolemic' | 'hypervolemic'; // impacts PEEP/intratoracic pressure tolerance
+  intracranialPressureBaseline?: number; // mmHg (for neurocritical patients, normal 8-15)
 }
 
 export interface MonitoredData {
@@ -138,6 +145,18 @@ export interface MonitoredData {
   alveolarPaO2: number; // PAO2
   aaGradient: number; // (A-a) DO2
   etco2: number; // mmHg
+
+  // Hemodynamics & Heart-Lung Interaction
+  heartRate: number; // bpm (FC)
+  systolicBP: number; // mmHg (PAS)
+  diastolicBP: number; // mmHg (PAD)
+  meanArterialPressure: number; // mmHg (PAM)
+  cardiacOutput: number; // L/min (DC)
+  cardiacIndex: number; // L/min/m2 (IC)
+  pulsePressureVariation: number; // % (ΔPP / VPP)
+  strokeVolume: number; // mL (VS)
+  intracranialPressure?: number; // mmHg (PIC)
+  cerebralPerfusionPressure?: number; // mmHg (PPC = PAM - PIC)
 }
 
 export interface WaveformSample {

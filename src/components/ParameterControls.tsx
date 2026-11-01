@@ -487,6 +487,26 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             <span className="hidden sm:inline">Avançados</span>
           </button>
 
+          {/* Discard Button (visible when draft changes exist) */}
+          {hasChanges && (
+            <button
+              type="button"
+              onClick={() => {
+                audioEngine.playClick(750);
+                onDiscard();
+              }}
+              className={`px-2 py-1 rounded-lg text-[10px] sm:text-xs font-mono font-bold transition-all flex items-center gap-1 border cursor-pointer ${
+                isLight
+                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-300 shadow-xs'
+                  : 'bg-rose-950/70 hover:bg-rose-900 text-rose-300 border-rose-800/80 shadow-xs'
+              }`}
+              title="Descartar alterações e restaurar valores ativos"
+            >
+              <X className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span className="hidden sm:inline">Descartar</span>
+            </button>
+          )}
+
           {/* Master Confirm Button */}
           <button
             type="button"

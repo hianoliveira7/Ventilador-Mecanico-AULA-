@@ -1274,7 +1274,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
 
                         return (
                           <div
-                            key={res.id}
+                            key={`${res.id || 'res'}-${index}`}
                             className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3.5 transition-all ${
                               isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0f1324] border-zinc-800'
                             }`}
@@ -2754,9 +2754,9 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {reports.map((rep) => (
+                  {reports.map((rep, index) => (
                     <div
-                      key={rep.id}
+                      key={`${rep.id || 'rep'}-${index}`}
                       className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                         isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0f1422] border-zinc-800'
                       }`}

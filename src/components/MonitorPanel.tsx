@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MonitoredData, VentilationMode, PatientParameters } from '../types/ventilation';
 import {
   Activity,
+  Heart,
   ShieldCheck,
   FileText,
   SlidersHorizontal,
@@ -35,7 +36,7 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
   onToggleBlindMechanics,
 }) => {
   const { isLight } = useTheme();
-  const [activeTab, setActiveTab] = useState<'vital' | 'mechanics'>('vital');
+  const [activeTab, setActiveTab] = useState<'vital' | 'hemo' | 'mechanics'>('vital');
   const [revealedBlind, setRevealedBlind] = useState(false);
   const [isWeaningEvaluated, setIsWeaningEvaluated] = useState(false);
 
@@ -116,11 +117,11 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
         )}
       </div>
 
-      {/* Tabs Selector for Clean Layout: Visão Rápida vs Mecânica Detalhada */}
+      {/* Tabs Selector for Clean Layout: Visão Rápida vs Hemodinâmica vs Mecânica Detalhada */}
       <div className={`p-1.5 border-b flex gap-1.5 shrink-0 ${isLight ? 'bg-slate-100/90 border-slate-200' : 'bg-[#0b0c11] border-zinc-800'}`}>
         <button
           onClick={() => setActiveTab('vital')}
-          className={`flex-1 py-1 px-2 rounded-xl text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+          className={`flex-1 py-1 px-1.5 rounded-xl text-[10.5px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1 border ${
             activeTab === 'vital'
               ? isLight
                 ? 'bg-white text-cyan-800 border-cyan-300 shadow-sm'
@@ -134,12 +135,27 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
           <span>VITAIS</span>
         </button>
         <button
+          onClick={() => setActiveTab('hemo')}
+          className={`flex-1 py-1 px-1.5 rounded-xl text-[10.5px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1 border ${
+            activeTab === 'hemo'
+              ? isLight
+                ? 'bg-white text-rose-800 border-rose-300 shadow-sm'
+                : 'bg-[#221319] text-rose-300 border-rose-500/40 shadow-sm'
+              : isLight
+              ? 'bg-transparent text-slate-700 border-transparent hover:bg-slate-200/60 font-semibold'
+              : 'bg-transparent text-zinc-400 border-transparent hover:bg-[#141620]'
+          }`}
+        >
+          <Heart className="w-3.5 h-3.5 text-rose-500" />
+          <span>HEMO</span>
+        </button>
+        <button
           onClick={() => setActiveTab('mechanics')}
-          className={`flex-1 py-1 px-2 rounded-xl text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 border ${
+          className={`flex-1 py-1 px-1.5 rounded-xl text-[10.5px] font-mono font-bold transition-all cursor-pointer flex items-center justify-center gap-1 border ${
             activeTab === 'mechanics'
               ? isLight
-                ? 'bg-white text-cyan-800 border-cyan-300 shadow-sm'
-                : 'bg-[#161928] text-cyan-300 border-cyan-500/40 shadow-sm'
+                ? 'bg-white text-purple-800 border-purple-300 shadow-sm'
+                : 'bg-[#1b1528] text-purple-300 border-purple-500/40 shadow-sm'
               : isLight
               ? 'bg-transparent text-slate-700 border-transparent hover:bg-slate-200/60 font-semibold'
               : 'bg-transparent text-zinc-400 border-transparent hover:bg-[#141620]'
@@ -384,6 +400,255 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
               />
             </div>
           </>
+        ) : activeTab === 'hemo' ? (
+          /* HEMODYNAMICS & HEART-LUNG INTERACTION TAB */
+          <div className="space-y-2 animate-fadeIn">
+            {/* Header / Summary Card */}
+            <div
+              className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                isLight ? 'bg-rose-50/70 border-rose-200 shadow-xs' : 'bg-[#180e14] border-rose-900/40'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Heart className={`w-4 h-4 text-rose-500 ${monitored.heartRate > 100 ? 'animate-bounce' : 'animate-pulse'}`} />
+                <div>
+                  <span className={`text-xs font-display font-black block ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
+                    INTERAÇÃO CORAÇÃO-PULMÃO
+                  </span>
+                  <span className={`text-[10px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    P. Média: {currentMean} cmH₂O • PEEPt: {(currentPeep + currentAutoPeep).toFixed(1)} cmH₂O
+                  </span>
+                </div>
+              </div>
+              <span
+                className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold border ${
+                  monitored.meanArterialPressure < 65
+                    ? isLight
+                      ? 'bg-rose-100 text-rose-900 border-rose-300 animate-pulse'
+                      : 'bg-rose-950 text-rose-200 border-rose-700 animate-pulse'
+                    : isLight
+                    ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+                    : 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                }`}
+              >
+                {monitored.meanArterialPressure < 65 ? 'HIPOTENSÃO / CHOQUE' : 'PAM ADEQUADA'}
+              </span>
+            </div>
+
+            {/* Blood Pressure & Heart Rate Grid */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Blood Pressure (PA Sistólica / Diastólica & PAM) */}
+              <div
+                className={`p-2.5 rounded-xl border flex flex-col justify-between ${
+                  isLight ? 'bg-white border-slate-300 shadow-sm' : 'bg-[#07080d] border-zinc-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-[9px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                    PRESSÃO ARTERIAL (PA)
+                  </span>
+                  <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>mmHg</span>
+                </div>
+                <div className="flex items-baseline gap-1 my-1">
+                  <span
+                    className={`text-xl font-bold font-mono ${
+                      monitored.meanArterialPressure < 65
+                        ? isLight ? 'text-rose-700 font-black' : 'text-rose-400 font-black'
+                        : isLight ? 'text-rose-900 font-black' : 'text-rose-300 font-black'
+                    }`}
+                  >
+                    {monitored.systolicBP ?? 120}/{monitored.diastolicBP ?? 80}
+                  </span>
+                  <span className={`text-xs font-mono font-bold ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    ({monitored.meanArterialPressure ?? 93})
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[8px] font-mono">
+                  <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>PAM Alvo: &ge;65</span>
+                  <span className={`font-bold ${monitored.meanArterialPressure >= 65 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {monitored.meanArterialPressure >= 65 ? 'OK' : 'Baixa!'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Heart Rate (FC) */}
+              <div
+                className={`p-2.5 rounded-xl border flex flex-col justify-between ${
+                  isLight ? 'bg-white border-slate-300 shadow-sm' : 'bg-[#07080d] border-zinc-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-[9px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                    FREQ. CARDÍACA (FC)
+                  </span>
+                  <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>bpm</span>
+                </div>
+                <div className="flex items-baseline gap-1 my-1">
+                  <span
+                    className={`text-xl font-bold font-mono ${
+                      (monitored.heartRate ?? 75) > 100
+                        ? isLight ? 'text-amber-800 font-black' : 'text-amber-400 font-black'
+                        : (monitored.heartRate ?? 75) < 50
+                        ? isLight ? 'text-rose-800 font-black' : 'text-rose-400 font-black'
+                        : isLight ? 'text-rose-900 font-black' : 'text-rose-300 font-black'
+                    }`}
+                  >
+                    {monitored.heartRate ?? 75}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[8px] font-mono">
+                  <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>Ritmo: Sinusal</span>
+                  <span className={`font-bold ${
+                    (monitored.heartRate ?? 75) > 100 ? 'text-amber-500' : (monitored.heartRate ?? 75) < 50 ? 'text-rose-500' : 'text-emerald-500'
+                  }`}>
+                    {(monitored.heartRate ?? 75) > 100 ? 'Taquicardia' : (monitored.heartRate ?? 75) < 50 ? 'Bradicardia' : 'Normal'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Cardiac Output, Cardiac Index & Stroke Volume */}
+            <div className="grid grid-cols-3 gap-1.5">
+              {/* Cardiac Output */}
+              <div
+                className={`p-2 rounded-xl border flex flex-col justify-between ${
+                  isLight ? 'bg-white border-slate-300 shadow-sm' : 'bg-[#07080d] border-zinc-800'
+                }`}
+              >
+                <span className={`text-[8.5px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                  DÉBITO CARD.
+                </span>
+                <div className="my-0.5">
+                  <span className={`text-base font-bold font-mono ${isLight ? 'text-rose-900' : 'text-rose-300'}`}>
+                    {(monitored.cardiacOutput ?? 5.0).toFixed(1)}
+                  </span>
+                  <span className="text-[8px] font-mono ml-0.5 opacity-60">L/min</span>
+                </div>
+                <span className="text-[7.5px] font-mono opacity-60">Ref: 4.0–8.0</span>
+              </div>
+
+              {/* Cardiac Index */}
+              <div
+                className={`p-2 rounded-xl border flex flex-col justify-between ${
+                  isLight ? 'bg-white border-slate-300 shadow-sm' : 'bg-[#07080d] border-zinc-800'
+                }`}
+              >
+                <span className={`text-[8.5px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                  ÍNDICE CARD.
+                </span>
+                <div className="my-0.5">
+                  <span className={`text-base font-bold font-mono ${isLight ? 'text-rose-900' : 'text-rose-300'}`}>
+                    {(monitored.cardiacIndex ?? 2.8).toFixed(1)}
+                  </span>
+                  <span className="text-[8px] font-mono ml-0.5 opacity-60">L/m²</span>
+                </div>
+                <span className="text-[7.5px] font-mono opacity-60">Ref: 2.5–4.0</span>
+              </div>
+
+              {/* Stroke Volume */}
+              <div
+                className={`p-2 rounded-xl border flex flex-col justify-between ${
+                  isLight ? 'bg-white border-slate-300 shadow-sm' : 'bg-[#07080d] border-zinc-800'
+                }`}
+              >
+                <span className={`text-[8.5px] font-mono font-bold ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                  VOL. SISTÓLICO
+                </span>
+                <div className="my-0.5">
+                  <span className={`text-base font-bold font-mono ${isLight ? 'text-rose-900' : 'text-rose-300'}`}>
+                    {monitored.strokeVolume ?? 70}
+                  </span>
+                  <span className="text-[8px] font-mono ml-0.5 opacity-60">mL</span>
+                </div>
+                <span className="text-[7.5px] font-mono opacity-60">Ref: 60–100</span>
+              </div>
+            </div>
+
+            {/* Fluid Responsiveness & Pulse Pressure Variation (ΔPP / VPP) */}
+            <div
+              className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-[#0b0d14] border-zinc-800'
+              }`}
+            >
+              <div>
+                <span className={`text-[9.5px] font-mono font-bold block ${isLight ? 'text-slate-800' : 'text-zinc-200'}`}>
+                  Variação de Pressão de Pulso (ΔPP / VPP):
+                </span>
+                <span className={`text-sm font-bold font-mono ${
+                  (monitored.pulsePressureVariation ?? 8) > 13
+                    ? isLight ? 'text-amber-800' : 'text-amber-400'
+                    : isLight ? 'text-emerald-800' : 'text-emerald-400'
+                }`}>
+                  {monitored.pulsePressureVariation ?? 8}%
+                </span>
+                <span className={`text-[8.5px] font-mono block ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  {(monitored.pulsePressureVariation ?? 8) > 13
+                    ? '⚠️ Responsivo a Volume (Hipovolemia / Susceptível à queda de PA por PEEP)'
+                    : '✅ Normovolemia (Baixa sensibilidade hemodinâmica à PEEP)'}
+                </span>
+              </div>
+              <span
+                className={`text-[8.5px] font-mono px-2 py-0.5 rounded font-bold border ${
+                  (monitored.pulsePressureVariation ?? 8) > 13
+                    ? isLight
+                      ? 'bg-amber-100 text-amber-900 border-amber-300'
+                      : 'bg-amber-950 text-amber-300 border-amber-700'
+                    : isLight
+                    ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+                    : 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                }`}
+              >
+                {(monitored.pulsePressureVariation ?? 8) > 13 ? 'RESPONSIVO' : 'ESTÁVEL'}
+              </span>
+            </div>
+
+            {/* Neurocritical Monitoring: PIC & PPC (if neuro case) */}
+            {(monitored.intracranialPressure !== undefined || patient.pathology === 'neuro') && (
+              <div
+                className={`p-2.5 rounded-xl border ${
+                  isLight ? 'bg-indigo-50/80 border-indigo-200' : 'bg-[#121226] border-indigo-900/50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase">
+                    🧠 MONITORIZAÇÃO NEUROCRÍTICA
+                  </span>
+                  <span className={`text-[8.5px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                    (monitored.intracranialPressure ?? 12) > 20
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/50'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
+                  }`}>
+                    {(monitored.intracranialPressure ?? 12) > 20 ? 'HIC / Alerta!' : 'PIC Normal'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className={`p-1.5 rounded-lg border ${isLight ? 'bg-white border-indigo-100' : 'bg-[#090b14] border-zinc-800'}`}>
+                    <span className="text-[8px] font-mono opacity-70 block">PRESSÃO INTRACRANIANA (PIC)</span>
+                    <span className={`text-base font-bold font-mono ${
+                      (monitored.intracranialPressure ?? 12) > 20 ? 'text-rose-400' : 'text-indigo-300'
+                    }`}>
+                      {monitored.intracranialPressure ?? 12}
+                    </span>
+                    <span className="text-[8px] font-mono ml-0.5 opacity-60">mmHg (Alvo &le;20)</span>
+                  </div>
+                  <div className={`p-1.5 rounded-lg border ${isLight ? 'bg-white border-indigo-100' : 'bg-[#090b14] border-zinc-800'}`}>
+                    <span className="text-[8px] font-mono opacity-70 block">PERFUSÃO CEREBRAL (PPC)</span>
+                    <span className={`text-base font-bold font-mono ${
+                      (monitored.cerebralPerfusionPressure ?? 80) < 60 ? 'text-rose-400' : 'text-emerald-400'
+                    }`}>
+                      {monitored.cerebralPerfusionPressure ?? 80}
+                    </span>
+                    <span className="text-[8px] font-mono ml-0.5 opacity-60">mmHg (Alvo &ge;60)</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pulse Oximeter Module */}
+            <div className="pt-0.5">
+              <PulseOximeterModule monitored={monitored} patient={patient} />
+            </div>
+          </div>
         ) : (
           /* DETAILED MECHANICS TAB */
           <div className="space-y-2 animate-fadeIn">

@@ -13,8 +13,8 @@ export const LungVisualizer: React.FC<LungVisualizerProps> = ({ monitored, patie
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const phaseRef = useRef<number>(0);
 
-  const spo2Val = Math.round(monitored.spo2);
-  const heartRate = Math.round(72 + (patient.spontaneousDrive ? 12 : 0) + (spo2Val < 90 ? (90 - spo2Val) * 2.5 : 0));
+  const spo2Val = Math.round(monitored.spo2 ?? 98);
+  const heartRate = monitored.heartRate ?? Math.round(72 + (patient.spontaneousDrive ? 12 : 0) + (spo2Val < 90 ? (90 - spo2Val) * 2.5 : 0));
   
   // Status & color scheme
   let statusText = 'Normoxemia Estável';
