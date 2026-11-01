@@ -71,13 +71,8 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
 
   const handleRequestTeacher = (action?: () => void) => {
     audioEngine.playClick(850);
-    if (currentRole === 'teacher') {
-      onSelectRole('teacher');
-      if (action) action();
-    } else {
-      setPendingTeacherAction(() => action || null);
-      setIsTeacherAuthOpen(true);
-    }
+    setPendingTeacherAction(() => action || null);
+    setIsTeacherAuthOpen(true);
   };
 
   const handleEnterDirectly = () => {

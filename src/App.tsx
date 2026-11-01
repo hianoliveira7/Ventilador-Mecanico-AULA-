@@ -406,11 +406,7 @@ export default function App() {
   };
 
   const handleOpenTeacherAdmin = () => {
-    if (userRole === 'teacher') {
-      setIsTeacherAdminOpen(true);
-    } else {
-      setIsTeacherAuthOpen(true);
-    }
+    setIsTeacherAuthOpen(true);
   };
 
   const handleTeacherAuthSuccess = () => {

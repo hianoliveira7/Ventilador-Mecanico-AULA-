@@ -1,6 +1,6 @@
 import { ClinicalCase, PatientParameters, VentilatorSettings, MonitoredData } from '../types/ventilation';
 import { CLINICAL_CASES } from '../data/clinicalCases';
-import { doc, setDoc, getDoc, getDocs, collection, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { educationalStorage, QuizQuestionItem } from './educationalStorage';
 
@@ -534,9 +534,15 @@ class LocalDatabaseService {
     return result;
   }
 
-  public deleteRoom(code: string) {
-    const rooms = this.getRooms().filter((r) => r.code !== code);
+  public async deleteRoom(code: string) {
+    const normalized = code.trim().toUpperCase();
+    const rooms = this.getRooms().filter((r) => r.code.toUpperCase() !== normalized);
     localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+    try {
+      await deleteDoc(doc(db, 'kahootRooms', normalized));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `kahootRooms/${normalized}`);
+    }
   }
 
   public toggleRoomActive(code: string) {
@@ -549,13 +555,33 @@ class LocalDatabaseService {
     localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
   }
 
-  public deleteResult(id: string) {
+  public async deleteResult(id: string) {
     const results = this.getResults().filter((res) => res.id !== id);
     localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(results));
+    try {
+      await deleteDoc(doc(db, 'results', id));
+      await deleteDoc(doc(db, 'studentGameResults', id));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `results/${id}`);
+    }
   }
 
-  public clearResults() {
+  public async clearResults() {
     localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify([]));
+    try {
+      const snap = await getDocs(collection(db, 'results'));
+      const batchPromises: Promise<void>[] = [];
+      snap.forEach((docSnap) => {
+        batchPromises.push(deleteDoc(docSnap.ref));
+      });
+      const snap2 = await getDocs(collection(db, 'studentGameResults'));
+      snap2.forEach((docSnap) => {
+        batchPromises.push(deleteDoc(docSnap.ref));
+      });
+      await Promise.all(batchPromises);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'results/clear');
+    }
   }
 
   public async fetchCloudResults(): Promise<StudentGameResult[]> {

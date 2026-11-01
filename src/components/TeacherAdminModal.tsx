@@ -254,27 +254,27 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     loadData();
   };
 
-  const handleDeleteRoom = (code: string) => {
+  const handleDeleteRoom = async (code: string) => {
     if (confirm(`Tem certeza que deseja excluir a sala "${code}"?`)) {
-      localDatabase.deleteRoom(code);
+      await localDatabase.deleteRoom(code);
       audioEngine.playClick(750);
       showFeedback(`Sala "${code}" removida.`);
       loadData();
     }
   };
 
-  const handleDeleteStudentResult = (id: string) => {
+  const handleDeleteStudentResult = async (id: string) => {
     if (confirm('Deseja excluir este registro de nota do aluno?')) {
-      localDatabase.deleteResult(id);
+      await localDatabase.deleteResult(id);
       audioEngine.playClick(750);
       showFeedback('Nota do aluno removida.');
       loadData();
     }
   };
 
-  const handleClearAllResults = () => {
+  const handleClearAllResults = async () => {
     if (confirm('ATENÇÃO: Deseja apagar todas as pontuações e registros de alunos do Kahoot? Esta ação não pode ser desfeita.')) {
-      localDatabase.clearResults();
+      await localDatabase.clearResults();
       audioEngine.playConfirmBeep();
       showFeedback('Todas as pontuações foram resetadas.');
       loadData();
