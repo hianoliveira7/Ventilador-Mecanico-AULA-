@@ -63,7 +63,11 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
       return;
     }
 
-    const room = roomToJoin || localDatabase.getRoomByCode(inputRoomCode);
+    let room = roomToJoin || localDatabase.getRoomByCode(inputRoomCode);
+    if (!room && inputRoomCode.trim()) {
+      room = await localDatabase.getRoomByCodeAsync(inputRoomCode);
+    }
+
     if (!room) {
       setErrorMsg(`Código de sala "${inputRoomCode}" não encontrado. Verifique com seu professor.`);
       return;

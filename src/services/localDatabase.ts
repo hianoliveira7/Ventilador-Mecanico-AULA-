@@ -1,6 +1,6 @@
 import { ClinicalCase, PatientParameters, VentilatorSettings, MonitoredData } from '../types/ventilation';
 import { CLINICAL_CASES } from '../data/clinicalCases';
-import { doc, setDoc, getDocs, collection, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, onSnapshot } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { educationalStorage, QuizQuestionItem } from './educationalStorage';
 
@@ -316,6 +316,30 @@ class LocalDatabaseService {
     return rooms.find((r) => r.code.toUpperCase() === code.trim().toUpperCase()) || null;
   }
 
+  public async getRoomByCodeAsync(code: string): Promise<KahootRoom | null> {
+    const normalized = code.trim().toUpperCase();
+    const localRoom = this.getRoomByCode(normalized);
+    if (localRoom) return localRoom;
+
+    try {
+      const docSnap = await getDoc(doc(db, 'kahootRooms', normalized));
+      if (docSnap.exists()) {
+        const roomData = docSnap.data() as KahootRoom;
+        if (roomData && roomData.code) {
+          const rooms = this.getRooms();
+          if (!rooms.some((r) => r.code.toUpperCase() === normalized)) {
+            rooms.unshift(roomData);
+            localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+          }
+          return roomData;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch room from cloud:', err);
+    }
+    return null;
+  }
+
   // Student Game Results
   public getResults(): StudentGameResult[] {
     this.init();
@@ -558,6 +582,35 @@ class LocalDatabaseService {
       console.warn('Using local cache for results:', err);
     }
     return this.getResults();
+  }
+
+  public async publishRoomState(roomCode: string, state: any) {
+    try {
+      const normalized = roomCode.trim().toUpperCase();
+      await setDoc(doc(db, 'kahootRooms', normalized, 'state', 'current'), {
+        ...state,
+        updatedAt: Date.now(),
+        updatedBy: auth.currentUser?.uid || 'anonymous',
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Could not publish room state to cloud:', err);
+    }
+  }
+
+  public subscribeRoomState(roomCode: string, callback: (state: any) => void): () => void {
+    const normalized = roomCode.trim().toUpperCase();
+    const unsub = onSnapshot(
+      doc(db, 'kahootRooms', normalized, 'state', 'current'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          callback(docSnap.data());
+        }
+      },
+      (err) => {
+        console.warn('Room state live sync error:', err);
+      }
+    );
+    return unsub;
   }
 }
 

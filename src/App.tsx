@@ -359,6 +359,8 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [activeKahootSession?.remainingSeconds, activeKahootSession === null, handleFinishKahootSession]);
 
+
+
   useEffect(() => {
     // Initial sync from Firestore
     educationalStorage.syncFromFirestore().catch((err) => {
@@ -433,6 +435,48 @@ export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [audioContextState, setAudioContextState] = useState<string>(audioEngine.getContextState());
   const [isAudioBannerDismissed, setIsAudioBannerDismissed] = useState<boolean>(false);
+
+  // Kahoot Real-time State Synchronization across devices
+  useEffect(() => {
+    if (!activeKahootSession) return;
+
+    const roomCode = activeKahootSession.room.code;
+
+    // Subscribe to remote updates from other devices in the same room
+    const unsubscribe = localDatabase.subscribeRoomState(roomCode, (remoteState) => {
+      if (remoteState && remoteState.settings) {
+        if (JSON.stringify(remoteState.settings) !== JSON.stringify(settings)) {
+          setSettings(remoteState.settings);
+          setDraftSettings(remoteState.settings);
+        }
+      }
+      if (remoteState && remoteState.patient) {
+        if (JSON.stringify(remoteState.patient) !== JSON.stringify(patient)) {
+          setPatient(remoteState.patient);
+        }
+      }
+      if (typeof remoteState?.isVentilating === 'boolean' && remoteState.isVentilating !== isVentilating) {
+        setIsVentilating(remoteState.isVentilating);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [activeKahootSession?.room.code]);
+
+  // Publish local state changes to Firestore room state when in active Kahoot session
+  useEffect(() => {
+    if (!activeKahootSession) return;
+
+    const roomCode = activeKahootSession.room.code;
+    localDatabase.publishRoomState(roomCode, {
+      settings,
+      patient,
+      isVentilating,
+      activeCaseId: activeClinicalCase?.id,
+    });
+  }, [settings, patient, isVentilating, activeClinicalCase?.id, activeKahootSession]);
 
   // Track browser tab visibility (pause simulation when backgrounded or hidden)
   const [isDocumentVisible, setIsDocumentVisible] = useState<boolean>(

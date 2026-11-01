@@ -51,9 +51,10 @@ service cloud.firestore {
 
     // Kahoot Rooms Collection
     match /kahootRooms/{roomCode} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isSignedIn();
+      allow read, write: if true;
+      match /{subcollection=**} {
+        allow read, write: if true;
+      }
     }
 
     // Pedagogical Settings Collection

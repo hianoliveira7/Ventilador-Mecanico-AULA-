@@ -126,6 +126,7 @@ const STORAGE_KEYS = {
   USER_ROLE: 'vm_sim_user_role',
   ACTIVE_QUIZ_QUESTIONS: 'vm_sim_active_quiz_questions',
   CUSTOM_QUIZ_QUESTIONS: 'vm_sim_custom_quiz_questions',
+  DELETED_QUIZ_IDS: 'vm_sim_deleted_quiz_ids',
   ACTIVE_CLINICAL_CASES: 'vm_sim_active_clinical_cases',
   CUSTOM_CLINICAL_CASES: 'vm_sim_custom_clinical_cases',
   TUTORIAL_SEEN: 'vm_sim_tutorial_completed',
@@ -302,20 +303,35 @@ export const educationalStorage = {
   // Quiz Questions management
   getAllQuizQuestions: (): QuizQuestionItem[] => {
     try {
+      const deletedRaw = localStorage.getItem(STORAGE_KEYS.DELETED_QUIZ_IDS);
+      const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+
       const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS);
+      let list: QuizQuestionItem[] = [];
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          list = parsed;
         }
       }
-      const oldCustomRaw = localStorage.getItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS);
-      const oldCustom: QuizQuestionItem[] = oldCustomRaw ? JSON.parse(oldCustomRaw) : [];
-      const initialList = [...DEFAULT_QUIZ_QUESTIONS, ...oldCustom];
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(initialList));
-      return initialList;
+      if (list.length === 0) {
+        const oldCustomRaw = localStorage.getItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS);
+        const oldCustom: QuizQuestionItem[] = oldCustomRaw ? JSON.parse(oldCustomRaw) : [];
+        list = [...DEFAULT_QUIZ_QUESTIONS, ...oldCustom];
+      }
+      const filtered = list.filter((q) => !deletedIds.includes(q.id));
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(filtered));
+      return filtered;
     } catch {
-      return DEFAULT_QUIZ_QUESTIONS;
+      return DEFAULT_QUIZ_QUESTIONS.filter((q) => {
+        try {
+          const deletedRaw = localStorage.getItem(STORAGE_KEYS.DELETED_QUIZ_IDS);
+          const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+          return !deletedIds.includes(q.id);
+        } catch {
+          return true;
+        }
+      });
     }
   },
 
@@ -352,6 +368,13 @@ export const educationalStorage = {
 
   deleteQuizQuestion: (id: string): boolean => {
     try {
+      const deletedRaw = localStorage.getItem(STORAGE_KEYS.DELETED_QUIZ_IDS);
+      const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+      if (!deletedIds.includes(id)) {
+        deletedIds.push(id);
+        localStorage.setItem(STORAGE_KEYS.DELETED_QUIZ_IDS, JSON.stringify(deletedIds));
+      }
+
       const currentList = educationalStorage.getAllQuizQuestions();
       const filtered = currentList.filter((q) => q.id !== id);
       localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(filtered));
