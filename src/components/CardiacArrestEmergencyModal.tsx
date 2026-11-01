@@ -21,6 +21,7 @@ interface CardiacArrestEmergencyModalProps {
   onApplyRescueSettings: (newSettings: VentilatorSettings) => void;
   onRestartCase: () => void;
   onOpenDebriefing: () => void;
+  onPatientDeceased?: () => void;
 }
 
 export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalProps> = ({
@@ -31,6 +32,7 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
   onApplyRescueSettings,
   onRestartCase,
   onOpenDebriefing,
+  onPatientDeceased,
 }) => {
   // 20-second countdown timer
   const [secondsRemaining, setSecondsRemaining] = useState<number>(20);
@@ -79,10 +81,6 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
       timerRef.current = window.setInterval(() => {
         setSecondsRemaining((prev) => {
           if (prev <= 1) {
-            if (timerRef.current) clearInterval(timerRef.current);
-            setHasDied(true);
-            audioEngine.stopAlarm();
-            audioEngine.playFlatlineTone();
             return 0;
           }
           if (prev <= 6) {
@@ -98,6 +96,17 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
       audioEngine.stopFlatlineTone();
     };
   }, [isOpen]);
+
+  // Handle death side-effects when countdown reaches 0
+  useEffect(() => {
+    if (isOpen && secondsRemaining === 0 && !hasDied && !hasSucceeded) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setHasDied(true);
+      audioEngine.stopAlarm();
+      audioEngine.playFlatlineTone();
+      onPatientDeceased?.();
+    }
+  }, [isOpen, secondsRemaining, hasDied, hasSucceeded, onPatientDeceased]);
 
   if (!isOpen) return null;
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap, Sparkles, Award, Trophy } from 'lucide-react';
+import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap, Sparkles, Award, Trophy, RotateCcw } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 
@@ -23,6 +23,7 @@ interface MenuModalProps {
   onOpenFlashcards?: () => void;
   onOpenDebriefing?: () => void;
   onOpenKahoot?: () => void;
+  onResetSimulation?: () => void;
 }
 
 export const MenuModal: React.FC<MenuModalProps> = ({
@@ -45,6 +46,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
   onOpenFlashcards,
   onOpenDebriefing,
   onOpenKahoot,
+  onResetSimulation,
 }) => {
   const { theme, toggleTheme, isLight } = useTheme();
 
@@ -90,6 +92,37 @@ export const MenuModal: React.FC<MenuModalProps> = ({
 
         {/* Menu Items */}
         <div className="p-4 space-y-2 max-h-[80vh] overflow-y-auto">
+          {/* Reiniciar Simulação / Admissão */}
+          {onResetSimulation && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onResetSimulation();
+              }}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group shadow-sm ${
+                isLight
+                  ? 'bg-rose-50 hover:bg-rose-100 border-rose-300 text-rose-950'
+                  : 'bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/80 text-rose-200'
+              }`}
+            >
+              <div
+                className={`p-2.5 rounded-lg ${
+                  isLight ? 'bg-rose-600 text-white' : 'bg-rose-900/80 text-rose-300'
+                }`}
+              >
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <span className="block text-sm font-display font-bold text-rose-700 dark:text-rose-300">
+                  Reiniciar Simulação (Tela de Admissão)
+                </span>
+                <span className={`text-xs ${isLight ? 'text-rose-900/80' : 'text-rose-300/80'}`}>
+                  Retornar à admissão do paciente e zerar os parâmetros
+                </span>
+              </div>
+            </button>
+          )}
           {/* Role Portal / Change Profile */}
           {onOpenRolePortal && (
             <button

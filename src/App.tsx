@@ -79,7 +79,7 @@ export default function App() {
   }, [isVentilating]);
 
   // Case tracking for After Action Review (AAR)
-  const [caseStartTime, setCaseStartTime] = useState<number>(Date.now());
+  const [caseElapsedSeconds, setCaseElapsedSeconds] = useState<number>(0);
   const [caseInterventions, setCaseInterventions] = useState<CaseIntervention[]>([]);
   const [viliExposureSeconds, setViliExposureSeconds] = useState<number>(0);
   const [highPlateauSeconds, setHighPlateauSeconds] = useState<number>(0);
@@ -127,7 +127,7 @@ export default function App() {
 
     // Record clinical interventions for debriefing report
     if (activeClinicalCase) {
-      const elapsed = Math.max(1, Math.round((Date.now() - caseStartTime) / 1000));
+      const elapsed = Math.max(1, caseElapsedSeconds);
       const timeStr = `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
       (Object.keys(draftSettings) as (keyof VentilatorSettings)[]).forEach((k) => {
         if (draftSettings[k] !== settings[k]) {
@@ -306,7 +306,7 @@ export default function App() {
   ) => {
     handleLoadCase(selectedCase);
     setIsVentilating(true);
-    setCaseStartTime(Date.now());
+    setCaseElapsedSeconds(0);
     const timeLimitSeconds = room.timeLimitMinutes * 60;
     setActiveKahootSession({
       studentName,
@@ -413,6 +413,47 @@ export default function App() {
   const [audioContextState, setAudioContextState] = useState<string>(audioEngine.getContextState());
   const [isAudioBannerDismissed, setIsAudioBannerDismissed] = useState<boolean>(false);
 
+  // Track browser tab visibility (pause simulation when backgrounded or hidden)
+  const [isDocumentVisible, setIsDocumentVisible] = useState<boolean>(
+    typeof document !== 'undefined' ? document.visibilityState === 'visible' : true
+  );
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsDocumentVisible(document.visibilityState === 'visible');
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Compute whether the user is actively viewing and interacting with the main simulator screen
+  const isSimulatorActive =
+    isDocumentVisible &&
+    currentPage === 'simulator' &&
+    isVentilating &&
+    !maneuverState.isFrozen &&
+    !isPatientDeceased &&
+    !isRolePortalOpen &&
+    !isTeacherAdminOpen &&
+    !isTeacherAuthOpen &&
+    !isTutorialOpen &&
+    !isFlashcardsOpen &&
+    !isDebriefingOpen &&
+    !isQuizOpen &&
+    !isKahootPortalOpen &&
+    !isKahootResultModalOpen &&
+    !isCardiacArrestModalOpen &&
+    !isPatientConfigOpen &&
+    !isAlarmsModalOpen &&
+    !isAudioSettingsOpen &&
+    !isEducationalOpen &&
+    !isMenuOpen;
+
+  const isSimulatorActiveRef = useRef(isSimulatorActive);
+  useEffect(() => {
+    isSimulatorActiveRef.current = isSimulatorActive;
+  }, [isSimulatorActive]);
+
   // 8a. Resizable Parameter Controls Splitter (Vertical height between graphs and parameters)
   const [paramPanelHeight, setParamPanelHeight] = useState<number>(165);
   const [isDraggingParamSplitter, setIsDraggingParamSplitter] = useState<boolean>(false);
@@ -508,7 +549,7 @@ export default function App() {
   useEffect(() => {
     // Standard ICU heart rate approx 75 bpm = 800ms
     const pulseTimer = setInterval(() => {
-      if (!maneuverStateRef.current.isFrozen && isVentilatingRef.current && monitored.spo2 > 0) {
+      if (isSimulatorActiveRef.current && monitored.spo2 > 0) {
         audioEngine.playSpO2Pulse(monitored.spo2);
       }
     }, 850);
@@ -535,7 +576,7 @@ export default function App() {
     let lastTime = performance.now();
 
     const interval = setInterval(() => {
-      if (maneuverStateRef.current.isFrozen || !isVentilatingRef.current) return;
+      if (!isSimulatorActiveRef.current) return;
 
       const { sample, monitored: newMonitored } = physicsEngine.step(
         dt,
@@ -554,7 +595,7 @@ export default function App() {
   // Alarm Evaluation Engine (1 Hz)
   useEffect(() => {
     const checkAlarms = () => {
-      if (!isVentilating) {
+      if (!isSimulatorActiveRef.current) {
         setActiveAlarms([]);
         audioEngine.stopAlarm();
         return;
@@ -854,7 +895,7 @@ export default function App() {
     setPatient(selectedCase.patientProfile);
     setSettings(selectedCase.initialSettings);
     setDraftSettings(selectedCase.initialSettings);
-    setCaseStartTime(Date.now());
+    setCaseElapsedSeconds(0);
     setCaseInterventions([]);
     setViliExposureSeconds(0);
     setHighPlateauSeconds(0);
@@ -867,6 +908,7 @@ export default function App() {
     setIsPatientDeceased(false);
     
     // Always return to the admission screen (Início do Caso) on case load/restart
+    setCurrentPage('simulator');
     setIsVentilating(false);
 
     physicsEngine.reset(
@@ -876,47 +918,69 @@ export default function App() {
     );
   };
 
+  // Restart case/simulation and return to admission screen
+  const handleRestartSimulation = useCallback(() => {
+    audioEngine.stopFlatlineTone();
+    audioEngine.stopAlarm();
+    setIsCardiacArrestModalOpen(false);
+    setIsDebriefingOpen(false);
+    setIsPatientDeceased(false);
+    hasTriggeredPcrRef.current = false;
+    setCurrentPage('simulator');
+
+    if (activeClinicalCase) {
+      handleLoadCase(activeClinicalCase);
+    } else {
+      setIsVentilating(false);
+      physicsEngine.reset();
+    }
+  }, [activeClinicalCase]);
+
   // Safety tracking, temporal phase progression and physiological dynamic deterioration
   useEffect(() => {
     const timer = setInterval(() => {
-      if (!activeClinicalCase || maneuverStateRef.current.isFrozen) return;
+      if (!isSimulatorActiveRef.current || !activeClinicalCase) return;
 
-      const elapsedCaseSec = Math.floor((Date.now() - caseStartTime) / 1000);
+      setCaseElapsedSeconds((prevElapsed) => {
+        const elapsedCaseSec = prevElapsed + 1;
 
-      // Automatic Temporal Progression across Phases (e.g. Admission -> Worsening/Inflammatory Cascade -> Stabilization)
-      if (activeClinicalCase.phases && activeClinicalCase.phases.length > 1) {
-        const phase2Trigger = pedagogicalSettings.admissionPhase2TimeSeconds || 90;
-        const phase3Trigger = pedagogicalSettings.admissionPhase3TimeSeconds || 200;
+        // Automatic Temporal Progression across Phases (e.g. Admission -> Worsening/Inflammatory Cascade -> Stabilization)
+        if (activeClinicalCase.phases && activeClinicalCase.phases.length > 1) {
+          const phase2Trigger = pedagogicalSettings.admissionPhase2TimeSeconds || 90;
+          const phase3Trigger = pedagogicalSettings.admissionPhase3TimeSeconds || 200;
 
-        // Trigger Phase 2 (Configurable in Teacher Area)
-        if (currentPhaseIndex === 0 && elapsedCaseSec >= phase2Trigger) {
-          const nextPhase = activeClinicalCase.phases[1];
-          if (nextPhase) {
-            setCurrentPhaseIndex(1);
-            if (nextPhase.patientOverrides) {
-              setPatient((p) => ({ ...p, ...nextPhase.patientOverrides }));
+          // Trigger Phase 2 (Configurable in Teacher Area)
+          if (currentPhaseIndex === 0 && elapsedCaseSec >= phase2Trigger) {
+            const nextPhase = activeClinicalCase.phases[1];
+            if (nextPhase) {
+              setCurrentPhaseIndex(1);
+              if (nextPhase.patientOverrides) {
+                setPatient((p) => ({ ...p, ...nextPhase.patientOverrides }));
+              }
+              audioEngine.triggerAlarmPattern('medium');
+              setDeteriorationWarning(
+                `⚡ EVOLUÇÃO TEMPORAL: ${nextPhase.name}! A complacência caiu e o shunt aumentou. Reavalie a Driving Pressure imediatamente!`
+              );
             }
-            audioEngine.triggerAlarmPattern('medium');
-            setDeteriorationWarning(
-              `⚡ EVOLUÇÃO TEMPORAL: ${nextPhase.name}! A complacência caiu e o shunt aumentou. Reavalie a Driving Pressure imediatamente!`
-            );
+          }
+          // Trigger Phase 3 (Configurable in Teacher Area)
+          else if (currentPhaseIndex === 1 && elapsedCaseSec >= phase3Trigger) {
+            const nextPhase = activeClinicalCase.phases[2];
+            if (nextPhase) {
+              setCurrentPhaseIndex(2);
+              if (nextPhase.patientOverrides) {
+                setPatient((p) => ({ ...p, ...nextPhase.patientOverrides }));
+              }
+              audioEngine.playConfirmBeep();
+              setDeteriorationWarning(
+                `⚡ FASE FINAL: ${nextPhase.name}! Busque a estabilização gasométrica com proteção alveolar plena.`
+              );
+            }
           }
         }
-        // Trigger Phase 3 (Configurable in Teacher Area)
-        else if (currentPhaseIndex === 1 && elapsedCaseSec >= phase3Trigger) {
-          const nextPhase = activeClinicalCase.phases[2];
-          if (nextPhase) {
-            setCurrentPhaseIndex(2);
-            if (nextPhase.patientOverrides) {
-              setPatient((p) => ({ ...p, ...nextPhase.patientOverrides }));
-            }
-            audioEngine.playConfirmBeep();
-            setDeteriorationWarning(
-              `⚡ FASE FINAL: ${nextPhase.name}! Busque a estabilização gasométrica com proteção alveolar plena.`
-            );
-          }
-        }
-      }
+
+        return elapsedCaseSec;
+      });
 
       // VILI Tracking
       if (monitored.drivingPressure > pedagogicalSettings.dpSafetyThreshold) {
@@ -928,9 +992,6 @@ export default function App() {
 
       // Critical Cardiac Arrest (PCR) Trigger: SpO2 <= 35% in any case
       if (
-        !maneuverStateRef.current.isFrozen &&
-        isVentilating &&
-        !isDebriefingOpen &&
         !isPatientDeceased &&
         monitored.spo2 > 0 &&
         monitored.spo2 <= 35 &&
@@ -976,12 +1037,14 @@ export default function App() {
     return () => clearInterval(timer);
   }, [
     activeClinicalCase,
-    caseStartTime,
     currentPhaseIndex,
     monitored.drivingPressure,
     monitored.plateauPressure,
+    monitored.spo2,
     pedagogicalSettings,
     hasDeteriorated,
+    isPatientDeceased,
+    isCardiacArrestModalOpen,
   ]);
 
   // Debriefing Report Generator (After Action Review - AAR)
@@ -989,7 +1052,7 @@ export default function App() {
     const caseId = activeClinicalCase?.id || 'ventilacao-livre';
     const caseTitle = activeClinicalCase?.title || 'Sessão de Ventilação Prática / Treinamento Geral';
     const studentName = localStorage.getItem('simulador_student_name') || 'Estudante UTI';
-    const durationSec = Math.max(5, Math.round((Date.now() - caseStartTime) / 1000));
+    const durationSec = Math.max(5, caseElapsedSeconds);
     const currentGoals = activeClinicalCase?.goals || [];
 
     let goalsMet = 0;
@@ -1072,7 +1135,7 @@ export default function App() {
     return rep;
   }, [
     activeClinicalCase,
-    caseStartTime,
+    caseElapsedSeconds,
     monitored,
     settings,
     patient,
@@ -1120,7 +1183,7 @@ export default function App() {
             setSettings(safeSettings);
             setDraftSettings(safeSettings);
             setIsVentilating(true);
-            setCaseStartTime(Date.now());
+            setCaseElapsedSeconds(0);
             physicsEngine.reset(patient.compliance, patient.resistance, safeSettings.peep);
             audioEngine.playConfirmBeep();
             if (!educationalStorage.hasCompletedTour()) {
@@ -1495,7 +1558,7 @@ export default function App() {
         onOpenAudio={() => setIsAudioSettingsOpen(true)}
         onOpenQuiz={() => setIsQuizOpen(true)}
         onOpenMissions={() => setIsMissionsOpen(true)}
-        onResetSimulation={() => physicsEngine.reset()}
+        onResetSimulation={handleRestartSimulation}
       />
       </>
       )}
@@ -1593,6 +1656,7 @@ export default function App() {
           generateDebriefingReport();
           setIsDebriefingOpen(true);
         }}
+        onResetSimulation={handleRestartSimulation}
       />
 
       <QuizModal
@@ -1699,13 +1763,14 @@ export default function App() {
 
       <DebriefingModal
         isOpen={isDebriefingOpen}
-        onClose={() => setIsDebriefingOpen(false)}
-        report={currentDebriefingReport}
-        onRestartCase={() => {
-          if (activeClinicalCase) {
-            handleLoadCase(activeClinicalCase);
+        onClose={() => {
+          setIsDebriefingOpen(false);
+          if (isPatientDeceased) {
+            handleRestartSimulation();
           }
         }}
+        report={currentDebriefingReport}
+        onRestartCase={handleRestartSimulation}
       />
 
       <FlashcardsModal
@@ -1727,7 +1792,12 @@ export default function App() {
 
       <CardiacArrestEmergencyModal
         isOpen={isCardiacArrestModalOpen}
-        onClose={() => setIsCardiacArrestModalOpen(false)}
+        onClose={() => {
+          setIsCardiacArrestModalOpen(false);
+          if (isPatientDeceased) {
+            handleRestartSimulation();
+          }
+        }}
         monitored={monitored}
         currentSettings={settings}
         onApplyRescueSettings={(rescueSettings) => {
@@ -1743,18 +1813,11 @@ export default function App() {
           }));
           audioEngine.playConfirmBeep();
         }}
-        onRestartCase={() => {
-          setIsPatientDeceased(false);
-          hasTriggeredPcrRef.current = false;
-          setIsCardiacArrestModalOpen(false);
-          if (activeClinicalCase) {
-            handleLoadCase(activeClinicalCase);
-          } else {
-            setIsVentilating(false);
-            physicsEngine.reset();
-            setSettings({ mode: 'VCV', fio2: 0, peep: 0, respiratoryRate: 0, tidalVolume: 0 });
-          }
+        onPatientDeceased={() => {
+          setIsPatientDeceased(true);
+          setIsVentilating(false);
         }}
+        onRestartCase={handleRestartSimulation}
         onOpenDebriefing={() => {
           hasTriggeredPcrRef.current = true;
           setIsPatientDeceased(true);
