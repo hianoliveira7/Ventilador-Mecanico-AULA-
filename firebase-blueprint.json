@@ -2,13 +2,13 @@
   "entities": {
     "user": {
       "title": "User Profile",
-      "description": "User profile with role definition (student or professor)",
+      "description": "User profile with role definition (student or teacher)",
       "type": "object",
       "properties": {
         "uid": { "type": "string", "maxLength": 128 },
         "displayName": { "type": "string", "maxLength": 100 },
         "email": { "type": "string", "maxLength": 150 },
-        "role": { "type": "string", "enum": ["student", "professor", "admin"] },
+        "role": { "type": "string", "enum": ["student", "teacher", "admin"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "displayName", "email", "role"]
@@ -27,6 +27,20 @@
       },
       "required": ["id", "title", "category", "description"]
     },
+    "quizQuestion": {
+      "title": "Quiz Question Item",
+      "description": "Educational quiz questions for student evaluation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "question": { "type": "string", "maxLength": 500 },
+        "explanation": { "type": "string", "maxLength": 1000 },
+        "category": { "type": "string", "maxLength": 50 },
+        "difficulty": { "type": "string", "maxLength": 50 },
+        "createdBy": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "question", "explanation"]
+    },
     "student": {
       "title": "Student Registration",
       "description": "Student profile or temporary registration for Kahoot sessions",
@@ -40,8 +54,8 @@
       "required": ["id", "studentName", "roomCode"]
     },
     "result": {
-      "title": "Game Result",
-      "description": "Score, mistakes, and evaluation performance for a student in a Kahoot room",
+      "title": "Game Result / Debriefing Report",
+      "description": "Score, evaluation, performance and AAR metrics for a simulation run or Kahoot room",
       "type": "object",
       "properties": {
         "id": { "type": "string", "maxLength": 128 },
@@ -58,11 +72,11 @@
         "rankBadge": { "type": "string", "maxLength": 100 },
         "submittedAt": { "type": "number" }
       },
-      "required": ["id", "studentName", "roomCode", "caseId", "caseTitle", "score", "gradePercentage", "submittedAt"]
+      "required": ["id", "studentName", "caseId", "caseTitle", "score", "gradePercentage", "submittedAt"]
     },
     "kahootRoom": {
       "title": "Kahoot Room",
-      "description": "Gamified room created by a professor for students to join",
+      "description": "Gamified room created by a teacher for students to join",
       "type": "object",
       "properties": {
         "code": { "type": "string", "maxLength": 30 },
@@ -74,6 +88,23 @@
         "createdAt": { "type": "number" }
       },
       "required": ["code", "title", "caseId", "timeLimitMinutes", "active", "professorName"]
+    },
+    "pedagogicalSettings": {
+      "title": "Pedagogical Settings",
+      "description": "Teacher configuration settings for simulator thresholds and mechanics",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "blindMechanicsEnabled": { "type": "boolean" },
+        "allowStudentRevealBlind": { "type": "boolean" },
+        "deteriorationEnabled": { "type": "boolean" },
+        "deteriorationTimeoutSeconds": { "type": "number" },
+        "dpSafetyThreshold": { "type": "number" },
+        "platSafetyThreshold": { "type": "number" },
+        "autoOpenDebriefingOnFinish": { "type": "boolean" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "dpSafetyThreshold", "platSafetyThreshold"]
     }
   },
   "firestore": {
@@ -84,6 +115,10 @@
     "/cases/{caseId}": {
       "schema": "case",
       "description": "Clinical cases collection"
+    },
+    "/quizQuestions/{quizId}": {
+      "schema": "quizQuestion",
+      "description": "Quiz questions collection"
     },
     "/students/{studentId}": {
       "schema": "student",
@@ -96,6 +131,10 @@
     "/kahootRooms/{roomCode}": {
       "schema": "kahootRoom",
       "description": "Active Kahoot rooms"
+    },
+    "/pedagogicalSettings/{settingsId}": {
+      "schema": "pedagogicalSettings",
+      "description": "Pedagogical settings configuration"
     }
   }
 }

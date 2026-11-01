@@ -28,6 +28,13 @@ service cloud.firestore {
       allow delete: if isSignedIn();
     }
 
+    // Quiz Questions Collection
+    match /quizQuestions/{quizId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isSignedIn();
+    }
+
     // Students Collection
     match /students/{studentId} {
       allow read: if true;
@@ -44,6 +51,13 @@ service cloud.firestore {
 
     // Kahoot Rooms Collection
     match /kahootRooms/{roomCode} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isSignedIn();
+    }
+
+    // Pedagogical Settings Collection
+    match /pedagogicalSettings/{settingsId} {
       allow read: if true;
       allow create, update: if true;
       allow delete: if isSignedIn();

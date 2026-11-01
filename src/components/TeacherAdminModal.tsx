@@ -88,7 +88,8 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const [passError, setPassError] = useState<string | null>(null);
   const [passSuccess, setPassSuccess] = useState<string | null>(null);
 
-  // Form for New Quiz Question
+  // Form for New / Edit Quiz Question
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [qQuestion, setQQuestion] = useState('');
   const [qOption0, setQOption0] = useState('');
   const [qOption1, setQOption1] = useState('');
@@ -295,6 +296,35 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     setTimeout(() => setNotification(null), 3500);
   };
 
+  const handleStartNewQuestion = () => {
+    setEditingQuestionId(null);
+    setQQuestion('');
+    setQOption0('');
+    setQOption1('');
+    setQOption2('');
+    setQOption3('');
+    setQCorrectIndex(0);
+    setQExplanation('');
+    setQCategory('Geral');
+    setQDifficulty('Intermediário');
+    setActiveTab('new_quiz');
+  };
+
+  const handleStartEditQuestion = (q: QuizQuestionItem) => {
+    setEditingQuestionId(q.id);
+    setQQuestion(q.question);
+    setQOption0(q.options[0] || '');
+    setQOption1(q.options[1] || '');
+    setQOption2(q.options[2] || '');
+    setQOption3(q.options[3] || '');
+    setQCorrectIndex(q.correctIndex || 0);
+    setQExplanation(q.explanation || '');
+    setQCategory(q.category || 'Geral');
+    setQDifficulty(q.difficulty || 'Intermediário');
+    setActiveTab('new_quiz');
+    audioEngine.playClick(900);
+  };
+
   const handleSaveQuizQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!qQuestion.trim() || !qOption0.trim() || !qOption1.trim()) {
@@ -303,19 +333,35 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     }
 
     const options = [qOption0, qOption1, qOption2, qOption3].filter((opt) => opt.trim() !== '');
+    const correctIdx = Math.min(qCorrectIndex, Math.max(0, options.length - 1));
 
-    educationalStorage.addQuizQuestion({
-      question: qQuestion.trim(),
-      options,
-      correctIndex: Math.min(qCorrectIndex, options.length - 1),
-      explanation: qExplanation.trim() || 'Resposta correta com base nas diretrizes de ventilação mecânica.',
-      category: qCategory,
-      difficulty: qDifficulty,
-    });
+    if (editingQuestionId) {
+      const existing = questions.find((q) => q.id === editingQuestionId);
+      educationalStorage.updateQuizQuestion({
+        id: editingQuestionId,
+        question: qQuestion.trim(),
+        options,
+        correctIndex: correctIdx,
+        explanation: qExplanation.trim() || 'Resposta correta com base nas diretrizes de ventilação mecânica.',
+        category: qCategory.trim() || 'Geral',
+        difficulty: qDifficulty,
+        createdBy: existing?.createdBy || 'teacher',
+      });
+      showFeedback('Questão de Quiz atualizada com sucesso!');
+    } else {
+      educationalStorage.addQuizQuestion({
+        question: qQuestion.trim(),
+        options,
+        correctIndex: correctIdx,
+        explanation: qExplanation.trim() || 'Resposta correta com base nas diretrizes de ventilação mecânica.',
+        category: qCategory.trim() || 'Geral',
+        difficulty: qDifficulty,
+      });
+      showFeedback('Nova questão de Quiz cadastrada com sucesso!');
+    }
 
     audioEngine.playConfirmBeep();
-    showFeedback('Nova questão de Quiz cadastrada com sucesso!');
-    // Reset form
+    setEditingQuestionId(null);
     setQQuestion('');
     setQOption0('');
     setQOption1('');
@@ -331,6 +377,15 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
       educationalStorage.deleteQuizQuestion(id);
       audioEngine.playClick(750);
       showFeedback('Questão removida do banco com sucesso.');
+      loadData();
+    }
+  };
+
+  const handleDeleteDebriefingReport = (id: string) => {
+    if (confirm('Deseja excluir este relatório de debriefing?')) {
+      educationalStorage.deleteDebriefingReport(id);
+      audioEngine.playClick(750);
+      showFeedback('Relatório de debriefing excluído com sucesso.');
       loadData();
     }
   };
@@ -763,7 +818,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
 
             <button
               type="button"
-              onClick={() => setActiveTab('new_quiz')}
+              onClick={handleStartNewQuestion}
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                 activeTab === 'new_quiz'
                   ? isLight
@@ -1400,17 +1455,32 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                         <p className="text-xs font-semibold leading-snug pt-1">{q.question}</p>
                       </div>
 
-                      {/* Deletion Button for ANY question */}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteQuestion(q.id)}
-                        className={`p-1.5 rounded-lg border text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all ${
-                          isLight ? 'border-rose-200 bg-rose-50' : 'border-rose-900/50 bg-rose-950/30'
-                        }`}
-                        title="Excluir questão do Quiz"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Action buttons (Edit & Delete) for ANY question */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditQuestion(q)}
+                          className={`p-1.5 rounded-lg border text-indigo-400 hover:text-indigo-300 cursor-pointer transition-all ${
+                            isLight
+                              ? 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200'
+                              : 'bg-indigo-950/40 hover:bg-indigo-900/60 border-indigo-800/50'
+                          }`}
+                          title="Editar esta questão"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuestion(q.id)}
+                          className={`p-1.5 rounded-lg border text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all ${
+                            isLight ? 'border-rose-200 bg-rose-50' : 'border-rose-900/50 bg-rose-950/30'
+                          }`}
+                          title="Excluir questão do Quiz"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Options list */}
@@ -1446,14 +1516,40 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: CREATE NEW QUIZ QUESTION */}
+          {/* TAB 2: CREATE / EDIT QUIZ QUESTION */}
           {activeTab === 'new_quiz' && (
             <form onSubmit={handleSaveQuizQuestion} className="space-y-4 max-w-2xl mx-auto">
-              <div>
-                <h4 className="text-sm font-display font-bold">Cadastrar Nova Questão de Quiz</h4>
-                <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                  Insira o enunciado da questão, as 4 opções e marque qual alternativa é a correta.
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-display font-bold flex items-center gap-2">
+                    {editingQuestionId ? (
+                      <>
+                        <Pencil className="w-4 h-4 text-indigo-400" />
+                        <span>Editar Questão de Quiz</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 text-emerald-400" />
+                        <span>Cadastrar Nova Questão de Quiz</span>
+                      </>
+                    )}
+                  </h4>
+                  <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                    Insira o enunciado da questão, as opções de resposta e marque qual alternativa é a correta.
+                  </p>
+                </div>
+
+                {editingQuestionId && (
+                  <button
+                    type="button"
+                    onClick={handleStartNewQuestion}
+                    className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold cursor-pointer ${
+                      isLight ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-zinc-800 border-zinc-700 text-zinc-300'
+                    }`}
+                  >
+                    + Criar Nova em vez de Editar
+                  </button>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -1570,7 +1666,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                   className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
                 >
                   <Save className="w-4 h-4" />
-                  <span>Salvar Questão</span>
+                  <span>{editingQuestionId ? 'Salvar Alterações da Questão' : 'Salvar Questão'}</span>
                 </button>
               </div>
             </form>
@@ -2783,6 +2879,16 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                         <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
                           {rep.rating}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDebriefingReport(rep.id)}
+                          className={`p-1.5 rounded-lg border text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all ${
+                            isLight ? 'border-rose-200 bg-rose-50' : 'border-rose-900/50 bg-rose-950/30'
+                          }`}
+                          title="Excluir este relatório"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   ))}

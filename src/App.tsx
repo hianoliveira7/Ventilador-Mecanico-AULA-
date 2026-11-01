@@ -359,6 +359,27 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [activeKahootSession?.remainingSeconds, activeKahootSession === null, handleFinishKahootSession]);
 
+  useEffect(() => {
+    // Initial sync from Firestore
+    educationalStorage.syncFromFirestore().catch((err) => {
+      console.warn('Initial Firestore sync error:', err);
+    });
+
+    // Start real-time bidirectional listening
+    const cleanupSync = educationalStorage.initBidirectionalSync();
+    localDatabase.init();
+
+    // Subscribe to pedagogical settings updates from Firestore/localStorage
+    const unsubSettings = educationalStorage.subscribePedagogicalSettings((newSettings) => {
+      setPedagogicalSettings(newSettings);
+    });
+
+    return () => {
+      cleanupSync();
+      unsubSettings();
+    };
+  }, []);
+
   const handleSelectRole = (role: UserRole) => {
     setUserRole(role);
     if (role) {

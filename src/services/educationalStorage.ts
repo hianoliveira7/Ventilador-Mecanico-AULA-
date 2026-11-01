@@ -1,6 +1,8 @@
 import { ClinicalCase, PedagogicalSettings, FlashcardItem, CaseDebriefingReport } from '../types/ventilation';
 import { CLINICAL_CASES } from '../data/clinicalCases';
 import { DEFAULT_FLASHCARDS } from '../data/flashcardsData';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { doc, getDoc, setDoc, deleteDoc, collection, getDocs, onSnapshot } from 'firebase/firestore';
 
 export type UserRole = 'student' | 'teacher';
 
@@ -50,7 +52,7 @@ export const DEFAULT_QUIZ_QUESTIONS: QuizQuestionItem[] = [
       'O fluxo inspiratório atinge valores negativos',
       'A curva de fluxo expiratório não retorna à linha de base zero antes do início do próximo ciclo inspiratório',
       'A pressão de pico eleva-se acima de 60 cmH₂O',
-      'O volume corrente expirar excede o volume inspirado',
+      'O volume corrente expirado excede o volume inspirado',
     ],
     correctIndex: 1,
     explanation: 'O aprisionamento aéreo dinâmico (Auto-PEEP) ocorre quando o tempo expiratório é insuficiente para o esvaziamento completo do pulmão, fazendo com que a curva de fluxo expiratório ainda esteja em declínio quando um novo ciclo se inicia.',
@@ -121,7 +123,7 @@ export const DEFAULT_QUIZ_QUESTIONS: QuizQuestionItem[] = [
 ];
 
 const STORAGE_KEYS = {
-  USER_ROLE: 'vm_sim_user_role', // 'student' | 'teacher' | null
+  USER_ROLE: 'vm_sim_user_role',
   ACTIVE_QUIZ_QUESTIONS: 'vm_sim_active_quiz_questions',
   CUSTOM_QUIZ_QUESTIONS: 'vm_sim_custom_quiz_questions',
   ACTIVE_CLINICAL_CASES: 'vm_sim_active_clinical_cases',
@@ -135,7 +137,89 @@ const STORAGE_KEYS = {
 
 const DEFAULT_TEACHER_PASSWORD = '14253697';
 
+// Event Subscribers for Real-Time Sync
+type PedagogicalSettingsListener = (settings: PedagogicalSettings) => void;
+type DebriefingReportsListener = (reports: CaseDebriefingReport[]) => void;
+type QuizQuestionsListener = (questions: QuizQuestionItem[]) => void;
+type ClinicalCasesListener = (cases: ClinicalCase[]) => void;
+
+const pedagogicalListeners: Set<PedagogicalSettingsListener> = new Set();
+const debriefingListeners: Set<DebriefingReportsListener> = new Set();
+const quizListeners: Set<QuizQuestionsListener> = new Set();
+const caseListeners: Set<ClinicalCasesListener> = new Set();
+
+let isSyncInitialized = false;
+
+function notifyPedagogicalListeners(settings: PedagogicalSettings) {
+  pedagogicalListeners.forEach((cb) => {
+    try {
+      cb(settings);
+    } catch (e) {
+      console.error('Error in pedagogical settings listener', e);
+    }
+  });
+}
+
+function notifyDebriefingListeners(reports: CaseDebriefingReport[]) {
+  debriefingListeners.forEach((cb) => {
+    try {
+      cb(reports);
+    } catch (e) {
+      console.error('Error in debriefing reports listener', e);
+    }
+  });
+}
+
+function notifyQuizListeners(questions: QuizQuestionItem[]) {
+  quizListeners.forEach((cb) => {
+    try {
+      cb(questions);
+    } catch (e) {
+      console.error('Error in quiz questions listener', e);
+    }
+  });
+}
+
+function notifyCaseListeners(cases: ClinicalCase[]) {
+  caseListeners.forEach((cb) => {
+    try {
+      cb(cases);
+    } catch (e) {
+      console.error('Error in clinical cases listener', e);
+    }
+  });
+}
+
 export const educationalStorage = {
+  // Subscription API for React UI reactive updates
+  subscribePedagogicalSettings: (callback: PedagogicalSettingsListener) => {
+    pedagogicalListeners.add(callback);
+    return () => {
+      pedagogicalListeners.delete(callback);
+    };
+  },
+
+  subscribeDebriefingReports: (callback: DebriefingReportsListener) => {
+    debriefingListeners.add(callback);
+    return () => {
+      debriefingListeners.delete(callback);
+    };
+  },
+
+  subscribeQuizQuestions: (callback: QuizQuestionsListener) => {
+    quizListeners.add(callback);
+    return () => {
+      quizListeners.delete(callback);
+    };
+  },
+
+  subscribeClinicalCases: (callback: ClinicalCasesListener) => {
+    caseListeners.add(callback);
+    return () => {
+      caseListeners.delete(callback);
+    };
+  },
+
   // Teacher Authentication & Password Management
   getTeacherPassword: (): string => {
     try {
@@ -215,7 +299,7 @@ export const educationalStorage = {
     }
   },
 
-  // Quiz Questions management (Supports deleting ANY question, system or custom)
+  // Quiz Questions management
   getAllQuizQuestions: (): QuizQuestionItem[] => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS);
@@ -225,7 +309,6 @@ export const educationalStorage = {
           return parsed;
         }
       }
-      // Migrate from old custom questions format if present
       const oldCustomRaw = localStorage.getItem(STORAGE_KEYS.CUSTOM_QUIZ_QUESTIONS);
       const oldCustom: QuizQuestionItem[] = oldCustomRaw ? JSON.parse(oldCustomRaw) : [];
       const initialList = [...DEFAULT_QUIZ_QUESTIONS, ...oldCustom];
@@ -246,8 +329,23 @@ export const educationalStorage = {
       const currentList = educationalStorage.getAllQuizQuestions();
       const updatedList = [newItem, ...currentList];
       localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(updatedList));
+      notifyQuizListeners(updatedList);
+
+      // Sync write to Firestore
+      const path = `quizQuestions/${newItem.id}`;
+      setDoc(doc(db, 'quizQuestions', newItem.id), {
+        id: newItem.id,
+        question: newItem.question,
+        options: newItem.options,
+        correctIndex: newItem.correctIndex,
+        explanation: newItem.explanation,
+        category: newItem.category || 'Geral',
+        difficulty: newItem.difficulty || 'Intermediário',
+        createdBy: newItem.createdBy,
+        createdAt: Date.now(),
+      }).catch((err) => handleFirestoreError(err, OperationType.WRITE, path));
     } catch (e) {
-      console.error('Failed to save quiz question', e);
+      console.error('Failed to save quiz question locally', e);
     }
     return newItem;
   },
@@ -257,9 +355,47 @@ export const educationalStorage = {
       const currentList = educationalStorage.getAllQuizQuestions();
       const filtered = currentList.filter((q) => q.id !== id);
       localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(filtered));
+      notifyQuizListeners(filtered);
+
+      // Sync delete to Firestore
+      const path = `quizQuestions/${id}`;
+      deleteDoc(doc(db, 'quizQuestions', id)).catch((err) =>
+        handleFirestoreError(err, OperationType.DELETE, path)
+      );
       return true;
     } catch (e) {
-      console.error('Failed to delete quiz question', e);
+      console.error('Failed to delete quiz question locally', e);
+      return false;
+    }
+  },
+
+  updateQuizQuestion: (question: QuizQuestionItem): boolean => {
+    try {
+      const currentList = educationalStorage.getAllQuizQuestions();
+      const updatedList = currentList.map((q) => (q.id === question.id ? question : q));
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(updatedList));
+      notifyQuizListeners(updatedList);
+
+      // Sync update to Firestore
+      const path = `quizQuestions/${question.id}`;
+      setDoc(
+        doc(db, 'quizQuestions', question.id),
+        {
+          id: question.id,
+          question: question.question,
+          options: question.options,
+          correctIndex: question.correctIndex,
+          explanation: question.explanation,
+          category: question.category || 'Geral',
+          difficulty: question.difficulty || 'Intermediário',
+          createdBy: question.createdBy || 'teacher',
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      ).catch((err) => handleFirestoreError(err, OperationType.UPDATE, path));
+      return true;
+    } catch (e) {
+      console.error('Failed to update quiz question locally', e);
       return false;
     }
   },
@@ -267,13 +403,14 @@ export const educationalStorage = {
   resetQuizQuestionsToDefault: (): QuizQuestionItem[] => {
     try {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(DEFAULT_QUIZ_QUESTIONS));
+      notifyQuizListeners(DEFAULT_QUIZ_QUESTIONS);
       return DEFAULT_QUIZ_QUESTIONS;
     } catch {
       return DEFAULT_QUIZ_QUESTIONS;
     }
   },
 
-  // Clinical Cases management (Supports editing and deleting ANY case: default or custom)
+  // Clinical Cases management
   getAllClinicalCases: (): ClinicalCase[] => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES);
@@ -283,7 +420,6 @@ export const educationalStorage = {
           return parsed;
         }
       }
-      // Migrate from old custom cases format if present
       const oldCustomRaw = localStorage.getItem(STORAGE_KEYS.CUSTOM_CLINICAL_CASES);
       const oldCustom: ClinicalCase[] = oldCustomRaw ? JSON.parse(oldCustomRaw) : [];
       const initialList = [...CLINICAL_CASES, ...oldCustom];
@@ -299,6 +435,18 @@ export const educationalStorage = {
       const currentList = educationalStorage.getAllClinicalCases();
       const updatedList = [customCase, ...currentList.filter((c) => c.id !== customCase.id)];
       localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(updatedList));
+      notifyCaseListeners(updatedList);
+
+      // Sync to Firestore
+      const path = `cases/${customCase.id}`;
+      setDoc(doc(db, 'cases', customCase.id), {
+        id: customCase.id,
+        title: customCase.title,
+        category: customCase.category,
+        description: customCase.description || customCase.clinicalHistory,
+        difficulty: customCase.difficulty,
+        createdAt: Date.now(),
+      }).catch((err) => handleFirestoreError(err, OperationType.WRITE, path));
     } catch (e) {
       console.error('Failed to save clinical case', e);
     }
@@ -310,6 +458,22 @@ export const educationalStorage = {
       const currentList = educationalStorage.getAllClinicalCases();
       const updatedList = currentList.map((c) => (c.id === updatedCase.id ? updatedCase : c));
       localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(updatedList));
+      notifyCaseListeners(updatedList);
+
+      // Sync to Firestore
+      const path = `cases/${updatedCase.id}`;
+      setDoc(
+        doc(db, 'cases', updatedCase.id),
+        {
+          id: updatedCase.id,
+          title: updatedCase.title,
+          category: updatedCase.category,
+          description: updatedCase.description || updatedCase.clinicalHistory,
+          difficulty: updatedCase.difficulty,
+          createdAt: Date.now(),
+        },
+        { merge: true }
+      ).catch((err) => handleFirestoreError(err, OperationType.UPDATE, path));
       return true;
     } catch (e) {
       console.error('Failed to update clinical case', e);
@@ -322,6 +486,11 @@ export const educationalStorage = {
       const currentList = educationalStorage.getAllClinicalCases();
       const filtered = currentList.filter((c) => c.id !== id);
       localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(filtered));
+      notifyCaseListeners(filtered);
+
+      // Sync to Firestore
+      const path = `cases/${id}`;
+      deleteDoc(doc(db, 'cases', id)).catch((err) => handleFirestoreError(err, OperationType.DELETE, path));
       return true;
     } catch (e) {
       console.error('Failed to delete clinical case', e);
@@ -332,6 +501,7 @@ export const educationalStorage = {
   resetClinicalCasesToDefault: (): ClinicalCase[] => {
     try {
       localStorage.setItem(STORAGE_KEYS.ACTIVE_CLINICAL_CASES, JSON.stringify(CLINICAL_CASES));
+      notifyCaseListeners(CLINICAL_CASES);
       return CLINICAL_CASES;
     } catch {
       return CLINICAL_CASES;
@@ -374,6 +544,20 @@ export const educationalStorage = {
       const current = educationalStorage.getPedagogicalSettings();
       const updated = { ...current, ...settings };
       localStorage.setItem(STORAGE_KEYS.PEDAGOGICAL_SETTINGS, JSON.stringify(updated));
+      notifyPedagogicalListeners(updated);
+
+      // Sync write to Firestore
+      const path = 'pedagogicalSettings/default';
+      setDoc(
+        doc(db, 'pedagogicalSettings', 'default'),
+        {
+          id: 'default',
+          ...updated,
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      ).catch((err) => handleFirestoreError(err, OperationType.WRITE, path));
+
       return updated;
     } catch (e) {
       console.error('Failed to save pedagogical settings', e);
@@ -381,7 +565,7 @@ export const educationalStorage = {
     }
   },
 
-  // Flashcards Management (Curve Recognition)
+  // Flashcards Management
   getAllFlashcards: (): FlashcardItem[] => {
     try {
       const raw = localStorage.getItem(STORAGE_KEYS.ACTIVE_FLASHCARDS);
@@ -452,9 +636,26 @@ export const educationalStorage = {
   saveDebriefingReport: (report: CaseDebriefingReport): void => {
     try {
       const current = educationalStorage.getAllDebriefingReports();
-      // Keep up to 50 most recent reports
       const updated = [report, ...current.filter((r) => r.id !== report.id)].slice(0, 50);
       localStorage.setItem(STORAGE_KEYS.DEBRIEFING_REPORTS, JSON.stringify(updated));
+      notifyDebriefingListeners(updated);
+
+      // Persist to Firestore results collection
+      const path = `results/${report.id}`;
+      setDoc(
+        doc(db, 'results', report.id),
+        {
+          id: report.id,
+          studentName: report.studentName || 'Estudante',
+          caseId: report.caseId || 'custom',
+          caseTitle: report.caseTitle || 'Simulação Clínica',
+          score: report.score || 0,
+          gradePercentage: report.score || 0,
+          completionTimeSeconds: report.durationSeconds || 0,
+          submittedAt: Date.now(),
+        },
+        { merge: true }
+      ).catch((err) => handleFirestoreError(err, OperationType.WRITE, path));
     } catch (e) {
       console.error('Failed to save debriefing report', e);
     }
@@ -463,8 +664,204 @@ export const educationalStorage = {
   clearDebriefingReports: (): void => {
     try {
       localStorage.removeItem(STORAGE_KEYS.DEBRIEFING_REPORTS);
+      notifyDebriefingListeners([]);
     } catch (e) {
       console.error('Failed to clear debriefing reports', e);
     }
+  },
+
+  deleteDebriefingReport: (id: string): boolean => {
+    try {
+      const current = educationalStorage.getAllDebriefingReports();
+      const filtered = current.filter((r) => r.id !== id);
+      localStorage.setItem(STORAGE_KEYS.DEBRIEFING_REPORTS, JSON.stringify(filtered));
+      notifyDebriefingListeners(filtered);
+
+      // Sync delete to Firestore
+      const path = `results/${id}`;
+      deleteDoc(doc(db, 'results', id)).catch((err) =>
+        handleFirestoreError(err, OperationType.DELETE, path)
+      );
+      return true;
+    } catch (e) {
+      console.error('Failed to delete debriefing report', e);
+      return false;
+    }
+  },
+
+  // Synchronize Firestore data once on boot
+  syncFromFirestore: async (): Promise<void> => {
+    try {
+      // 1. Sync Pedagogical Settings
+      const pathSettings = 'pedagogicalSettings/default';
+      try {
+        const docSnap = await getDoc(doc(db, 'pedagogicalSettings', 'default'));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const mergedSettings = { ...DEFAULT_PEDAGOGICAL_SETTINGS, ...data };
+          localStorage.setItem(STORAGE_KEYS.PEDAGOGICAL_SETTINGS, JSON.stringify(mergedSettings));
+          notifyPedagogicalListeners(mergedSettings);
+        }
+      } catch (err) {
+        console.warn('Could not sync pedagogicalSettings from Firestore:', err);
+      }
+
+      // 2. Sync Debriefing Results
+      const pathResults = 'results';
+      try {
+        const querySnap = await getDocs(collection(db, 'results'));
+        if (!querySnap.empty) {
+          const remoteReports: CaseDebriefingReport[] = [];
+          querySnap.forEach((docItem) => {
+            const data = docItem.data();
+            remoteReports.push({
+              id: docItem.id,
+              studentName: data.studentName || 'Estudante',
+              caseId: data.caseId || 'custom',
+              caseTitle: data.caseTitle || 'Simulação Clínica',
+              score: data.score || 0,
+              durationSeconds: data.completionTimeSeconds || 0,
+              completedAt: data.submittedAt ? new Date(data.submittedAt).toISOString() : new Date().toISOString(),
+              rating: 'Adequado / Seguro',
+              goalsCompletedCount: 0,
+              totalGoalsCount: 0,
+              safetyMetrics: {
+                timeUnderViliSeconds: 0,
+                timeHighPlateauSeconds: 0,
+                autoPeepRiskEvents: 0,
+                asynchronyEventsCount: 0,
+                hadDeterioration: false,
+              },
+              interventions: [],
+              guidelineFeedback: [],
+              recommendations: [],
+            });
+          });
+          if (remoteReports.length > 0) {
+            const local = educationalStorage.getAllDebriefingReports();
+            const mergedMap = new Map<string, CaseDebriefingReport>();
+            local.forEach((r) => mergedMap.set(r.id, r));
+            remoteReports.forEach((r) => mergedMap.set(r.id, r));
+            const mergedList = Array.from(mergedMap.values()).slice(0, 50);
+            localStorage.setItem(STORAGE_KEYS.DEBRIEFING_REPORTS, JSON.stringify(mergedList));
+            notifyDebriefingListeners(mergedList);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not sync results from Firestore:', err);
+      }
+    } catch (e) {
+      console.error('Firestore initial sync failed', e);
+    }
+  },
+
+  // Initialize Real-Time Bidirectional Sync with Firestore
+  initBidirectionalSync: (): () => void => {
+    if (isSyncInitialized) return () => {};
+    isSyncInitialized = true;
+
+    // 1. Real-Time Listener for Pedagogical Settings
+    const unsubPedagogical = onSnapshot(
+      doc(db, 'pedagogicalSettings', 'default'),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const merged = { ...DEFAULT_PEDAGOGICAL_SETTINGS, ...data };
+          localStorage.setItem(STORAGE_KEYS.PEDAGOGICAL_SETTINGS, JSON.stringify(merged));
+          notifyPedagogicalListeners(merged);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, 'pedagogicalSettings/default');
+      }
+    );
+
+    // 2. Real-Time Listener for Debriefing Reports / Student Results
+    const unsubResults = onSnapshot(
+      collection(db, 'results'),
+      (querySnap) => {
+        const remoteReports: CaseDebriefingReport[] = [];
+        querySnap.forEach((docItem) => {
+          const data = docItem.data();
+          remoteReports.push({
+            id: docItem.id,
+            studentName: data.studentName || 'Estudante',
+            caseId: data.caseId || 'custom',
+            caseTitle: data.caseTitle || 'Simulação Clínica',
+            score: data.score || 0,
+            durationSeconds: data.completionTimeSeconds || 0,
+            completedAt: data.submittedAt ? new Date(data.submittedAt).toISOString() : new Date().toISOString(),
+            rating: 'Adequado / Seguro',
+            goalsCompletedCount: 0,
+            totalGoalsCount: 0,
+            safetyMetrics: {
+              timeUnderViliSeconds: 0,
+              timeHighPlateauSeconds: 0,
+              autoPeepRiskEvents: 0,
+              asynchronyEventsCount: 0,
+              hadDeterioration: false,
+            },
+            interventions: [],
+            guidelineFeedback: [],
+            recommendations: [],
+          });
+        });
+        if (remoteReports.length > 0) {
+          const local = educationalStorage.getAllDebriefingReports();
+          const mergedMap = new Map<string, CaseDebriefingReport>();
+          local.forEach((r) => mergedMap.set(r.id, r));
+          remoteReports.forEach((r) => mergedMap.set(r.id, r));
+          const mergedList = Array.from(mergedMap.values()).slice(0, 50);
+          localStorage.setItem(STORAGE_KEYS.DEBRIEFING_REPORTS, JSON.stringify(mergedList));
+          notifyDebriefingListeners(mergedList);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, 'results');
+      }
+    );
+
+    // 3. Real-Time Listener for Quiz Questions
+    const unsubQuiz = onSnapshot(
+      collection(db, 'quizQuestions'),
+      (querySnap) => {
+        const remoteQuestions: QuizQuestionItem[] = [];
+        querySnap.forEach((docItem) => {
+          const data = docItem.data();
+          if (data && data.question) {
+            remoteQuestions.push({
+              id: docItem.id,
+              question: data.question,
+              options: Array.isArray(data.options) ? data.options : [],
+              correctIndex: typeof data.correctIndex === 'number' ? data.correctIndex : 0,
+              explanation: data.explanation || '',
+              category: data.category || 'Geral',
+              difficulty: data.difficulty || 'Intermediário',
+              createdBy: data.createdBy || 'teacher',
+            });
+          }
+        });
+        if (remoteQuestions.length > 0) {
+          const local = educationalStorage.getAllQuizQuestions();
+          const mergedMap = new Map<string, QuizQuestionItem>();
+          local.forEach((q) => mergedMap.set(q.id, q));
+          remoteQuestions.forEach((q) => mergedMap.set(q.id, q));
+          const mergedList = Array.from(mergedMap.values());
+          localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(mergedList));
+          notifyQuizListeners(mergedList);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.GET, 'quizQuestions');
+      }
+    );
+
+    // Cleanup function
+    return () => {
+      unsubPedagogical();
+      unsubResults();
+      unsubQuiz();
+      isSyncInitialized = false;
+    };
   },
 };

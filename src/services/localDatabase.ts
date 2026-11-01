@@ -1,6 +1,6 @@
 import { ClinicalCase, PatientParameters, VentilatorSettings, MonitoredData } from '../types/ventilation';
 import { CLINICAL_CASES } from '../data/clinicalCases';
-import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection, onSnapshot } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { educationalStorage, QuizQuestionItem } from './educationalStorage';
 
@@ -109,8 +109,45 @@ const DEFAULT_ROOMS: KahootRoom[] = [
   },
 ];
 
+type RoomListener = (rooms: KahootRoom[]) => void;
+type ResultListener = (results: StudentGameResult[]) => void;
+
 class LocalDatabaseService {
-  // Initialize default database records
+  private roomListeners: Set<RoomListener> = new Set();
+  private resultListeners: Set<ResultListener> = new Set();
+  private isListening = false;
+
+  public subscribeRooms(cb: RoomListener) {
+    this.roomListeners.add(cb);
+    return () => this.roomListeners.delete(cb);
+  }
+
+  public subscribeResults(cb: ResultListener) {
+    this.resultListeners.add(cb);
+    return () => this.resultListeners.delete(cb);
+  }
+
+  private notifyRoomListeners(rooms: KahootRoom[]) {
+    this.roomListeners.forEach((cb) => {
+      try {
+        cb(rooms);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  private notifyResultListeners(results: StudentGameResult[]) {
+    this.resultListeners.forEach((cb) => {
+      try {
+        cb(results);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  // Initialize default database records and real-time Firestore synchronization
   public init() {
     if (typeof window === 'undefined') return;
 
@@ -123,6 +160,63 @@ class LocalDatabaseService {
     if (!localStorage.getItem(STORAGE_KEYS.RESULTS)) {
       localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify([]));
     }
+
+    if (!this.isListening) {
+      this.isListening = true;
+      this.startRealtimeSync();
+    }
+  }
+
+  private startRealtimeSync() {
+    // Listen to Kahoot Rooms collection in real-time
+    onSnapshot(
+      collection(db, 'kahootRooms'),
+      (snapshot) => {
+        const remoteRooms: KahootRoom[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as KahootRoom;
+          if (data && data.code) {
+            remoteRooms.push(data);
+          }
+        });
+        if (remoteRooms.length > 0) {
+          const local = this.getRooms();
+          const mergedMap = new Map<string, KahootRoom>();
+          local.forEach((r) => mergedMap.set(r.code.toUpperCase(), r));
+          remoteRooms.forEach((r) => mergedMap.set(r.code.toUpperCase(), r));
+          const merged = Array.from(mergedMap.values());
+          localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(merged));
+          this.notifyRoomListeners(merged);
+        }
+      },
+      (err) => console.warn('Kahoot rooms live sync error:', err)
+    );
+
+    // Listen to Results collection in real-time
+    onSnapshot(
+      collection(db, 'results'),
+      (snapshot) => {
+        const remoteResults: StudentGameResult[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as StudentGameResult;
+          if (data && data.studentName) {
+            remoteResults.push(data);
+          }
+        });
+        if (remoteResults.length > 0) {
+          const local = this.getResults();
+          const mergedMap = new Map<string, StudentGameResult>();
+          local.forEach((r) => mergedMap.set(r.id, r));
+          remoteResults.forEach((r) => mergedMap.set(r.id, r));
+          const merged = Array.from(mergedMap.values()).sort(
+            (a, b) => (b.submittedAt || 0) - (a.submittedAt || 0)
+          );
+          localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(merged));
+          this.notifyResultListeners(merged);
+        }
+      },
+      (err) => console.warn('Student results live sync error:', err)
+    );
   }
 
   // Clinical Cases
