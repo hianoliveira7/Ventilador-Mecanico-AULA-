@@ -45,6 +45,7 @@ import { audioEngine } from '../services/audioEngine';
 import { educationalStorage, QuizQuestionItem, DEFAULT_PEDAGOGICAL_SETTINGS } from '../services/educationalStorage';
 import { localDatabase, KahootRoom, StudentGameResult } from '../services/localDatabase';
 import { ClinicalCase, VentilationMode, PedagogicalSettings, CaseDebriefingReport } from '../types/ventilation';
+import { SurpriseEventModal } from './SurpriseEventModal';
 
 interface TeacherAdminModalProps {
   isOpen: boolean;
@@ -73,6 +74,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const [newRoomProfName, setNewRoomProfName] = useState('Prof. Orientador');
   const [isSyncingKahoot, setIsSyncingKahoot] = useState(false);
   const [copiedPin, setCopiedPin] = useState<string | null>(null);
+  const [surpriseModalRoomCode, setSurpriseModalRoomCode] = useState<string | null>(null);
 
   // Quiz Questions state
   const [questions, setQuestions] = useState<QuizQuestionItem[]>([]);
@@ -1318,23 +1320,11 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
 
                               <button
                                 type="button"
-                                onClick={async () => {
-                                  await localDatabase.publishRoomState(room.code, {
-                                    surpriseEvent: {
-                                      id: `surp_${Date.now()}`,
-                                      title: '⚡ Evento Surpresa: Broncoespasmo Agudo',
-                                      description: 'O paciente apresentou broncoespasmo agudo súbito: resistência aumentou e complacência caiu!',
-                                      complianceOverride: 16,
-                                      resistanceOverride: 24,
-                                      timestamp: Date.now(),
-                                    }
-                                  });
-                                  showFeedback(`Evento surpresa disparado para a sala "${room.code}"!`);
-                                }}
+                                onClick={() => setSurpriseModalRoomCode(room.code)}
                                 className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/50 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer"
-                                title="Enviar evento clínico surpresa para os alunos na sala"
+                                title="Editar e enviar evento clínico surpresa para a sala"
                               >
-                                <Zap className="w-3 h-3" />
+                                <Zap className="w-3 h-3 text-amber-400" />
                                 <span>Surpresa</span>
                               </button>
 
@@ -3407,6 +3397,13 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
           )}
         </div>
       </div>
+
+      <SurpriseEventModal
+        isOpen={!!surpriseModalRoomCode}
+        roomCode={surpriseModalRoomCode || ''}
+        onClose={() => setSurpriseModalRoomCode(null)}
+        onEventDispatched={showFeedback}
+      />
     </div>
   );
 };

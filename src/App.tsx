@@ -45,6 +45,7 @@ import { CardiacArrestEmergencyModal } from './components/CardiacArrestEmergency
 import { KahootPortalModal } from './components/KahootPortalModal';
 import { KahootResultModal } from './components/KahootResultModal';
 import { KahootTopBanner } from './components/KahootTopBanner';
+import { RoleActionPanel, TeamRole } from './components/RoleActionPanel';
 import { localDatabase, KahootRoom, StudentGameResult } from './services/localDatabase';
 import { educationalStorage, UserRole } from './services/educationalStorage';
 import {
@@ -288,6 +289,10 @@ export default function App() {
   const [isTeacherAdminOpen, setIsTeacherAdminOpen] = useState<boolean>(false);
   const [isTeacherAuthOpen, setIsTeacherAuthOpen] = useState<boolean>(false);
 
+  // Multidisciplinary Team Role State
+  const [activeTeamRole, setActiveTeamRole] = useState<TeamRole>('Fisioterapeuta Respiratório');
+  const [isRoleActionPanelOpen, setIsRoleActionPanelOpen] = useState<boolean>(false);
+
   // Kahoot Gamified Mode State
   const [isKahootPortalOpen, setIsKahootPortalOpen] = useState<boolean>(false);
   const [isKahootResultModalOpen, setIsKahootResultModalOpen] = useState<boolean>(false);
@@ -303,8 +308,13 @@ export default function App() {
   const handleStartKahootSession = (
     studentName: string,
     room: KahootRoom,
-    selectedCase: ClinicalCase
+    selectedCase: ClinicalCase,
+    teamRole?: string
   ) => {
+    if (teamRole) {
+      setActiveTeamRole(teamRole as TeamRole);
+    }
+    setIsRoleActionPanelOpen(true);
     handleLoadCase(selectedCase);
     setIsVentilating(false);
     setCaseElapsedSeconds(0);
@@ -1263,7 +1273,12 @@ export default function App() {
     >
       {currentPage === 'clinical_cases' ? (
         <ClinicalCasesPage
-          onBackToSimulator={() => setCurrentPage('simulator')}
+          onBackToSimulator={() => {
+            if (!isVentilating) {
+              setIsRolePortalOpen(true);
+            }
+            setCurrentPage('simulator');
+          }}
           onLoadCaseInSimulator={(selectedCase) => {
             handleLoadCase(selectedCase);
             setCurrentPage('simulator');
@@ -1599,8 +1614,78 @@ export default function App() {
                 style={{
                   height: `${Math.max(165, paramPanelHeight)}px`,
                 }}
-                className="shrink-0 overflow-y-auto lg:overflow-hidden transition-all"
+                className="shrink-0 overflow-y-auto lg:overflow-hidden transition-all flex flex-col"
               >
+                {/* Role Action & Collaboration Bar (Only active during Kahoot Cooperative Session) */}
+                {activeKahootSession && (
+                  <div className={`px-3 py-1.5 border-b flex flex-wrap items-center justify-between gap-2 shrink-0 ${
+                    isLight ? 'bg-slate-100 border-slate-200' : 'bg-[#0a0d18] border-zinc-800'
+                  }`}>
+                    <div className="flex items-center gap-1.5 overflow-x-auto">
+                      <span className="text-[10px] font-mono font-bold uppercase text-indigo-400 mr-1">
+                        Função na UTI:
+                      </span>
+                      {[
+                        { id: 'Fisioterapeuta Respiratório', label: '🫁 Fisio' },
+                        { id: 'Médico Intensivista', label: '🩺 Médico' },
+                        { id: 'Enfermeiro(a) UTI', label: '💊 Enfermagem' },
+                        { id: 'Todos', label: '🤝 Todos' },
+                      ].map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveTeamRole(r.id as TeamRole);
+                            setIsRoleActionPanelOpen(true);
+                          }}
+                          className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border ${
+                            activeTeamRole === r.id
+                              ? 'bg-amber-400 text-slate-950 border-amber-300 font-black shadow-sm'
+                              : isLight
+                              ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                              : 'bg-[#121626] text-zinc-400 border-zinc-800 hover:text-white'
+                          }`}
+                        >
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsRoleActionPanelOpen((prev) => !prev)}
+                      className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isRoleActionPanelOpen
+                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                          : isLight
+                          ? 'bg-slate-200 text-slate-800 border-slate-300 hover:bg-slate-300'
+                          : 'bg-zinc-800 text-zinc-200 border-zinc-700 hover:bg-zinc-700'
+                      }`}
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>{isRoleActionPanelOpen ? 'Ocultar Painel Multidisciplinar' : '⚡ Ações da Equipe UTI'}</span>
+                    </button>
+                  </div>
+                )}
+
+                {activeKahootSession && isRoleActionPanelOpen && (
+                  <div className="p-2 shrink-0 max-h-72 overflow-y-auto">
+                    <RoleActionPanel
+                      teamRole={activeTeamRole}
+                      patient={patient}
+                      settings={settings}
+                      monitored={monitored}
+                      onUpdatePatient={(upd) => setPatient((prev) => ({ ...prev, ...upd }))}
+                      onUpdateSettings={(upd) => {
+                        setSettings((prev) => ({ ...prev, ...upd }));
+                        setDraftSettings((prev) => ({ ...prev, ...upd }));
+                      }}
+                      roomCode={activeKahootSession?.room.code}
+                      isLight={isLight}
+                    />
+                  </div>
+                )}
+
                 <ParameterControls
                   settings={settings}
                   draftSettings={draftSettings}
@@ -1608,6 +1693,8 @@ export default function App() {
                   hasChanges={hasChanges}
                   onConfirm={handleConfirmSettings}
                   onDiscard={handleDiscardSettings}
+                  isReadOnly={activeKahootSession !== null && activeTeamRole !== 'Fisioterapeuta Respiratório' && activeTeamRole !== 'Todos'}
+                  readOnlyNotice={activeTeamRole}
                 />
               </div>
             )}
@@ -1769,6 +1856,10 @@ export default function App() {
           setIsRolePortalOpen(false);
           setIsQuizOpen(true);
         }}
+        onOpenKahoot={() => {
+          setIsRolePortalOpen(false);
+          setIsKahootPortalOpen(true);
+        }}
         onOpenEducational={() => {
           setIsRolePortalOpen(false);
           setIsEducationalOpen(true);
@@ -1781,12 +1872,21 @@ export default function App() {
           setIsRolePortalOpen(false);
           setIsAsynchroniesOpen(true);
         }}
+        onOpenFlashcards={() => {
+          setIsRolePortalOpen(false);
+          setIsFlashcardsOpen(true);
+        }}
         onEnterSimulatorDirectly={() => setIsRolePortalOpen(false)}
       />
 
       <AsynchronyDatabaseModal
         isOpen={isAsynchroniesOpen}
-        onClose={() => setIsAsynchroniesOpen(false)}
+        onClose={() => {
+          setIsAsynchroniesOpen(false);
+          if (!isVentilating) {
+            setIsRolePortalOpen(true);
+          }
+        }}
         onLoadAsynchronyScenario={handleLoadAsynchronyScenario}
       />
 
@@ -1845,13 +1945,23 @@ export default function App() {
 
       <QuizModal
         isOpen={isQuizOpen}
-        onClose={() => setIsQuizOpen(false)}
+        onClose={() => {
+          setIsQuizOpen(false);
+          if (!isVentilating) {
+            setIsRolePortalOpen(true);
+          }
+        }}
         onOpenTeacherAdmin={handleOpenTeacherAdmin}
       />
 
       <ClinicalCaseModal
         isOpen={isClinicalCasesOpen}
-        onClose={() => setIsClinicalCasesOpen(false)}
+        onClose={() => {
+          setIsClinicalCasesOpen(false);
+          if (!isVentilating) {
+            setIsRolePortalOpen(true);
+          }
+        }}
         onLoadCase={handleLoadCase}
         currentMonitored={monitored}
         currentSettings={settings}
@@ -1959,7 +2069,12 @@ export default function App() {
 
       <FlashcardsModal
         isOpen={isFlashcardsOpen}
-        onClose={() => setIsFlashcardsOpen(false)}
+        onClose={() => {
+          setIsFlashcardsOpen(false);
+          if (!isVentilating) {
+            setIsRolePortalOpen(true);
+          }
+        }}
         onApplyPresetToSimulator={(preset) => {
           if (!preset) return;
           if (preset.mode) setSettings((s) => ({ ...s, mode: preset.mode! }));
@@ -2016,7 +2131,12 @@ export default function App() {
 
       <KahootPortalModal
         isOpen={isKahootPortalOpen}
-        onClose={() => setIsKahootPortalOpen(false)}
+        onClose={() => {
+          setIsKahootPortalOpen(false);
+          if (!isVentilating && !activeKahootSession) {
+            setIsRolePortalOpen(true);
+          }
+        }}
         userRole={userRole}
         onStartKahootSession={handleStartKahootSession}
       />

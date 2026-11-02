@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { VentilatorSettings, VentilationMode } from '../types/ventilation';
 import { audioEngine } from '../services/audioEngine';
-import { Plus, Minus, Check, X, Wind, Gauge, SlidersHorizontal, Settings2 } from 'lucide-react';
+import { Plus, Minus, Check, X, Wind, Gauge, SlidersHorizontal, Settings2, Lock } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 interface ParameterControlsProps {
@@ -11,6 +11,8 @@ interface ParameterControlsProps {
   hasChanges: boolean;
   onConfirm: () => void;
   onDiscard: () => void;
+  isReadOnly?: boolean;
+  readOnlyNotice?: string;
 }
 
 interface QuickPresets {
@@ -45,6 +47,7 @@ interface TouchParamTileProps {
   onUpdate: (field: keyof VentilatorSettings, val: number) => void;
   onConfirm?: () => void;
   onDiscardParam?: () => void;
+  isReadOnly?: boolean;
 }
 
 const TouchParamTile: React.FC<TouchParamTileProps> = ({
@@ -59,6 +62,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
   themeColor,
   activeVal,
   onUpdate,
+  isReadOnly = false,
 }) => {
   const { isLight } = useTheme();
   const [showPresets, setShowPresets] = useState(false);
@@ -88,12 +92,16 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
 
   const doStep = useCallback(
     (direction: 'up' | 'down') => {
+      if (isReadOnly) {
+        audioEngine.playClick(600);
+        return;
+      }
       audioEngine.playKnobTick();
       const delta = direction === 'up' ? step : -step;
       const nextVal = Math.max(min, Math.min(max, Number((safeVal + delta).toFixed(2))));
       onUpdate(field, nextVal);
     },
-    [field, min, max, step, safeVal, onUpdate]
+    [field, min, max, step, safeVal, onUpdate, isReadOnly]
   );
 
   const startHolding = (direction: 'up' | 'down') => {
@@ -270,6 +278,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
                 key={preset}
                 type="button"
                 onClick={() => {
+                  if (isReadOnly) return;
                   audioEngine.playKnobTick();
                   onUpdate(field, preset);
                   setShowPresets(false);
@@ -302,14 +311,16 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
           max={max}
           step={step}
           value={safeVal}
+          disabled={isReadOnly}
           onChange={(e) => {
+            if (isReadOnly) return;
             audioEngine.playKnobTick();
             const val = parseFloat(e.target.value);
             if (!isNaN(val)) onUpdate(field, val);
           }}
           className={`w-full h-2 rounded-full appearance-none cursor-pointer relative z-10 transition-all ${
             isLight ? 'bg-slate-200' : 'bg-zinc-800'
-          } ${scheme.sliderAccent}`}
+          } ${scheme.sliderAccent} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
         <span className={`text-[9.5px] font-mono font-bold shrink-0 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
           {max}
@@ -326,12 +337,18 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
   hasChanges,
   onConfirm,
   onDiscard,
+  isReadOnly = false,
+  readOnlyNotice,
 }) => {
   const { isLight } = useTheme();
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const mode = draftSettings.mode;
 
   const handleModeChange = (newMode: VentilationMode) => {
+    if (isReadOnly) {
+      audioEngine.playClick(600);
+      return;
+    }
     audioEngine.playClick(1000);
     const updated: VentilatorSettings = {
       ...draftSettings,
@@ -361,6 +378,10 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
   };
 
   const updateField = (field: keyof VentilatorSettings, val: number) => {
+    if (isReadOnly) {
+      audioEngine.playClick(600);
+      return;
+    }
     const updated: VentilatorSettings = {
       ...draftSettings,
       [field]: val,
@@ -405,6 +426,17 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
         isLight ? 'bg-white border-slate-200' : 'bg-[#070912] border-zinc-800'
       }`}
     >
+      {/* Read-Only Notice Banner for Kahoot Cooperative Mode */}
+      {isReadOnly && (
+        <div className="bg-amber-500/15 border-b border-amber-500/40 text-amber-300 px-3 py-1.5 text-xs font-mono font-bold flex items-center justify-between gap-2 shrink-0 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              🔒 Modo Cooperativo Kahoot: Os parâmetros do ventilador mecânico são ajustados pelo 🫁 Fisioterapeuta da equipe. (Visualização para {readOnlyNotice || 'Demais Profissionais'})
+            </span>
+          </div>
+        </div>
+      )}
       {/* 1. TOP HEADER: High-Visibility Compact Mode Selector Tabs + Master Actions */}
       <div
         className={`px-2.5 py-1.5 border-b flex items-center justify-between gap-2 shrink-0 overflow-x-auto scrollbar-none ${
@@ -549,6 +581,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="mL"
             themeColor="cyan"
             onUpdate={updateField}
+            isReadOnly={isReadOnly}
           />
         )}
 
@@ -565,6 +598,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="cmH₂O"
             themeColor="cyan"
             onUpdate={updateField}
+            isReadOnly={isReadOnly}
           />
         )}
 
@@ -581,6 +615,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="cmH₂O"
             themeColor="cyan"
             onUpdate={updateField}
+            isReadOnly={isReadOnly}
           />
         )}
 
@@ -598,6 +633,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="rpm"
             themeColor="emerald"
             onUpdate={updateField}
+            isReadOnly={isReadOnly}
           />
         )}
 
@@ -614,6 +650,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="rpm"
             themeColor="emerald"
             onUpdate={updateField}
+            isReadOnly={isReadOnly}
           />
         )}
 
@@ -631,6 +668,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             unit="s"
             themeColor="purple"
             onUpdate={updateField}
+            isReadOnly={isReadOnly}
           />
         )}
 
@@ -647,6 +685,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           unit="cmH₂O"
           themeColor="blue"
           onUpdate={updateField}
+          isReadOnly={isReadOnly}
         />
 
         {/* 5. FiO2 */}
@@ -662,6 +701,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           unit="%"
           themeColor="amber"
           onUpdate={updateField}
+          isReadOnly={isReadOnly}
         />
 
         {/* 6. Disparo & Sensibilidade Card */}
@@ -856,6 +896,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 unit="%"
                 themeColor="purple"
                 onUpdate={updateField}
+                isReadOnly={isReadOnly}
               />
             )}
 
@@ -873,6 +914,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 unit="%"
                 themeColor="teal"
                 onUpdate={updateField}
+                isReadOnly={isReadOnly}
               />
             )}
           </>

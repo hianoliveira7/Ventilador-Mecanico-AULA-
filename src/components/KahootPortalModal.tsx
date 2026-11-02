@@ -25,7 +25,8 @@ interface KahootPortalModalProps {
   onStartKahootSession: (
     studentName: string,
     room: KahootRoom,
-    selectedCase: ClinicalCase
+    selectedCase: ClinicalCase,
+    teamRole?: string
   ) => void;
 }
 
@@ -40,7 +41,9 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   const [activeTab, setActiveTab] = useState<'student' | 'professor' | 'history'>('student');
 
   // Student Form
-  const [studentName, setStudentName] = useState('');
+  const [studentName, setStudentName] = useState(() => {
+    return localStorage.getItem('simulador_student_name') || '';
+  });
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [teamRole, setTeamRole] = useState('Fisioterapeuta Respiratório');
   const [errorMsg, setErrorMsg] = useState('');
@@ -59,6 +62,10 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      const savedName = localStorage.getItem('simulador_student_name');
+      if (savedName) {
+        setStudentName(savedName);
+      }
       setRooms(localDatabase.getRooms());
       setResults(localDatabase.getResults());
       const unsubRooms = localDatabase.subscribeRooms((updated) => setRooms(updated));
@@ -231,7 +238,10 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                   type="text"
                   placeholder="Ex: Dra. Mariana Silva"
                   value={studentName}
-                  onChange={(e) => setStudentName(e.target.value)}
+                  onChange={(e) => {
+                    setStudentName(e.target.value);
+                    localStorage.setItem('simulador_student_name', e.target.value);
+                  }}
                   className={`w-full px-3 py-2 rounded-xl text-sm font-mono border focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                     isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-zinc-100'
                   }`}
