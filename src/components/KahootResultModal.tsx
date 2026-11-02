@@ -67,6 +67,30 @@ export const KahootResultModal: React.FC<KahootResultModalProps> = ({
             <div className="inline-block px-4 py-1.5 rounded-xl bg-black/40 border border-white/20 text-xs font-mono font-bold text-amber-200">
               {result.rankBadge} ({result.gradePercentage}%)
             </div>
+
+            {/* Achievement Badges Emblemas de Conquistas */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+              {result.gradePercentage >= 90 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-mono font-black text-[10px] shadow-sm flex items-center gap-1">
+                  <Award className="w-3 h-3" /> Mestre Protetor
+                </span>
+              )}
+              {!result.mistakes.some((m) => m.category === 'barotrauma' || m.category === 'volutrauma') && (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-400 text-slate-950 font-mono font-black text-[10px] shadow-sm flex items-center gap-1">
+                  <Award className="w-3 h-3" /> Guardião da Alveolar
+                </span>
+              )}
+              {result.completionTimeSeconds < (result.timeLimitSeconds || 300) * 0.6 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-cyan-400 text-slate-950 font-mono font-black text-[10px] shadow-sm flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> Resolução Relâmpago
+                </span>
+              )}
+              {result.gradePercentage >= 75 && (
+                <span className="px-2.5 py-0.5 rounded-full bg-purple-400 text-slate-950 font-mono font-black text-[10px] shadow-sm flex items-center gap-1">
+                  <Trophy className="w-3 h-3" /> Especialista UTI
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

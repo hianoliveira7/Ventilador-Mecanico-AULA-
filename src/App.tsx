@@ -87,6 +87,7 @@ export default function App() {
   const [deteriorationWarning, setDeteriorationWarning] = useState<string | null>(null);
   const [deteriorationSecondsCounter, setDeteriorationSecondsCounter] = useState<number>(0);
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState<number>(0);
+  const lastSurpriseTimestampRef = useRef<number>(0);
 
   // 1. Core Ventilator Settings
   const [settings, setSettings] = useState<VentilatorSettings>({
@@ -305,7 +306,7 @@ export default function App() {
     selectedCase: ClinicalCase
   ) => {
     handleLoadCase(selectedCase);
-    setIsVentilating(true);
+    setIsVentilating(false);
     setCaseElapsedSeconds(0);
     const timeLimitSeconds = room.timeLimitMinutes * 60;
     setActiveKahootSession({
@@ -432,6 +433,20 @@ export default function App() {
   const [audioContextState, setAudioContextState] = useState<string>(audioEngine.getContextState());
   const [isAudioBannerDismissed, setIsAudioBannerDismissed] = useState<boolean>(false);
 
+  const settingsRef = useRef(settings);
+  const draftSettingsRef = useRef(draftSettings);
+  const patientRef = useRef(patient);
+  const maneuverStateRef = useRef(maneuverState);
+  const alarmLimitsRef = useRef(alarmLimits);
+
+  useEffect(() => {
+    settingsRef.current = settings;
+    draftSettingsRef.current = draftSettings;
+    patientRef.current = patient;
+    maneuverStateRef.current = maneuverState;
+    alarmLimitsRef.current = alarmLimits;
+  }, [settings, draftSettings, patient, maneuverState, alarmLimits]);
+
   // Kahoot Real-time State Synchronization across devices
   useEffect(() => {
     if (!activeKahootSession) return;
@@ -440,19 +455,38 @@ export default function App() {
 
     // Subscribe to remote updates from other devices in the same room
     const unsubscribe = localDatabase.subscribeRoomState(roomCode, (remoteState) => {
-      if (remoteState && remoteState.settings) {
-        if (JSON.stringify(remoteState.settings) !== JSON.stringify(settings)) {
+      if (!remoteState) return;
+
+      if (remoteState.settings) {
+        const curSettings = settingsRef.current;
+        if (JSON.stringify(remoteState.settings) !== JSON.stringify(curSettings)) {
           setSettings(remoteState.settings);
-          setDraftSettings(remoteState.settings);
+          // Only overwrite draftSettings if student has no pending unconfirmed draft
+          setDraftSettings((prevDraft) => {
+            const isEditing = JSON.stringify(prevDraft) !== JSON.stringify(curSettings);
+            return isEditing ? prevDraft : remoteState.settings;
+          });
         }
       }
-      if (remoteState && remoteState.patient) {
-        if (JSON.stringify(remoteState.patient) !== JSON.stringify(patient)) {
+      if (remoteState.patient) {
+        if (JSON.stringify(remoteState.patient) !== JSON.stringify(patientRef.current)) {
           setPatient(remoteState.patient);
         }
       }
-      if (typeof remoteState?.isVentilating === 'boolean' && remoteState.isVentilating !== isVentilating) {
-        setIsVentilating(remoteState.isVentilating);
+      if (typeof remoteState.isVentilating === 'boolean') {
+        setIsVentilating((prev) => (prev !== remoteState.isVentilating ? remoteState.isVentilating : prev));
+      }
+      if (remoteState.surpriseEvent && remoteState.surpriseEvent.timestamp > lastSurpriseTimestampRef.current) {
+        lastSurpriseTimestampRef.current = remoteState.surpriseEvent.timestamp;
+        setDeteriorationWarning(`${remoteState.surpriseEvent.title}: ${remoteState.surpriseEvent.description}`);
+        audioEngine.triggerAlarmPattern('high');
+        if (remoteState.surpriseEvent.complianceOverride) {
+          setPatient((p) => ({
+            ...p,
+            compliance: remoteState.surpriseEvent.complianceOverride,
+            resistance: remoteState.surpriseEvent.resistanceOverride || p.resistance,
+          }));
+        }
       }
     });
 
@@ -472,7 +506,7 @@ export default function App() {
       isVentilating,
       activeCaseId: activeClinicalCase?.id,
     });
-  }, [settings, patient, isVentilating, activeClinicalCase?.id, activeKahootSession]);
+  }, [settings, patient, isVentilating, activeClinicalCase?.id, activeKahootSession?.room.code]);
 
   // Track browser tab visibility (pause simulation when backgrounded or hidden)
   const [isDocumentVisible, setIsDocumentVisible] = useState<boolean>(
@@ -632,18 +666,7 @@ export default function App() {
     return () => clearInterval(pulseTimer);
   }, [monitored.spo2]);
 
-  // Keep references for physics interval
-  const settingsRef = useRef(settings);
-  const patientRef = useRef(patient);
-  const maneuverStateRef = useRef(maneuverState);
-  const alarmLimitsRef = useRef(alarmLimits);
 
-  useEffect(() => {
-    settingsRef.current = settings;
-    patientRef.current = patient;
-    maneuverStateRef.current = maneuverState;
-    alarmLimitsRef.current = alarmLimits;
-  }, [settings, patient, maneuverState, alarmLimits]);
 
   // Main High-Frequency Physics Engine Loop (60 Hz for fluid curves, ~4 Hz for DOM telemetry to prevent tablet stutter)
   useEffect(() => {

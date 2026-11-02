@@ -42,6 +42,7 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   // Student Form
   const [studentName, setStudentName] = useState('');
   const [inputRoomCode, setInputRoomCode] = useState('');
+  const [teamRole, setTeamRole] = useState('Fisioterapeuta Respiratório');
   const [errorMsg, setErrorMsg] = useState('');
 
   // Professor Form
@@ -106,8 +107,8 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
 
     const targetCase = cases.find((c) => c.id === room.caseId) || cases[0];
     setErrorMsg('');
-    await localDatabase.registerStudent(studentName, room.code);
-    onStartKahootSession(studentName, room, targetCase);
+    await localDatabase.registerStudent(studentName, room.code, teamRole);
+    onStartKahootSession(studentName, room, targetCase, teamRole);
     onClose();
   };
 
@@ -237,9 +238,37 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                 />
               </div>
 
+              <div className={`p-4 rounded-2xl border space-y-2 ${
+                isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-[#0f1325] border-indigo-900/40'
+              }`}>
+                <label className="block text-xs font-mono font-bold uppercase text-indigo-400">
+                  2. Função na Equipe de UTI (Modo Cooperativo):
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'Fisioterapeuta Respiratório', label: '🫁 Fisioterapeuta' },
+                    { id: 'Médico Intensivista', label: '🩺 Médico(a)' },
+                    { id: 'Enfermeiro(a) UTI', label: '💊 Enfermeiro(a)' },
+                  ].map((role) => (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => setTeamRole(role.id)}
+                      className={`py-2 px-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer text-center ${
+                        teamRole === role.id
+                          ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
+                          : isLight ? 'bg-white border-slate-300 text-slate-700' : 'bg-[#0a0d18] border-zinc-700 text-zinc-300'
+                      }`}
+                    >
+                      {role.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-mono font-bold uppercase text-zinc-400 mb-2">
-                  2. Digite o Código da Sala do Professor:
+                  3. Digite o Código da Sala do Professor:
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -488,37 +517,58 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {results.map((res, index) => (
-                    <div
-                      key={`${res.id || 'res'}-${index}`}
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
-                        isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0e1122] border-indigo-900/40'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-display font-black text-indigo-300">
-                            {res.studentName}
-                          </span>
-                          <span className="px-1.5 py-0.2 bg-indigo-950 text-indigo-300 border border-indigo-800/60 rounded text-[9px] font-mono font-bold">
-                            Sala: {res.roomCode}
-                          </span>
-                        </div>
-                        <p className="text-[10px] font-mono text-zinc-400">
-                          {res.caseTitle} • Concluído em {res.completionTimeSeconds}s
-                        </p>
-                      </div>
+                  {[...results]
+                    .sort((a, b) => (b.score || 0) - (a.score || 0))
+                    .map((res, index) => {
+                      const rank = index + 1;
+                      const rankBadgeColor =
+                        rank === 1
+                          ? 'bg-amber-400 text-slate-950 font-black border-amber-300'
+                          : rank === 2
+                          ? 'bg-slate-300 text-slate-900 font-black border-slate-200'
+                          : rank === 3
+                          ? 'bg-amber-700 text-white font-black border-amber-600'
+                          : isLight ? 'bg-slate-200 text-slate-700 border-slate-300' : 'bg-zinc-800 text-zinc-300 border-zinc-700';
 
-                      <div className="text-right shrink-0">
-                        <span className="text-sm font-bold font-mono text-amber-400 block">
-                          {res.score} / {res.maxScore} Pts ({res.gradePercentage}%)
-                        </span>
-                        <span className="text-[9px] font-mono text-emerald-400 font-bold block">
-                          {res.rankBadge}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                      return (
+                        <div
+                          key={`${res.id || 'res'}-${index}`}
+                          className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
+                            rank === 1
+                              ? isLight ? 'bg-amber-50/90 border-amber-400 shadow-md ring-1 ring-amber-400/50' : 'bg-[#1b170c] border-amber-500/80 shadow-lg'
+                              : isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0e1122] border-indigo-900/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-xl border flex items-center justify-center font-mono text-xs ${rankBadgeColor}`}>
+                              {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}º`}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-xs font-display font-black text-indigo-300">
+                                  {res.studentName}
+                                </span>
+                                <span className="px-1.5 py-0.2 bg-indigo-950 text-indigo-300 border border-indigo-800/60 rounded text-[9px] font-mono font-bold">
+                                  Sala: {res.roomCode}
+                                </span>
+                              </div>
+                              <p className="text-[10px] font-mono text-zinc-400">
+                                {res.caseTitle} • Concluído em {res.completionTimeSeconds}s
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <span className="text-sm font-bold font-mono text-amber-400 block">
+                              {res.score} / {res.maxScore} Pts ({res.gradePercentage}%)
+                            </span>
+                            <span className="text-[9px] font-mono text-emerald-400 font-bold block">
+                              {res.rankBadge}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>

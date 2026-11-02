@@ -265,9 +265,9 @@ class LocalDatabaseService {
           }
         });
 
-        // Remote snapshot is authoritative for rooms
-        localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(remoteRooms));
-        this.notifyRoomListeners(remoteRooms);
+        const filteredRooms = remoteRooms.filter((r) => !deletedRooms.has(r.code.trim().toUpperCase()));
+        localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(filteredRooms));
+        this.notifyRoomListeners(filteredRooms);
       },
       (err) => console.warn('Kahoot rooms live sync error:', err)
     );
@@ -295,7 +295,13 @@ class LocalDatabaseService {
           }
         });
 
-        const sorted = remoteResults.sort(
+        const filteredResults = remoteResults.filter((r) => {
+          if (r.submittedAt && r.submittedAt <= clearedAt) return false;
+          if (deletedIds.has(r.id)) return false;
+          return true;
+        });
+
+        const sorted = filteredResults.sort(
           (a, b) => (b.submittedAt || 0) - (a.submittedAt || 0)
         );
         localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(sorted));
@@ -341,13 +347,14 @@ class LocalDatabaseService {
     }
   }
 
-  public async registerStudent(studentName: string, roomCode: string) {
+  public async registerStudent(studentName: string, roomCode: string, teamRole: string = 'Fisioterapeuta Respiratório') {
     const studentId = `student_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     try {
       await setDoc(doc(db, 'students', studentId), {
         id: studentId,
         studentName,
         roomCode,
+        teamRole,
         joinedAt: Date.now(),
       });
     } catch (err) {
@@ -724,11 +731,24 @@ class LocalDatabaseService {
     return this.getResults();
   }
 
+  private clientId: string = typeof window !== 'undefined'
+    ? (sessionStorage.getItem('sim_client_id') || (() => {
+        const id = `client_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        sessionStorage.setItem('sim_client_id', id);
+        return id;
+      })())
+    : `client_${Date.now()}`;
+
+  public getClientId(): string {
+    return this.clientId;
+  }
+
   public async publishRoomState(roomCode: string, state: any) {
     try {
       const normalized = roomCode.trim().toUpperCase();
       await setDoc(doc(db, 'kahootRooms', normalized, 'state', 'current'), {
         ...state,
+        senderId: this.clientId,
         updatedAt: Date.now(),
         updatedBy: auth.currentUser?.uid || 'anonymous',
       }, { merge: true });
@@ -743,7 +763,12 @@ class LocalDatabaseService {
       doc(db, 'kahootRooms', normalized, 'state', 'current'),
       (docSnap) => {
         if (docSnap.exists()) {
-          callback(docSnap.data());
+          const data = docSnap.data();
+          // Avoid echoing back our own writes
+          if (data && data.senderId === this.clientId) {
+            return;
+          }
+          callback(data);
         }
       },
       (err) => {
