@@ -303,13 +303,15 @@ export default function App() {
     case: ClinicalCase;
     remainingSeconds: number;
     timeLimitSeconds: number;
+    teamName?: string;
   } | null>(null);
 
   const handleStartKahootSession = (
     studentName: string,
     room: KahootRoom,
     selectedCase: ClinicalCase,
-    teamRole?: string
+    teamRole?: string,
+    teamName?: string
   ) => {
     if (teamRole) {
       setActiveTeamRole(teamRole as TeamRole);
@@ -319,12 +321,14 @@ export default function App() {
     setIsVentilating(false);
     setCaseElapsedSeconds(0);
     const timeLimitSeconds = room.timeLimitMinutes * 60;
+    const effectiveTeamName = teamName || (room.mode === 'team' ? 'Equipe UTI Alfa' : undefined);
     setActiveKahootSession({
       studentName,
       room,
       case: selectedCase,
       remainingSeconds: timeLimitSeconds,
       timeLimitSeconds,
+      teamName: effectiveTeamName,
     });
   };
 
@@ -340,7 +344,9 @@ export default function App() {
         settings,
         patient,
         elapsedSeconds,
-        currentSession.timeLimitSeconds
+        currentSession.timeLimitSeconds,
+        currentSession.teamName,
+        currentSession.room.mode === 'team' || Boolean(currentSession.teamName)
       );
       setKahootResult(result);
       setIsKahootResultModalOpen(true);
@@ -462,8 +468,9 @@ export default function App() {
     if (!activeKahootSession) return;
 
     const roomCode = activeKahootSession.room.code;
+    const teamName = activeKahootSession.teamName;
 
-    // Subscribe to remote updates from other devices in the same room
+    // Subscribe to remote updates from other devices in the same room & group
     const unsubscribe = localDatabase.subscribeRoomState(roomCode, (remoteState) => {
       if (!remoteState) return;
 
@@ -498,25 +505,26 @@ export default function App() {
           }));
         }
       }
-    });
+    }, teamName);
 
     return () => {
       unsubscribe();
     };
-  }, [activeKahootSession?.room.code]);
+  }, [activeKahootSession?.room.code, activeKahootSession?.teamName]);
 
   // Publish local state changes to Firestore room state when in active Kahoot session
   useEffect(() => {
     if (!activeKahootSession) return;
 
     const roomCode = activeKahootSession.room.code;
+    const teamName = activeKahootSession.teamName;
     localDatabase.publishRoomState(roomCode, {
       settings,
       patient,
       isVentilating,
       activeCaseId: activeClinicalCase?.id,
-    });
-  }, [settings, patient, isVentilating, activeClinicalCase?.id, activeKahootSession?.room.code]);
+    }, teamName);
+  }, [settings, patient, isVentilating, activeClinicalCase?.id, activeKahootSession?.room.code, activeKahootSession?.teamName]);
 
   // Track browser tab visibility (pause simulation when backgrounded or hidden)
   const [isDocumentVisible, setIsDocumentVisible] = useState<boolean>(
@@ -1326,6 +1334,7 @@ export default function App() {
               remainingSeconds={activeKahootSession.remainingSeconds}
               timeLimitSeconds={activeKahootSession.timeLimitSeconds}
               onFinishKahootSession={handleFinishKahootSession}
+              teamName={activeKahootSession.teamName}
             />
           )}
 

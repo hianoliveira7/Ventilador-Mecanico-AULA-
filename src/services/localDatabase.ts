@@ -55,6 +55,8 @@ export interface StudentMistake {
 export interface StudentGameResult {
   id: string;
   studentName: string;
+  teamName?: string;
+  isTeamMode?: boolean;
   roomCode: string;
   caseId: string;
   caseTitle: string;
@@ -77,6 +79,7 @@ export interface KahootRoom {
   createdAt: number;
   active: boolean;
   professorName: string;
+  mode?: 'individual' | 'team';
 }
 
 const STORAGE_KEYS = {
@@ -347,12 +350,13 @@ class LocalDatabaseService {
     }
   }
 
-  public async registerStudent(studentName: string, roomCode: string, teamRole: string = 'Fisioterapeuta Respiratório') {
+  public async registerStudent(studentName: string, roomCode: string, teamRole: string = 'Fisioterapeuta Respiratório', teamName?: string) {
     const studentId = `student_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     try {
       await setDoc(doc(db, 'students', studentId), {
         id: studentId,
         studentName,
+        teamName: teamName?.trim() || null,
         roomCode,
         teamRole,
         joinedAt: Date.now(),
@@ -401,6 +405,7 @@ class LocalDatabaseService {
         timeLimitMinutes: room.timeLimitMinutes,
         active: room.active,
         professorName: room.professorName,
+        mode: room.mode || 'individual',
         createdAt: room.createdAt || Date.now(),
       });
     } catch (err) {
@@ -467,6 +472,8 @@ class LocalDatabaseService {
       const payload = {
         id: result.id,
         studentName: result.studentName,
+        teamName: result.teamName || null,
+        isTeamMode: Boolean(result.isTeamMode),
         roomCode: result.roomCode,
         caseId: result.caseId,
         caseTitle: result.caseTitle,
@@ -518,7 +525,9 @@ class LocalDatabaseService {
     settings: VentilatorSettings,
     patient: PatientParameters,
     elapsedSeconds: number,
-    timeLimitSeconds: number
+    timeLimitSeconds: number,
+    teamName?: string,
+    isTeamMode?: boolean
   ): StudentGameResult {
     let score = 1000;
     const mistakes: StudentMistake[] = [];
@@ -625,9 +634,12 @@ class LocalDatabaseService {
     else if (gradePercentage >= 75) rankBadge = '🥈 Especialista em UTI';
     else if (gradePercentage >= 60) rankBadge = '🥉 Residente em Formação';
 
+    const cleanTeam = teamName?.trim();
     const result: StudentGameResult = {
       id: `result_${Date.now()}`,
       studentName: studentName.trim() || 'Aluno Anônimo',
+      teamName: cleanTeam || undefined,
+      isTeamMode: Boolean(isTeamMode || cleanTeam),
       roomCode: roomCode.toUpperCase(),
       caseId: selectedCase.id,
       caseTitle: selectedCase.title,
@@ -715,7 +727,7 @@ class LocalDatabaseService {
       const cloudResults: StudentGameResult[] = [];
       snap.forEach((docSnap) => {
         const data = docSnap.data() as StudentGameResult;
-        if (data && data.studentName) {
+        if (data && (data.studentName || data.teamName)) {
           if (data.submittedAt && data.submittedAt <= clearedAt) return;
           if (deletedIds.has(docSnap.id)) return;
           cloudResults.push(data);
@@ -743,10 +755,14 @@ class LocalDatabaseService {
     return this.clientId;
   }
 
-  public async publishRoomState(roomCode: string, state: any) {
+  public async publishRoomState(roomCode: string, state: any, teamName?: string) {
     try {
       const normalized = roomCode.trim().toUpperCase();
-      await setDoc(doc(db, 'kahootRooms', normalized, 'state', 'current'), {
+      const docRef = teamName && teamName.trim()
+        ? doc(db, 'kahootRooms', normalized, 'teams', teamName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'))
+        : doc(db, 'kahootRooms', normalized, 'state', 'current');
+
+      await setDoc(docRef, {
         ...state,
         senderId: this.clientId,
         updatedAt: Date.now(),
@@ -757,10 +773,14 @@ class LocalDatabaseService {
     }
   }
 
-  public subscribeRoomState(roomCode: string, callback: (state: any) => void): () => void {
+  public subscribeRoomState(roomCode: string, callback: (state: any) => void, teamName?: string): () => void {
     const normalized = roomCode.trim().toUpperCase();
+    const docRef = teamName && teamName.trim()
+      ? doc(db, 'kahootRooms', normalized, 'teams', teamName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'))
+      : doc(db, 'kahootRooms', normalized, 'state', 'current');
+
     const unsub = onSnapshot(
-      doc(db, 'kahootRooms', normalized, 'state', 'current'),
+      docRef,
       (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();

@@ -26,7 +26,8 @@ interface KahootPortalModalProps {
     studentName: string,
     room: KahootRoom,
     selectedCase: ClinicalCase,
-    teamRole?: string
+    teamRole?: string,
+    teamName?: string
   ) => void;
 }
 
@@ -44,6 +45,9 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   const [studentName, setStudentName] = useState(() => {
     return localStorage.getItem('simulador_student_name') || '';
   });
+  const [teamName, setTeamName] = useState(() => {
+    return localStorage.getItem('simulador_team_name') || 'Equipe UTI Alfa';
+  });
   const [inputRoomCode, setInputRoomCode] = useState('');
   const [teamRole, setTeamRole] = useState('Fisioterapeuta Respiratório');
   const [errorMsg, setErrorMsg] = useState('');
@@ -54,6 +58,7 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   const [selectedCaseId, setSelectedCaseId] = useState('');
   const [timeLimitMinutes, setTimeLimitMinutes] = useState(5);
   const [professorName, setProfessorName] = useState('');
+  const [newRoomMode, setNewRoomMode] = useState<'individual' | 'team'>('team');
   const [roomCreatedSuccess, setRoomCreatedSuccess] = useState('');
 
   const cases = localDatabase.getClinicalCases();
@@ -114,8 +119,9 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
 
     const targetCase = cases.find((c) => c.id === room.caseId) || cases[0];
     setErrorMsg('');
-    await localDatabase.registerStudent(studentName, room.code, teamRole);
-    onStartKahootSession(studentName, room, targetCase, teamRole);
+    const effectiveTeamName = room.mode === 'team' || teamName.trim() ? (teamName.trim() || 'Equipe UTI Alfa') : undefined;
+    await localDatabase.registerStudent(studentName, room.code, teamRole, effectiveTeamName);
+    onStartKahootSession(studentName, room, targetCase, teamRole, effectiveTeamName);
     onClose();
   };
 
@@ -134,6 +140,7 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
       createdAt: Date.now(),
       active: true,
       professorName: professorName.trim() || 'Prof. Orientador',
+      mode: newRoomMode,
     };
 
     localDatabase.createRoom(newRoom);
@@ -247,6 +254,30 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                   }`}
                 />
               </div>
+
+                {/* Ocultar se não for modo Equipe */}
+                {(rooms.find(r => r.code === inputRoomCode)?.mode === 'team') && (
+                  <div className={`p-4 rounded-2xl border ${
+                    isLight ? 'bg-purple-50/50 border-purple-200' : 'bg-[#150f25] border-purple-900/40'
+                  }`}>
+                    <label className="block text-xs font-mono font-bold uppercase text-purple-400 mb-1 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5" />
+                      2. Nome da Equipe / Grupo:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Equipe UTI Alfa"
+                      value={teamName}
+                      onChange={(e) => {
+                        setTeamName(e.target.value);
+                        localStorage.setItem('simulador_team_name', e.target.value);
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-sm font-mono border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-purple-200'
+                      }`}
+                    />
+                  </div>
+                )}
 
               <div className={`p-4 rounded-2xl border space-y-2 ${
                 isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-[#0f1325] border-indigo-900/40'
@@ -385,18 +416,35 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-mono font-bold uppercase text-zinc-400 mb-1">
-                  Título do Desafio / Turma:
+                <label className="block text-xs font-mono font-bold uppercase text-amber-400 mb-1">
+                  Modo de Trabalho (Formato da Sala):
                 </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Prova Prática: Admissão de SDRA em VCV"
-                  value={newRoomTitle}
-                  onChange={(e) => setNewRoomTitle(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-xl text-xs font-mono border focus:outline-none ${
-                    isLight ? 'bg-white border-slate-300' : 'bg-[#080a14] border-zinc-700 text-zinc-100'
-                  }`}
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewRoomMode('team')}
+                    className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      newRoomMode === 'team'
+                        ? 'bg-amber-400 border-amber-300 text-slate-950 font-black shadow-md'
+                        : isLight ? 'bg-white border-slate-300 text-slate-700' : 'bg-[#080a14] border-zinc-700 text-zinc-400'
+                    }`}
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>👥 TRABALHO EM EQUIPE</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewRoomMode('individual')}
+                    className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      newRoomMode === 'individual'
+                        ? 'bg-indigo-600 border-indigo-400 text-white font-black shadow-md'
+                        : isLight ? 'bg-white border-slate-300 text-slate-700' : 'bg-[#080a14] border-zinc-700 text-zinc-400'
+                    }`}
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    <span>👤 INDIVIDUAL</span>
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -554,10 +602,22 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                               {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}º`}
                             </div>
                             <div>
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-xs font-display font-black text-indigo-300">
-                                  {res.studentName}
-                                </span>
+                              <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                {res.teamName ? (
+                                  <>
+                                    <span className="text-xs font-display font-black text-amber-300 flex items-center gap-1">
+                                      <Users className="w-3.5 h-3.5 text-purple-400 inline" />
+                                      GRUPO: {res.teamName}
+                                    </span>
+                                    <span className="text-[11px] font-mono text-zinc-300">
+                                      ({res.studentName})
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-display font-black text-indigo-300">
+                                    {res.studentName}
+                                  </span>
+                                )}
                                 <span className="px-1.5 py-0.2 bg-indigo-950 text-indigo-300 border border-indigo-800/60 rounded text-[9px] font-mono font-bold">
                                   Sala: {res.roomCode}
                                 </span>

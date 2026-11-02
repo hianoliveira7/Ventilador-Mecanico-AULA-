@@ -72,6 +72,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const [newRoomCaseId, setNewRoomCaseId] = useState('');
   const [newRoomTimeLimit, setNewRoomTimeLimit] = useState(5);
   const [newRoomProfName, setNewRoomProfName] = useState('Prof. Orientador');
+  const [newRoomMode, setNewRoomMode] = useState<'individual' | 'team'>('team');
   const [isSyncingKahoot, setIsSyncingKahoot] = useState(false);
   const [copiedPin, setCopiedPin] = useState<string | null>(null);
   const [surpriseModalRoomCode, setSurpriseModalRoomCode] = useState<string | null>(null);
@@ -241,6 +242,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
       createdAt: Date.now(),
       active: true,
       professorName: newRoomProfName.trim() || 'Prof. Orientador',
+      mode: newRoomMode,
     };
     await localDatabase.createRoom(newRoom);
     audioEngine.playConfirmBeep();
@@ -1207,6 +1209,40 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Mode Selection: Individual vs Team */}
+                  <div>
+                    <label className="block font-bold text-amber-400 mb-1">
+                      6. Formato do Desafio (Modo de Trabalho) *
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewRoomMode('team')}
+                        className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          newRoomMode === 'team'
+                            ? 'bg-amber-400 border-amber-300 text-slate-950 font-black shadow-md'
+                            : isLight ? 'bg-white border-slate-300 text-slate-700' : 'bg-[#0a0d18] border-zinc-700 text-zinc-400'
+                        }`}
+                      >
+                        <Users className="w-4 h-4" />
+                        <span>👥 TRABALHO EM EQUIPE / GRUPO</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setNewRoomMode('individual')}
+                        className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          newRoomMode === 'individual'
+                            ? 'bg-indigo-600 border-indigo-400 text-white font-black shadow-md'
+                            : isLight ? 'bg-white border-slate-300 text-slate-700' : 'bg-[#0a0d18] border-zinc-700 text-zinc-400'
+                        }`}
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        <span>👤 TRABALHO INDIVIDUAL</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="pt-2 flex justify-end">
                     <button
                       type="submit"
@@ -1277,6 +1313,13 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                                     : 'bg-zinc-800 text-zinc-400 border-zinc-700'
                                 }`}>
                                   {room.active ? '● Ativa' : 'Pausada'}
+                                </span>
+                                <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${
+                                  room.mode === 'team'
+                                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                                    : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                }`}>
+                                  {room.mode === 'team' ? '👥 Equipe' : '👤 Individual'}
                                 </span>
                               </div>
                               <h5 className="font-display font-bold text-xs mt-1">
@@ -1433,6 +1476,12 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
                                 <span className="font-mono text-xs font-black text-amber-400">
                                   #{index + 1}
                                 </span>
+                                {res.teamName && (
+                                  <span className="px-2 py-0.5 rounded font-mono font-black text-[11px] bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1">
+                                    <Users className="w-3 h-3" />
+                                    GRUPO: {res.teamName}
+                                  </span>
+                                )}
                                 <h5 className="font-display font-black text-sm text-slate-900 dark:text-white">
                                   {res.studentName}
                                 </h5>

@@ -8,6 +8,7 @@ interface KahootTopBannerProps {
   remainingSeconds: number;
   timeLimitSeconds: number;
   onFinishKahootSession: () => void;
+  teamName?: string;
 }
 
 export const KahootTopBanner: React.FC<KahootTopBannerProps> = ({
@@ -15,6 +16,7 @@ export const KahootTopBanner: React.FC<KahootTopBannerProps> = ({
   room,
   remainingSeconds,
   onFinishKahootSession,
+  teamName,
 }) => {
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = remainingSeconds % 60;
@@ -31,6 +33,11 @@ export const KahootTopBanner: React.FC<KahootTopBannerProps> = ({
         </div>
         <div>
           <div className="flex items-center gap-1.5">
+            {teamName && (
+              <span className="px-2 py-0.5 bg-purple-500/30 text-purple-200 border border-purple-400/50 rounded-lg text-[11px] font-mono font-black flex items-center gap-1">
+                👥 {teamName}
+              </span>
+            )}
             <span className="text-xs font-display font-black text-amber-300">
               {studentName}
             </span>
