@@ -1261,22 +1261,46 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     renderBackground();
   }, [renderBackground]);
 
+  // Stable ref for continuous RequestAnimationFrame Loop with Double Buffering
+  const renderForegroundRef = useRef(renderForeground);
+  useEffect(() => {
+    renderForegroundRef.current = renderForeground;
+  }, [renderForeground]);
+
   // High-Performance Continuous RequestAnimationFrame Loop with Double Buffering
   useEffect(() => {
     let animId: number;
     const loop = () => {
-      renderForeground();
+      renderForegroundRef.current();
       animId = requestAnimationFrame(loop);
     };
     animId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animId);
-  }, [renderForeground]);
+  }, []);
 
   // Mouse hover for Caliper in Freeze mode
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!maneuverState.isFrozen || !fgCanvasRef.current) return;
     const rect = fgCanvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    const padLeft = 48;
+    const chartW = rect.width - padLeft - 16;
+    if (x < padLeft || x > rect.width - 16) return;
+
+    const buffer = bufferRef.current;
+    if (buffer.length === 0) return;
+
+    const ratio = (x - padLeft) / chartW;
+    const idx = Math.min(buffer.length - 1, Math.max(0, Math.round(ratio * (buffer.length - 1))));
+    setHoverData({ x, sample: buffer[idx] });
+  };
+
+  // Touch caliper inspection on tablets
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!maneuverState.isFrozen || !fgCanvasRef.current || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const rect = fgCanvasRef.current.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
     const padLeft = 48;
     const chartW = rect.width - padLeft - 16;
     if (x < padLeft || x > rect.width - 16) return;
@@ -1304,18 +1328,21 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     >
       {/* Waveform Screen Header & Utility Bar */}
       <div
-        className={`flex items-center justify-between px-3 py-1.5 border-b z-20 shrink-0 ${
+        className={`flex items-center justify-between gap-1.5 px-2.5 sm:px-3 py-1.5 border-b z-20 shrink-0 overflow-x-auto scrollbar-none whitespace-nowrap touch-pan-x ${
           isLight
             ? 'bg-white/90 border-slate-200 backdrop-blur-md'
             : 'bg-[#090c14]/90 border-[#141a29] backdrop-blur-md'
         }`}
       >
         {/* Left: View Mode Switcher Pills */}
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1 text-[11px] font-bold font-mono tracking-wider text-cyan-400 mr-2">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 text-[11px] font-bold font-mono tracking-wider text-cyan-400 mr-1 sm:mr-2">
             <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-            <span className={isLight ? 'text-slate-800 font-black' : 'text-white font-black'}>
+            <span className={`hidden sm:inline ${isLight ? 'text-slate-800 font-black' : 'text-white font-black'}`}>
               TRAÇADOS EM TEMPO REAL
+            </span>
+            <span className={`sm:hidden text-[10px] font-black ${isLight ? 'text-slate-800' : 'text-white'}`}>
+              TRAÇADOS
             </span>
           </div>
 
@@ -1582,7 +1609,12 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
           ref={fgCanvasRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
-          className="absolute inset-0 w-full h-full block cursor-crosshair z-10"
+          onTouchStart={handleTouchMove}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleMouseLeave}
+          onTouchCancel={handleMouseLeave}
+          style={{ touchAction: 'none' }}
+          className="absolute inset-0 w-full h-full block cursor-crosshair z-10 touch-none select-none"
         />
       </div>
     </div>

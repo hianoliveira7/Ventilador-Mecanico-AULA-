@@ -199,10 +199,10 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
     const results = localDatabase.getResults();
     setKahootResults(results);
     localDatabase.fetchCloudRooms().then((cloudRooms) => {
-      if (cloudRooms && cloudRooms.length > 0) setKahootRooms(cloudRooms);
+      if (cloudRooms) setKahootRooms(cloudRooms);
     });
     localDatabase.fetchCloudResults().then((cloudResults) => {
-      if (cloudResults && cloudResults.length > 0) setKahootResults(cloudResults);
+      if (cloudResults) setKahootResults(cloudResults);
     });
   };
 
@@ -256,15 +256,18 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
 
   const handleDeleteRoom = async (code: string) => {
     if (confirm(`Tem certeza que deseja excluir a sala "${code}"?`)) {
+      const normalized = code.trim().toUpperCase();
+      setKahootRooms((prev) => prev.filter((r) => r.code.toUpperCase() !== normalized));
       await localDatabase.deleteRoom(code);
       audioEngine.playClick(750);
-      showFeedback(`Sala "${code}" removida.`);
+      showFeedback(`Sala "${code}" removida com sucesso.`);
       loadData();
     }
   };
 
   const handleDeleteStudentResult = async (id: string) => {
     if (confirm('Deseja excluir este registro de nota do aluno?')) {
+      setKahootResults((prev) => prev.filter((r) => r.id !== id));
       await localDatabase.deleteResult(id);
       audioEngine.playClick(750);
       showFeedback('Nota do aluno removida.');
@@ -274,9 +277,10 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
 
   const handleClearAllResults = async () => {
     if (confirm('ATENÇÃO: Deseja apagar todas as pontuações e registros de alunos do Kahoot? Esta ação não pode ser desfeita.')) {
+      setKahootResults([]);
       await localDatabase.clearResults();
       audioEngine.playConfirmBeep();
-      showFeedback('Todas as pontuações foram resetadas.');
+      showFeedback('Todas as pontuações foram resetadas com sucesso.');
       loadData();
     }
   };
@@ -302,6 +306,16 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadData();
+      const unsubRooms = localDatabase.subscribeRooms((rooms) => {
+        setKahootRooms(rooms);
+      });
+      const unsubResults = localDatabase.subscribeResults((results) => {
+        setKahootResults(results);
+      });
+      return () => {
+        unsubRooms();
+        unsubResults();
+      };
     }
   }, [isOpen]);
 

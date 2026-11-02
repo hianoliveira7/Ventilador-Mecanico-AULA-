@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { localDatabase, KahootRoom, StudentGameResult } from '../services/localDatabase';
 import { ClinicalCase } from '../types/ventilation';
 import { useTheme } from '../context/ThemeContext';
@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   History,
   Users,
+  Trash2,
 } from 'lucide-react';
 
 interface KahootPortalModalProps {
@@ -51,11 +52,41 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   const [professorName, setProfessorName] = useState('');
   const [roomCreatedSuccess, setRoomCreatedSuccess] = useState('');
 
-  if (!isOpen) return null;
-
   const cases = localDatabase.getClinicalCases();
-  const rooms = localDatabase.getRooms();
-  const results = localDatabase.getResults();
+  const [rooms, setRooms] = useState<KahootRoom[]>(() => localDatabase.getRooms());
+  const [results, setResults] = useState<StudentGameResult[]>(() => localDatabase.getResults());
+
+  useEffect(() => {
+    if (isOpen) {
+      setRooms(localDatabase.getRooms());
+      setResults(localDatabase.getResults());
+      const unsubRooms = localDatabase.subscribeRooms((updated) => setRooms(updated));
+      const unsubResults = localDatabase.subscribeResults((updated) => setResults(updated));
+      return () => {
+        unsubRooms();
+        unsubResults();
+      };
+    }
+  }, [isOpen]);
+
+  const handleDeleteRoom = async (code: string) => {
+    if (confirm(`Tem certeza que deseja excluir a sala "${code}"?`)) {
+      const normalized = code.trim().toUpperCase();
+      setRooms((prev) => prev.filter((r) => r.code.toUpperCase() !== normalized));
+      await localDatabase.deleteRoom(code);
+      setRoomCreatedSuccess(`Sala "${code}" removida com sucesso.`);
+    }
+  };
+
+  const handleClearAllResults = async () => {
+    if (confirm('ATENÇÃO: Deseja apagar todas as pontuações e registros de alunos do Kahoot? Esta ação não pode ser desfeita.')) {
+      setResults([]);
+      await localDatabase.clearResults();
+      setRoomCreatedSuccess('Todas as pontuações foram resetadas com sucesso.');
+    }
+  };
+
+  if (!isOpen) return null;
 
   const handleEnterRoom = async (roomToJoin?: KahootRoom) => {
     if (!studentName.trim()) {
@@ -375,6 +406,53 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                 <PlusCircle className="w-4 h-4" />
                 <span>CRIAR SALA DE DESAFIO KAHOOT</span>
               </button>
+
+              {/* Salas Cadastradas pelo Professor */}
+              <div className="pt-4 border-t border-inherit space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono font-bold uppercase text-zinc-400">
+                    Salas Cadastradas ({rooms.length}):
+                  </span>
+                </div>
+                {rooms.length === 0 ? (
+                  <p className="text-xs font-mono text-zinc-500 py-1">
+                    Nenhuma sala ativa no momento.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {rooms.map((r) => (
+                      <div
+                        key={r.code}
+                        className={`p-3 rounded-xl border flex items-center justify-between gap-2 ${
+                          isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e1122] border-indigo-900/40'
+                        }`}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 font-mono font-black text-[10px]">
+                              {r.code}
+                            </span>
+                            <span className="text-xs font-display font-bold truncate">
+                              {r.title}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono text-zinc-400 block truncate">
+                            {r.timeLimitMinutes} min • {r.professorName}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRoom(r.code)}
+                          className="p-1.5 text-rose-400 hover:bg-rose-950/40 rounded-lg border border-rose-900/40 cursor-pointer shrink-0 transition-colors"
+                          title="Excluir Sala"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </form>
           )}
 
@@ -386,9 +464,22 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                   <Users className="w-4 h-4 text-amber-400" />
                   Últimas Submissões Registradas no Banco de Dados:
                 </span>
-                <span className="text-[10px] font-mono text-indigo-400">
-                  Total: {results.length} respostas
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-indigo-400">
+                    Total: {results.length} respostas
+                  </span>
+                  {isTeacher && results.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAllResults}
+                      className="px-2.5 py-1 rounded-lg border border-rose-800/60 bg-rose-950/30 text-rose-300 hover:bg-rose-900/50 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Apagar todas as pontuações e notas do Kahoot"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Zerar Notas</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {results.length === 0 ? (

@@ -188,7 +188,8 @@ export const TopBar: React.FC<TopBarProps> = ({
             {userRole === 'teacher' ? (
               <>
                 <UserCheck className="w-3.5 h-3.5 text-indigo-500" />
-                <span className="hidden md:inline">Professor</span>
+                <span className="hidden xl:inline">Professor</span>
+                <span className="hidden sm:inline xl:hidden">Prof</span>
               </>
             ) : (
               <>
@@ -479,7 +480,8 @@ export const TopBar: React.FC<TopBarProps> = ({
               title="Acessar Painel Administrativo do Docente (ADM, Kahoot, Turmas e Quizes)"
             >
               <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-              <span className="font-display font-black">Painel ADM</span>
+              <span className="font-display font-black hidden xl:inline">Painel ADM</span>
+              <span className="font-display font-black xl:hidden">ADM</span>
             </button>
           )
         ) : (

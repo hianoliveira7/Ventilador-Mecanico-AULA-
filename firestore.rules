@@ -23,30 +23,32 @@ service cloud.firestore {
 
     // Cases Collection
     match /cases/{caseId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isSignedIn();
+      allow read, write: if true;
+    }
+
+    // Clinical Cases Alias Collection
+    match /clinicalCases/{caseId} {
+      allow read, write: if true;
     }
 
     // Quiz Questions Collection
     match /quizQuestions/{quizId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Students Collection
     match /students/{studentId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
 
     // Results Collection
     match /results/{resultId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isSignedIn();
+      allow read, write: if true;
+    }
+
+    // Student Game Results Collection
+    match /studentGameResults/{resultId} {
+      allow read, write: if true;
     }
 
     // Kahoot Rooms Collection
@@ -59,9 +61,7 @@ service cloud.firestore {
 
     // Pedagogical Settings Collection
     match /pedagogicalSettings/{settingsId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isSignedIn();
+      allow read, write: if true;
     }
   }
 }

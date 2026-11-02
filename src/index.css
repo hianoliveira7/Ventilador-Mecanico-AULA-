@@ -49,3 +49,14 @@
 input[type="range"] {
   accent-color: #00e5ff;
 }
+
+/* Tablet & Mobile Touch Engine Optimizations */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}

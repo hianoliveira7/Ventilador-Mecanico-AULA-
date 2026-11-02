@@ -116,6 +116,10 @@
       "schema": "case",
       "description": "Clinical cases collection"
     },
+    "/clinicalCases/{caseId}": {
+      "schema": "case",
+      "description": "Clinical cases alias collection"
+    },
     "/quizQuestions/{quizId}": {
       "schema": "quizQuestion",
       "description": "Quiz questions collection"
@@ -127,6 +131,10 @@
     "/results/{resultId}": {
       "schema": "result",
       "description": "Gameplay results collection"
+    },
+    "/studentGameResults/{resultId}": {
+      "schema": "result",
+      "description": "Student game results collection"
     },
     "/kahootRooms/{roomCode}": {
       "schema": "kahootRoom",

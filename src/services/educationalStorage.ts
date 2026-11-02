@@ -803,9 +803,22 @@ export const educationalStorage = {
     const unsubResults = onSnapshot(
       collection(db, 'results'),
       (querySnap) => {
+        const clearedAtStr = localStorage.getItem('simulador_venti_results_cleared_at_v2');
+        const clearedAt = clearedAtStr ? Number(clearedAtStr) : 0;
+        const deletedIdsStr = localStorage.getItem('simulador_venti_deleted_result_ids_v2');
+        const deletedIds: string[] = deletedIdsStr ? JSON.parse(deletedIdsStr) : [];
+
         const remoteReports: CaseDebriefingReport[] = [];
         querySnap.forEach((docItem) => {
+          if (deletedIds.includes(docItem.id)) {
+            deleteDoc(docItem.ref).catch(() => {});
+            return;
+          }
           const data = docItem.data();
+          if (data.submittedAt && data.submittedAt <= clearedAt) {
+            deleteDoc(docItem.ref).catch(() => {});
+            return;
+          }
           remoteReports.push({
             id: docItem.id,
             studentName: data.studentName || 'Estudante',
@@ -829,15 +842,9 @@ export const educationalStorage = {
             recommendations: [],
           });
         });
-        if (remoteReports.length > 0) {
-          const local = educationalStorage.getAllDebriefingReports();
-          const mergedMap = new Map<string, CaseDebriefingReport>();
-          local.forEach((r) => mergedMap.set(r.id, r));
-          remoteReports.forEach((r) => mergedMap.set(r.id, r));
-          const mergedList = Array.from(mergedMap.values()).slice(0, 50);
-          localStorage.setItem(STORAGE_KEYS.DEBRIEFING_REPORTS, JSON.stringify(mergedList));
-          notifyDebriefingListeners(mergedList);
-        }
+
+        localStorage.setItem(STORAGE_KEYS.DEBRIEFING_REPORTS, JSON.stringify(remoteReports));
+        notifyDebriefingListeners(remoteReports);
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, 'results');
@@ -848,8 +855,14 @@ export const educationalStorage = {
     const unsubQuiz = onSnapshot(
       collection(db, 'quizQuestions'),
       (querySnap) => {
+        const deletedRaw = localStorage.getItem(STORAGE_KEYS.DELETED_QUIZ_IDS);
+        const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
         const remoteQuestions: QuizQuestionItem[] = [];
         querySnap.forEach((docItem) => {
+          if (deletedIds.includes(docItem.id)) {
+            deleteDoc(docItem.ref).catch(() => {});
+            return;
+          }
           const data = docItem.data();
           if (data && data.question) {
             remoteQuestions.push({
@@ -864,15 +877,14 @@ export const educationalStorage = {
             });
           }
         });
-        if (remoteQuestions.length > 0) {
-          const local = educationalStorage.getAllQuizQuestions();
-          const mergedMap = new Map<string, QuizQuestionItem>();
-          local.forEach((q) => mergedMap.set(q.id, q));
-          remoteQuestions.forEach((q) => mergedMap.set(q.id, q));
-          const mergedList = Array.from(mergedMap.values());
-          localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(mergedList));
-          notifyQuizListeners(mergedList);
-        }
+
+        const local = educationalStorage.getAllQuizQuestions().filter((q) => !deletedIds.includes(q.id));
+        const mergedMap = new Map<string, QuizQuestionItem>();
+        local.forEach((q) => mergedMap.set(q.id, q));
+        remoteQuestions.forEach((q) => mergedMap.set(q.id, q));
+        const mergedList = Array.from(mergedMap.values()).filter((q) => !deletedIds.includes(q.id));
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_QUIZ_QUESTIONS, JSON.stringify(mergedList));
+        notifyQuizListeners(mergedList);
       },
       (error) => {
         handleFirestoreError(error, OperationType.GET, 'quizQuestions');

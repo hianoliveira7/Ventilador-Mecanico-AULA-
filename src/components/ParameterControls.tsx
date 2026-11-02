@@ -157,7 +157,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
   return (
     <div
       ref={popoverRef}
-      className={`relative flex-1 min-w-[160px] sm:min-w-[170px] md:min-w-[180px] shrink-0 rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between gap-1.5 min-h-[115px] select-none transition-all duration-150 border snap-start ${
+      className={`relative flex-1 min-w-[145px] sm:min-w-[155px] md:min-w-[165px] lg:min-w-[175px] shrink-0 rounded-2xl p-2 sm:p-2.5 flex flex-col justify-between gap-1 select-none transition-all duration-150 border snap-start ${
         isChanged
           ? isLight
             ? 'bg-amber-50/90 border-amber-500 shadow-md ring-1 ring-amber-400/60'
@@ -170,12 +170,12 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
       {/* 1. Header Row: Acronym Badge + Title */}
       <div className="flex items-center justify-between gap-1.5 leading-none">
         <span
-          className={`px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-black border uppercase tracking-wider shadow-xs ${scheme.badgeBg}`}
+          className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono font-black border uppercase tracking-wider shadow-xs ${scheme.badgeBg}`}
         >
           {acronym}
         </span>
         <span
-          className={`text-xs font-display font-bold truncate ${
+          className={`text-[11px] sm:text-xs font-display font-bold truncate ${
             isLight ? 'text-slate-700' : 'text-zinc-300'
           }`}
           title={title}
@@ -185,7 +185,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
       </div>
 
       {/* 2. Value Readout with - and + Steppers */}
-      <div className="flex items-center justify-between gap-1.5 my-0.5">
+      <div className="flex items-center justify-between gap-1 my-0.5">
         {/* Minus Button */}
         <button
           type="button"
@@ -193,7 +193,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
           onPointerUp={stopHolding}
           onPointerLeave={stopHolding}
           disabled={safeVal <= min}
-          className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
+          className={`w-9 h-9 sm:w-8.5 sm:h-8.5 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 touch-manipulation ${
             safeVal <= min
               ? isLight
                 ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
@@ -237,7 +237,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
           onPointerUp={stopHolding}
           onPointerLeave={stopHolding}
           disabled={safeVal >= max}
-          className={`w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 ${
+          className={`w-9 h-9 sm:w-8.5 sm:h-8.5 rounded-xl flex items-center justify-center cursor-pointer border active:scale-90 transition-all shrink-0 touch-manipulation ${
             safeVal >= max
               ? isLight
                 ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'
@@ -534,7 +534,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
       </div>
 
       {/* 2. PARAMETERS DOCK: Horizontal Scrollable Touch Row for Tablet & Desktop */}
-      <div className="p-2.5 sm:p-3 flex items-stretch gap-2.5 sm:gap-3.5 overflow-x-auto flex-1 min-h-0 scrollbar-thin snap-x">
+      <div className="p-2 sm:p-2.5 flex items-stretch gap-2 sm:gap-3 overflow-x-auto flex-1 min-h-0 scrollbar-thin snap-x touch-pan-x">
         {/* 1. Primary Volume / Pressure Controls */}
         {(mode === 'VCV' || mode === 'SIMV_VC') && (
           <TouchParamTile

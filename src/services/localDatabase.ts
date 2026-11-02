@@ -83,7 +83,10 @@ const STORAGE_KEYS = {
   CASES: 'simulador_venti_cases_v2',
   QUIZZES: 'simulador_venti_quizzes_v2',
   ROOMS: 'simulador_venti_rooms_v2',
+  DELETED_ROOMS: 'simulador_venti_deleted_rooms_v2',
   RESULTS: 'simulador_venti_results_v2',
+  CLEARED_RESULTS_AT: 'simulador_venti_results_cleared_at_v2',
+  DELETED_RESULT_IDS: 'simulador_venti_deleted_result_ids_v2',
   PROFILES: 'simulador_venti_profiles_v2',
 };
 
@@ -94,7 +97,7 @@ const DEFAULT_ROOMS: KahootRoom[] = [
     title: 'Desafio UTI: Admissão Imediata em SDRA',
     caseId: 'admissao-uti-zero-sdra',
     timeLimitMinutes: 5,
-    createdAt: Date.now(),
+    createdAt: 1700000000000,
     active: true,
     professorName: 'Prof. Dra. Camila Alencar',
   },
@@ -103,7 +106,7 @@ const DEFAULT_ROOMS: KahootRoom[] = [
     title: 'Desafio DPOC: Broncoespasmo e Auto-PEEP',
     caseId: 'dpoc-descompensado-auto-peep',
     timeLimitMinutes: 7,
-    createdAt: Date.now(),
+    createdAt: 1700000000000,
     active: true,
     professorName: 'Prof. Dr. Marcelo Vasconcelos',
   },
@@ -147,6 +150,81 @@ class LocalDatabaseService {
     });
   }
 
+  // Deletion tracking helpers
+  public getDeletedRoomCodes(): Set<string> {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.DELETED_ROOMS);
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr.map((s: string) => s.toUpperCase()) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  public addDeletedRoomCode(code: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      const set = this.getDeletedRoomCodes();
+      set.add(code.trim().toUpperCase());
+      localStorage.setItem(STORAGE_KEYS.DELETED_ROOMS, JSON.stringify(Array.from(set)));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  public removeDeletedRoomCode(code: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      const set = this.getDeletedRoomCodes();
+      set.delete(code.trim().toUpperCase());
+      localStorage.setItem(STORAGE_KEYS.DELETED_ROOMS, JSON.stringify(Array.from(set)));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  public getClearedResultsTimestamp(): number {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.CLEARED_RESULTS_AT);
+      return raw ? Number(raw) : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  public setClearedResultsTimestamp(ts: number) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.CLEARED_RESULTS_AT, String(ts));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  public getDeletedResultIds(): Set<string> {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.DELETED_RESULT_IDS);
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  public addDeletedResultId(id: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      const set = this.getDeletedResultIds();
+      set.add(id);
+      localStorage.setItem(STORAGE_KEYS.DELETED_RESULT_IDS, JSON.stringify(Array.from(set)));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   // Initialize default database records and real-time Firestore synchronization
   public init() {
     if (typeof window === 'undefined') return;
@@ -172,22 +250,24 @@ class LocalDatabaseService {
     onSnapshot(
       collection(db, 'kahootRooms'),
       (snapshot) => {
+        const deletedRooms = this.getDeletedRoomCodes();
         const remoteRooms: KahootRoom[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data() as KahootRoom;
           if (data && data.code) {
+            const norm = data.code.trim().toUpperCase();
+            if (deletedRooms.has(norm)) {
+              // Stale document in cloud that was deleted locally - clean it up
+              deleteDoc(docSnap.ref).catch(() => {});
+              return;
+            }
             remoteRooms.push(data);
           }
         });
-        if (remoteRooms.length > 0) {
-          const local = this.getRooms();
-          const mergedMap = new Map<string, KahootRoom>();
-          local.forEach((r) => mergedMap.set(r.code.toUpperCase(), r));
-          remoteRooms.forEach((r) => mergedMap.set(r.code.toUpperCase(), r));
-          const merged = Array.from(mergedMap.values());
-          localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(merged));
-          this.notifyRoomListeners(merged);
-        }
+
+        // Remote snapshot is authoritative for rooms
+        localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(remoteRooms));
+        this.notifyRoomListeners(remoteRooms);
       },
       (err) => console.warn('Kahoot rooms live sync error:', err)
     );
@@ -196,24 +276,30 @@ class LocalDatabaseService {
     onSnapshot(
       collection(db, 'results'),
       (snapshot) => {
+        const clearedAt = this.getClearedResultsTimestamp();
+        const deletedIds = this.getDeletedResultIds();
         const remoteResults: StudentGameResult[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data() as StudentGameResult;
           if (data && data.studentName) {
+            if (data.submittedAt && data.submittedAt <= clearedAt) {
+              // Result submitted before scores reset - purge from cloud
+              deleteDoc(docSnap.ref).catch(() => {});
+              return;
+            }
+            if (deletedIds.has(docSnap.id)) {
+              deleteDoc(docSnap.ref).catch(() => {});
+              return;
+            }
             remoteResults.push(data);
           }
         });
-        if (remoteResults.length > 0) {
-          const local = this.getResults();
-          const mergedMap = new Map<string, StudentGameResult>();
-          local.forEach((r) => mergedMap.set(r.id, r));
-          remoteResults.forEach((r) => mergedMap.set(r.id, r));
-          const merged = Array.from(mergedMap.values()).sort(
-            (a, b) => (b.submittedAt || 0) - (a.submittedAt || 0)
-          );
-          localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(merged));
-          this.notifyResultListeners(merged);
-        }
+
+        const sorted = remoteResults.sort(
+          (a, b) => (b.submittedAt || 0) - (a.submittedAt || 0)
+        );
+        localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(sorted));
+        this.notifyResultListeners(sorted);
       },
       (err) => console.warn('Student results live sync error:', err)
     );
@@ -283,31 +369,35 @@ class LocalDatabaseService {
   public getRooms(): KahootRoom[] {
     this.init();
     try {
+      const deletedRooms = this.getDeletedRoomCodes();
       const data = localStorage.getItem(STORAGE_KEYS.ROOMS);
-      return data ? JSON.parse(data) : DEFAULT_ROOMS;
+      const list: KahootRoom[] = data ? JSON.parse(data) : DEFAULT_ROOMS;
+      return list.filter((r) => !deletedRooms.has(r.code.toUpperCase()));
     } catch (e) {
-      return DEFAULT_ROOMS;
+      return DEFAULT_ROOMS.filter((r) => !this.getDeletedRoomCodes().has(r.code.toUpperCase()));
     }
   }
 
   public async createRoom(room: KahootRoom) {
-    const rooms = this.getRooms();
+    const normalized = room.code.trim().toUpperCase();
+    this.removeDeletedRoomCode(normalized);
+    const rooms = this.getRooms().filter((r) => r.code.toUpperCase() !== normalized);
     rooms.unshift(room);
     localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+    this.notifyRoomListeners(rooms);
 
     try {
-      const docPath = `kahootRooms/${room.code}`;
-      await setDoc(doc(db, 'kahootRooms', room.code), {
-        code: room.code,
+      await setDoc(doc(db, 'kahootRooms', normalized), {
+        code: normalized,
         title: room.title,
         caseId: room.caseId,
         timeLimitMinutes: room.timeLimitMinutes,
         active: room.active,
         professorName: room.professorName,
-        createdAt: room.createdAt,
+        createdAt: room.createdAt || Date.now(),
       });
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, `kahootRooms/${room.code}`);
+      handleFirestoreError(err, OperationType.WRITE, `kahootRooms/${normalized}`);
     }
   }
 
@@ -318,6 +408,7 @@ class LocalDatabaseService {
 
   public async getRoomByCodeAsync(code: string): Promise<KahootRoom | null> {
     const normalized = code.trim().toUpperCase();
+    if (this.getDeletedRoomCodes().has(normalized)) return null;
     const localRoom = this.getRoomByCode(normalized);
     if (localRoom) return localRoom;
 
@@ -325,11 +416,12 @@ class LocalDatabaseService {
       const docSnap = await getDoc(doc(db, 'kahootRooms', normalized));
       if (docSnap.exists()) {
         const roomData = docSnap.data() as KahootRoom;
-        if (roomData && roomData.code) {
+        if (roomData && roomData.code && !this.getDeletedRoomCodes().has(normalized)) {
           const rooms = this.getRooms();
           if (!rooms.some((r) => r.code.toUpperCase() === normalized)) {
             rooms.unshift(roomData);
             localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+            this.notifyRoomListeners(rooms);
           }
           return roomData;
         }
@@ -344,17 +436,25 @@ class LocalDatabaseService {
   public getResults(): StudentGameResult[] {
     this.init();
     try {
+      const clearedAt = this.getClearedResultsTimestamp();
+      const deletedIds = this.getDeletedResultIds();
       const data = localStorage.getItem(STORAGE_KEYS.RESULTS);
-      return data ? JSON.parse(data) : [];
+      const list: StudentGameResult[] = data ? JSON.parse(data) : [];
+      return list.filter((r) => {
+        if (r.submittedAt && r.submittedAt <= clearedAt) return false;
+        if (deletedIds.has(r.id)) return false;
+        return true;
+      });
     } catch (e) {
       return [];
     }
   }
 
   public async saveResult(result: StudentGameResult) {
-    const results = this.getResults();
+    const results = this.getResults().filter((r) => r.id !== result.id);
     results.unshift(result);
     localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(results));
+    this.notifyResultListeners(results);
 
     try {
       const payload = {
@@ -382,15 +482,20 @@ class LocalDatabaseService {
     try {
       const path = 'kahootRooms';
       const snap = await getDocs(collection(db, path));
+      const deletedRooms = this.getDeletedRoomCodes();
       const cloudRooms: KahootRoom[] = [];
       snap.forEach((docSnap) => {
         const data = docSnap.data() as KahootRoom;
-        if (data && data.code) cloudRooms.push(data);
+        if (data && data.code) {
+          const norm = data.code.trim().toUpperCase();
+          if (!deletedRooms.has(norm)) {
+            cloudRooms.push(data);
+          }
+        }
       });
-      if (cloudRooms.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(cloudRooms));
-        return cloudRooms;
-      }
+      localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(cloudRooms));
+      this.notifyRoomListeners(cloudRooms);
+      return cloudRooms;
     } catch (err) {
       console.warn('Using local cache for rooms:', err);
     }
@@ -536,10 +641,13 @@ class LocalDatabaseService {
 
   public async deleteRoom(code: string) {
     const normalized = code.trim().toUpperCase();
+    this.addDeletedRoomCode(normalized);
     const rooms = this.getRooms().filter((r) => r.code.toUpperCase() !== normalized);
     localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+    this.notifyRoomListeners(rooms);
     try {
       await deleteDoc(doc(db, 'kahootRooms', normalized));
+      await deleteDoc(doc(db, 'kahootRooms', normalized, 'state', 'current')).catch(() => {});
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `kahootRooms/${normalized}`);
     }
@@ -553,21 +661,29 @@ class LocalDatabaseService {
       return r;
     });
     localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
+    this.notifyRoomListeners(rooms);
   }
 
   public async deleteResult(id: string) {
+    this.addDeletedResultId(id);
     const results = this.getResults().filter((res) => res.id !== id);
     localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(results));
+    this.notifyResultListeners(results);
     try {
-      await deleteDoc(doc(db, 'results', id));
-      await deleteDoc(doc(db, 'studentGameResults', id));
+      await deleteDoc(doc(db, 'results', id)).catch(() => {});
+      await deleteDoc(doc(db, 'studentGameResults', id)).catch(() => {});
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `results/${id}`);
     }
   }
 
   public async clearResults() {
+    const clearedAt = Date.now();
+    this.setClearedResultsTimestamp(clearedAt);
     localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify([]));
+    educationalStorage.clearDebriefingReports();
+    this.notifyResultListeners([]);
+
     try {
       const snap = await getDocs(collection(db, 'results'));
       const batchPromises: Promise<void>[] = [];
@@ -587,23 +703,21 @@ class LocalDatabaseService {
   public async fetchCloudResults(): Promise<StudentGameResult[]> {
     try {
       const snap = await getDocs(collection(db, 'results'));
+      const clearedAt = this.getClearedResultsTimestamp();
+      const deletedIds = this.getDeletedResultIds();
       const cloudResults: StudentGameResult[] = [];
       snap.forEach((docSnap) => {
         const data = docSnap.data() as StudentGameResult;
         if (data && data.studentName) {
+          if (data.submittedAt && data.submittedAt <= clearedAt) return;
+          if (deletedIds.has(docSnap.id)) return;
           cloudResults.push(data);
         }
       });
-      if (cloudResults.length > 0) {
-        // Merge with local results without duplicates
-        const local = this.getResults();
-        const mergedMap = new Map<string, StudentGameResult>();
-        local.forEach((r) => mergedMap.set(r.id, r));
-        cloudResults.forEach((r) => mergedMap.set(r.id, r));
-        const merged = Array.from(mergedMap.values()).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
-        localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(merged));
-        return merged;
-      }
+      const sorted = cloudResults.sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+      localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(sorted));
+      this.notifyResultListeners(sorted);
+      return sorted;
     } catch (err) {
       console.warn('Using local cache for results:', err);
     }

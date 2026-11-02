@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, VolumeX, Play, User, Activity, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, GripVertical } from 'lucide-react';
+import { Volume2, VolumeX, Play, User, Activity, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, GripVertical, Heart, SlidersHorizontal } from 'lucide-react';
 import {
   VentilatorSettings,
   PatientParameters,
@@ -556,6 +556,20 @@ export default function App() {
     window.addEventListener('pointercancel', onPointerUp);
   };
 
+  // Tablet & Responsive Screen Adaptation State
+  const [windowWidth, setWindowWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  );
+  const [tabletView, setTabletView] = useState<'waveforms' | 'monitor' | 'split'>('split');
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isTabletOrCompact = windowWidth < 1024;
+
   // 8b. Resizable Clinical Panel & Splitter State
   const [rightPanelWidth, setRightPanelWidth] = useState<number>(330);
   const [isDraggingSplitter, setIsDraggingSplitter] = useState<boolean>(false);
@@ -631,10 +645,10 @@ export default function App() {
     alarmLimitsRef.current = alarmLimits;
   }, [settings, patient, maneuverState, alarmLimits]);
 
-  // Main High-Frequency Physics Engine Loop (60 Hz)
+  // Main High-Frequency Physics Engine Loop (60 Hz for fluid curves, ~4 Hz for DOM telemetry to prevent tablet stutter)
   useEffect(() => {
     const dt = 0.0166; // 60fps time step
-    let lastTime = performance.now();
+    let lastMonitoredUpdate = 0;
 
     const interval = setInterval(() => {
       if (!isSimulatorActiveRef.current) return;
@@ -647,7 +661,18 @@ export default function App() {
       );
 
       setCurrentSample(sample);
-      setMonitored(newMonitored);
+
+      // Throttle React DOM state update of numerical telemetry to ~4Hz (every 240ms) for high performance on tablets,
+      // while updating immediately if a diagnostic maneuver (Insp/Exp Pause) is active
+      const now = performance.now();
+      if (
+        now - lastMonitoredUpdate >= 240 ||
+        maneuverStateRef.current.inspiratoryHoldActive ||
+        maneuverStateRef.current.expiratoryHoldActive
+      ) {
+        lastMonitoredUpdate = now;
+        setMonitored(newMonitored);
+      }
     }, 16);
 
     return () => clearInterval(interval);
@@ -1349,6 +1374,69 @@ export default function App() {
         </div>
       )}
 
+      {/* Tablet & Compact Viewport Segmented Control */}
+      {isTabletOrCompact && (
+        <div
+          className={`mx-2 mb-1 px-2.5 py-1 rounded-xl border flex items-center justify-between gap-2 shrink-0 select-none font-mono text-xs transition-colors ${
+            isLight
+              ? 'bg-white border-slate-200 text-slate-800 shadow-xs'
+              : 'bg-[#0b0d16] border-zinc-800 text-zinc-200 shadow-xs'
+          }`}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase font-bold text-cyan-500 hidden sm:inline">Exibição Tablet:</span>
+            <div className={`flex items-center p-0.5 rounded-lg border ${isLight ? 'bg-slate-100 border-slate-300' : 'bg-[#121626] border-zinc-700/60'}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  audioEngine.playClick(900);
+                  setTabletView('waveforms');
+                }}
+                className={`px-2 py-0.5 rounded text-[10.5px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 touch-manipulation ${
+                  tabletView === 'waveforms'
+                    ? 'bg-cyan-500 text-black shadow-xs font-black'
+                    : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Activity className="w-3 h-3" />
+                <span>Gráficos & Dials</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  audioEngine.playClick(900);
+                  setTabletView('monitor');
+                }}
+                className={`px-2 py-0.5 rounded text-[10.5px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 touch-manipulation ${
+                  tabletView === 'monitor'
+                    ? 'bg-cyan-500 text-black shadow-xs font-black'
+                    : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Heart className="w-3 h-3 text-rose-400" />
+                <span>Painel Clínico</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  audioEngine.playClick(900);
+                  setTabletView('split');
+                }}
+                className={`px-2 py-0.5 rounded text-[10.5px] font-bold font-mono transition-all cursor-pointer flex items-center gap-1 touch-manipulation ${
+                  tabletView === 'split'
+                    ? 'bg-cyan-500 text-black shadow-xs font-black'
+                    : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <SlidersHorizontal className="w-3 h-3" />
+                <span>Dividido</span>
+              </button>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono opacity-60 hidden sm:inline">Tablet Otimizado</span>
+        </div>
+      )}
+
       {/* 2. Main Studio Layout (Flexible Split View with Resizable Splitters) */}
       <main
         className={`flex-1 flex min-h-0 overflow-hidden p-2 gap-0 relative transition-colors ${
@@ -1356,54 +1444,24 @@ export default function App() {
         }`}
       >
         {/* Main Central/Left Workspace: Maximized Waveforms on Top + Mode & Parameters on Bottom */}
-        <div className="flex-1 min-w-0 h-full flex flex-col gap-0 overflow-hidden">
-          {/* Active Asynchrony Resolution Banner (Simulate & Solve Challenge) */}
-          {activeAsynchrony && (
-            <AsynchronyResolutionBanner
-              asynchrony={activeAsynchrony}
-              currentSettings={settings}
-              currentPatient={patient}
-              currentMonitored={monitored}
-              onOpenDatabase={() => setIsAsynchroniesOpen(true)}
-              onClose={() => setActiveAsynchrony(null)}
-            />
-          )}
-
-          {/* Top Waveforms Area (Maximized Canvas Height & Width) */}
-          <div id="tour-waveforms" className="flex-1 min-h-0 overflow-hidden">
-            {viewMode === 'waveforms' && (
-              <div className="h-full">
-                <WaveformDisplay
-                  currentSample={currentSample}
-                  maneuverState={maneuverState}
-                  onToggleFreeze={handleToggleFreeze}
-                  peepSet={settings.peep}
-                  viewMode={viewMode}
-                  onSelectViewMode={setViewMode}
-                  monitored={monitored}
-                  formulaOverlay={activeFormulaOverlay}
-                  onSelectFormulaOverlay={setActiveFormulaOverlay}
-                />
-              </div>
+        {(!isTabletOrCompact || tabletView !== 'monitor') && (
+          <div className="flex-1 min-w-0 h-full flex flex-col gap-0 overflow-hidden">
+            {/* Active Asynchrony Resolution Banner (Simulate & Solve Challenge) */}
+            {activeAsynchrony && (
+              <AsynchronyResolutionBanner
+                asynchrony={activeAsynchrony}
+                currentSettings={settings}
+                currentPatient={patient}
+                currentMonitored={monitored}
+                onOpenDatabase={() => setIsAsynchroniesOpen(true)}
+                onClose={() => setActiveAsynchrony(null)}
+              />
             )}
 
-            {viewMode === 'loops' && (
-              <div className="h-full">
-                <LoopsDisplay
-                  currentSample={currentSample}
-                  peepSet={settings.peep}
-                  viewMode={viewMode}
-                  onSelectViewMode={setViewMode}
-                  monitored={monitored}
-                  patient={patient}
-                  isFrozen={maneuverState.isFrozen}
-                />
-              </div>
-            )}
-
-            {viewMode === 'split' && (
-              <div className="h-full grid grid-rows-2 gap-2">
-                <div className="min-h-0">
+            {/* Top Waveforms Area (Maximized Canvas Height & Width) */}
+            <div id="tour-waveforms" className="flex-1 min-h-0 overflow-hidden">
+              {viewMode === 'waveforms' && (
+                <div className="h-full">
                   <WaveformDisplay
                     currentSample={currentSample}
                     maneuverState={maneuverState}
@@ -1416,7 +1474,10 @@ export default function App() {
                     onSelectFormulaOverlay={setActiveFormulaOverlay}
                   />
                 </div>
-                <div className="min-h-0">
+              )}
+
+              {viewMode === 'loops' && (
+                <div className="h-full">
                   <LoopsDisplay
                     currentSample={currentSample}
                     peepSet={settings.peep}
@@ -1427,27 +1488,127 @@ export default function App() {
                     isFrozen={maneuverState.isFrozen}
                   />
                 </div>
+              )}
+
+              {viewMode === 'split' && (
+                <div className="h-full grid grid-rows-2 gap-2">
+                  <div className="min-h-0">
+                    <WaveformDisplay
+                      currentSample={currentSample}
+                      maneuverState={maneuverState}
+                      onToggleFreeze={handleToggleFreeze}
+                      peepSet={settings.peep}
+                      viewMode={viewMode}
+                      onSelectViewMode={setViewMode}
+                      monitored={monitored}
+                      formulaOverlay={activeFormulaOverlay}
+                      onSelectFormulaOverlay={setActiveFormulaOverlay}
+                    />
+                  </div>
+                  <div className="min-h-0">
+                    <LoopsDisplay
+                      currentSample={currentSample}
+                      peepSet={settings.peep}
+                      viewMode={viewMode}
+                      onSelectViewMode={setViewMode}
+                      monitored={monitored}
+                      patient={patient}
+                      isFrozen={maneuverState.isFrozen}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Draggable Resizer Splitter between Graph Area and Parameter Controls */}
+            <div
+              onPointerDown={handleParamSplitterPointerDown}
+              onDoubleClick={() => setParamPanelHeight(165)}
+              title="Arraste verticalmente para ajustar o espaço entre os gráficos e os parâmetros (duplo clique para restaurar 165px)"
+              className={`group relative h-4 my-0.5 w-full cursor-row-resize flex items-center justify-center shrink-0 select-none touch-none z-20 transition-colors before:absolute before:inset-x-0 before:-inset-y-3 before:z-10 ${
+                isDraggingParamSplitter ? 'bg-cyan-500/20' : ''
+              }`}
+            >
+              {/* Visual Grab Bar */}
+              <div
+                className={`h-1 rounded-full transition-all duration-150 ${
+                  isDraggingParamSplitter
+                    ? 'w-48 bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.9)] scale-y-125'
+                    : isLight
+                    ? 'w-28 bg-slate-300 group-hover:bg-cyan-600 group-hover:w-40'
+                    : 'w-28 bg-zinc-700/80 group-hover:bg-cyan-400 group-hover:w-40'
+                }`}
+              />
+
+              {/* Quick Collapse / Expand button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsParamPanelCollapsed((prev) => !prev);
+                }}
+                className={`absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border shadow-sm flex items-center justify-center cursor-pointer transition-all hover:scale-110 z-30 touch-manipulation ${
+                  isLight
+                    ? 'bg-white border-slate-300 text-slate-700 hover:text-cyan-700 hover:border-cyan-400'
+                    : 'bg-[#121420] border-zinc-700 text-zinc-300 hover:text-cyan-400 hover:border-cyan-500'
+                }`}
+                title={isParamPanelCollapsed ? 'Expandir Parâmetros' : 'Recolher Parâmetros'}
+              >
+                {isParamPanelCollapsed ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+
+              {/* Dragging height indicator badge */}
+              {isDraggingParamSplitter && (
+                <div className="absolute top-1/2 -translate-y-7 bg-cyan-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-lg pointer-events-none whitespace-nowrap z-40">
+                  Altura: {paramPanelHeight}px
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Area: Parameters & Mode (User Resizable Height) */}
+            {!isParamPanelCollapsed && (
+              <div
+                id="tour-parameters"
+                style={{
+                  height: `${Math.max(165, paramPanelHeight)}px`,
+                }}
+                className="shrink-0 overflow-y-auto lg:overflow-hidden transition-all"
+              >
+                <ParameterControls
+                  settings={settings}
+                  draftSettings={draftSettings}
+                  onUpdateDraft={handleUpdateDraft}
+                  hasChanges={hasChanges}
+                  onConfirm={handleConfirmSettings}
+                  onDiscard={handleDiscardSettings}
+                />
               </div>
             )}
           </div>
+        )}
 
-          {/* Draggable Resizer Splitter between Graph Area and Parameter Controls */}
+        {/* Draggable Resizer Splitter between Graph Area and Clinical Data Panel */}
+        {(!isTabletOrCompact || tabletView === 'split') && !isRightPanelCollapsed && (
           <div
-            onPointerDown={handleParamSplitterPointerDown}
-            onDoubleClick={() => setParamPanelHeight(165)}
-            title="Arraste verticalmente para ajustar o espaço entre os gráficos e os parâmetros (duplo clique para restaurar 165px)"
-            className={`group relative h-4 my-0.5 w-full cursor-row-resize flex items-center justify-center shrink-0 select-none touch-none z-20 transition-colors ${
-              isDraggingParamSplitter ? 'bg-cyan-500/20' : ''
+            onPointerDown={handleSplitterPointerDown}
+            onDoubleClick={() => setRightPanelWidth(330)}
+            title="Arraste para ajustar a largura do painel de dados clínicos (duplo clique para restaurar 330px)"
+            className={`group relative w-3.5 sm:w-4 mx-0.5 h-full cursor-col-resize flex items-center justify-center shrink-0 select-none touch-none z-20 transition-colors before:absolute before:inset-y-0 before:-inset-x-3 before:z-10 ${
+              isDraggingSplitter ? 'bg-cyan-500/20' : ''
             }`}
           >
-            {/* Visual Grab Bar */}
+            {/* Visual Grab Handle */}
             <div
-              className={`h-1 rounded-full transition-all duration-150 ${
-                isDraggingParamSplitter
-                  ? 'w-48 bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.9)] scale-y-125'
+              className={`w-1 rounded-full transition-all duration-150 ${
+                isDraggingSplitter
+                  ? 'h-32 bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.9)] scale-x-125'
                   : isLight
-                  ? 'w-28 bg-slate-300 group-hover:bg-cyan-600 group-hover:w-40'
-                  : 'w-28 bg-zinc-700/80 group-hover:bg-cyan-400 group-hover:w-40'
+                  ? 'h-20 bg-slate-300 group-hover:bg-cyan-500 group-hover:h-28'
+                  : 'h-20 bg-zinc-700/80 group-hover:bg-cyan-400 group-hover:h-28'
               }`}
             />
 
@@ -1456,106 +1617,45 @@ export default function App() {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setIsParamPanelCollapsed((prev) => !prev);
+                setIsRightPanelCollapsed((prev) => !prev);
               }}
-              className={`absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border shadow-sm flex items-center justify-center cursor-pointer transition-all hover:scale-110 z-30 ${
+              className={`absolute -left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border shadow-md flex items-center justify-center cursor-pointer transition-all hover:scale-110 z-30 touch-manipulation ${
                 isLight
-                  ? 'bg-white border-slate-300 text-slate-700 hover:text-cyan-700 hover:border-cyan-400'
+                  ? 'bg-white border-slate-300 text-slate-700 hover:text-cyan-600 hover:border-cyan-400'
                   : 'bg-[#121420] border-zinc-700 text-zinc-300 hover:text-cyan-400 hover:border-cyan-500'
               }`}
-              title={isParamPanelCollapsed ? 'Expandir Parâmetros' : 'Recolher Parâmetros'}
+              title={isRightPanelCollapsed ? 'Expandir Painel de Dados Clínicos' : 'Recolher Painel de Dados Clínicos'}
             >
-              {isParamPanelCollapsed ? (
-                <ChevronUp className="w-3 h-3" />
+              {isRightPanelCollapsed ? (
+                <ChevronLeft className="w-3.5 h-3.5" />
               ) : (
-                <ChevronDown className="w-3 h-3" />
+                <ChevronRight className="w-3.5 h-3.5" />
               )}
             </button>
 
-            {/* Dragging height indicator badge */}
-            {isDraggingParamSplitter && (
-              <div className="absolute top-1/2 -translate-y-7 bg-cyan-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-lg pointer-events-none whitespace-nowrap z-40">
-                Altura: {paramPanelHeight}px
+            {/* Dragging width indicator badge */}
+            {isDraggingSplitter && (
+              <div className="absolute top-1/2 -translate-y-16 bg-cyan-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-lg pointer-events-none whitespace-nowrap z-40">
+                {rightPanelWidth}px
               </div>
             )}
           </div>
+        )}
 
-          {/* Bottom Area: Parameters & Mode (User Resizable Height) */}
-          {!isParamPanelCollapsed && (
-            <div
-              id="tour-parameters"
-              style={{
-                height: `${Math.max(165, paramPanelHeight)}px`,
-              }}
-              className="shrink-0 overflow-y-auto lg:overflow-hidden transition-all"
-            >
-              <ParameterControls
-                settings={settings}
-                draftSettings={draftSettings}
-                onUpdateDraft={handleUpdateDraft}
-                hasChanges={hasChanges}
-                onConfirm={handleConfirmSettings}
-                onDiscard={handleDiscardSettings}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Draggable Resizer Splitter between Graph Area and Clinical Data Panel */}
-        <div
-          onPointerDown={handleSplitterPointerDown}
-          onDoubleClick={() => setRightPanelWidth(330)}
-          title="Arraste para ajustar a largura do painel de dados clínicos (duplo clique para restaurar 330px)"
-          className={`group relative w-3.5 mx-0.5 h-full cursor-col-resize flex items-center justify-center shrink-0 select-none touch-none z-20 transition-colors ${
-            isDraggingSplitter ? 'bg-cyan-500/20' : ''
-          }`}
-        >
-          {/* Visual Grab Handle */}
-          <div
-            className={`w-1 rounded-full transition-all duration-150 ${
-              isDraggingSplitter
-                ? 'h-32 bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.9)] scale-x-125'
-                : isLight
-                ? 'h-20 bg-slate-300 group-hover:bg-cyan-500 group-hover:h-28'
-                : 'h-20 bg-zinc-700/80 group-hover:bg-cyan-400 group-hover:h-28'
-            }`}
-          />
-
-          {/* Quick Collapse / Expand button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsRightPanelCollapsed((prev) => !prev);
-            }}
-            className={`absolute -left-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border shadow-md flex items-center justify-center cursor-pointer transition-all hover:scale-110 z-30 ${
-              isLight
-                ? 'bg-white border-slate-300 text-slate-700 hover:text-cyan-600 hover:border-cyan-400'
-                : 'bg-[#121420] border-zinc-700 text-zinc-300 hover:text-cyan-400 hover:border-cyan-500'
-            }`}
-            title={isRightPanelCollapsed ? 'Expandir Painel de Dados Clínicos' : 'Recolher Painel de Dados Clínicos'}
-          >
-            {isRightPanelCollapsed ? (
-              <ChevronLeft className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5" />
-            )}
-          </button>
-
-          {/* Dragging width indicator badge */}
-          {isDraggingSplitter && (
-            <div className="absolute top-1/2 -translate-y-16 bg-cyan-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow-lg pointer-events-none whitespace-nowrap z-40">
-              {rightPanelWidth}px
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Monitorization & Mechanics (User Resizable Width) */}
-        {!isRightPanelCollapsed && (
+        {/* Right Column: Monitorization & Mechanics (User Resizable Width or Tablet Full Width) */}
+        {(!isTabletOrCompact ? !isRightPanelCollapsed : (tabletView === 'monitor' || (tabletView === 'split' && !isRightPanelCollapsed))) && (
           <div
             id="tour-monitored"
-            style={{ width: `${rightPanelWidth}px` }}
-            className="h-full min-h-0 shrink-0 overflow-hidden"
+            style={{
+              width: isTabletOrCompact
+                ? tabletView === 'monitor'
+                  ? '100%'
+                  : `${Math.min(rightPanelWidth, Math.max(260, Math.floor(windowWidth * 0.40)))}px`
+                : `${rightPanelWidth}px`,
+            }}
+            className={`h-full min-h-0 overflow-hidden ${
+              isTabletOrCompact && tabletView === 'monitor' ? 'flex-1 w-full' : 'shrink-0'
+            }`}
           >
             <MonitorPanel
               monitored={monitored}
