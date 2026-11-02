@@ -255,29 +255,26 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                 />
               </div>
 
-                {/* Ocultar se não for modo Equipe */}
-                {(rooms.find(r => r.code === inputRoomCode)?.mode === 'team') && (
-                  <div className={`p-4 rounded-2xl border ${
-                    isLight ? 'bg-purple-50/50 border-purple-200' : 'bg-[#150f25] border-purple-900/40'
-                  }`}>
-                    <label className="block text-xs font-mono font-bold uppercase text-purple-400 mb-1 flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5" />
-                      2. Nome da Equipe / Grupo:
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Equipe UTI Alfa"
-                      value={teamName}
-                      onChange={(e) => {
-                        setTeamName(e.target.value);
-                        localStorage.setItem('simulador_team_name', e.target.value);
-                      }}
-                      className={`w-full px-3 py-2 rounded-xl text-sm font-mono border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                        isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-purple-200'
-                      }`}
-                    />
-                  </div>
-                )}
+              <div className={`p-4 rounded-2xl border ${
+                isLight ? 'bg-purple-50/50 border-purple-200' : 'bg-[#150f25] border-purple-900/40'
+              }`}>
+                <label className="block text-xs font-mono font-bold uppercase text-purple-400 mb-1 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" />
+                  2. Nome da Equipe / Grupo (Trabalho em Equipe):
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Equipe UTI Alfa"
+                  value={teamName}
+                  onChange={(e) => {
+                    setTeamName(e.target.value);
+                    localStorage.setItem('simulador_team_name', e.target.value);
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl text-sm font-mono border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-purple-200'
+                  }`}
+                />
+              </div>
 
               <div className={`p-4 rounded-2xl border space-y-2 ${
                 isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-[#0f1325] border-indigo-900/40'
