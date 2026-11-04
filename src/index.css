@@ -68,10 +68,22 @@ html, body, #root {
 }
 
 /* Allow inner scrollable containers to scroll smoothly without leaking swipe gestures to root page */
-.overflow-y-auto, .overflow-x-auto, .overflow-auto {
+.overflow-y-auto {
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y !important;
+}
+
+.overflow-x-auto {
+  overscroll-behavior-x: contain !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x !important;
+}
+
+.overflow-auto {
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  touch-action: pan-x pan-y !important;
 }
 
 /* Precise Range Slider & Interactive Dials Styling */

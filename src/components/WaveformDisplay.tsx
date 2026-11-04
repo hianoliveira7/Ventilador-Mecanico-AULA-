@@ -1278,8 +1278,8 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  // Mouse hover for Caliper in Freeze mode
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Pointer hover and touch caliper inspection in Freeze mode
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!maneuverState.isFrozen || !fgCanvasRef.current) return;
     const rect = fgCanvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -1295,25 +1295,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     setHoverData({ x, sample: buffer[idx] });
   };
 
-  // Touch caliper inspection on tablets
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (!maneuverState.isFrozen || !fgCanvasRef.current || e.touches.length === 0) return;
-    const touch = e.touches[0];
-    const rect = fgCanvasRef.current.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const padLeft = 48;
-    const chartW = rect.width - padLeft - 16;
-    if (x < padLeft || x > rect.width - 16) return;
-
-    const buffer = bufferRef.current;
-    if (buffer.length === 0) return;
-
-    const ratio = (x - padLeft) / chartW;
-    const idx = Math.min(buffer.length - 1, Math.max(0, Math.round(ratio * (buffer.length - 1))));
-    setHoverData({ x, sample: buffer[idx] });
-  };
-
-  const handleMouseLeave = () => {
+  const handlePointerLeave = () => {
     setHoverData(null);
   };
 
@@ -1607,12 +1589,11 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         {/* Layer 2: Dynamic Real-time Front-Buffer (Atomically blitted from Offscreen Back-Buffer) */}
         <canvas
           ref={fgCanvasRef}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          onTouchStart={handleTouchMove}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleMouseLeave}
-          onTouchCancel={handleMouseLeave}
+          onPointerDown={handlePointerMove}
+          onPointerMove={handlePointerMove}
+          onPointerLeave={handlePointerLeave}
+          onPointerUp={handlePointerLeave}
+          onPointerCancel={handlePointerLeave}
           style={{ touchAction: 'none' }}
           className="absolute inset-0 w-full h-full block cursor-crosshair z-10 touch-none select-none"
         />

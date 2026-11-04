@@ -1688,7 +1688,7 @@ export default function App() {
 
   return (
     <div
-      className={`flex flex-col fixed inset-0 h-dvh w-dvw overflow-hidden font-sans select-none touch-none transition-colors ${
+      className={`flex flex-col fixed inset-0 h-dvh w-dvw overflow-hidden font-sans select-none touch-manipulation transition-colors ${
         isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#050505] text-zinc-100'
       }`}
     >
