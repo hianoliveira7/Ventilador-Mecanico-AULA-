@@ -520,38 +520,6 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           </div>
         </div>
 
-        {/* Center: Live Clinical Calculators (I:E, Flow, Exp. MV) */}
-        <div className={`hidden md:flex items-center gap-2 px-2.5 py-1 rounded-xl border text-[11px] font-mono shrink-0 select-none ${
-          isLight ? 'bg-slate-50 border-slate-200 shadow-xs' : 'bg-[#101426] border-zinc-800'
-        }`}>
-          {mode !== 'APRV' && (
-            <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>
-              I:E <strong className={isLight ? 'text-cyan-800' : 'text-cyan-300'}>1:{calculatedIeRatio}</strong>
-            </span>
-          )}
-          {mode === 'VCV' && (
-            <>
-              <span className="text-zinc-500">•</span>
-              <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>
-                Fluxo: <strong className={isLight ? 'text-purple-800' : 'text-purple-300'}>{draftSettings.inspiratoryFlow ?? 60} L/min</strong>
-              </span>
-            </>
-          )}
-          {estMinuteVentilation && (
-            <>
-              <span className="text-zinc-500">•</span>
-              <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>
-                VM est: <strong className={isLight ? 'text-emerald-800' : 'text-emerald-300'}>{estMinuteVentilation} L/min</strong>
-              </span>
-            </>
-          )}
-          {mode === 'APRV' && (
-            <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>
-              Freq. Ciclo: <strong className={isLight ? 'text-amber-800' : 'text-amber-300'}>{effectiveRr} cpm</strong>
-            </span>
-          )}
-        </div>
-
         {/* Right: Advanced Toggle & Confirmation / Discard Dock */}
         <div className="flex items-center gap-1.5 ml-auto shrink-0">
           {/* Advanced Parameters Expander Toggle */}
@@ -621,6 +589,52 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Dynamic Floating Clinical Calculator Balloon (Appears ONLY while adjusting parameters; disappears on CONFIRMAR/Descartar) */}
+      {hasChanges && (
+        <div className="absolute right-3 top-11 z-50 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-150">
+          <div
+            className={`px-3 py-1.5 rounded-xl border shadow-2xl flex items-center gap-2 font-mono text-[11px] sm:text-xs ${
+              isLight
+                ? 'bg-slate-900 text-white border-slate-700 shadow-slate-900/40'
+                : 'bg-[#0f1426] text-white border-cyan-400/80 shadow-[0_4px_24px_rgba(6,182,212,0.45)] ring-1 ring-cyan-400/50'
+            }`}
+          >
+            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <div className="flex flex-wrap items-center gap-2 font-bold">
+              {mode !== 'APRV' && (
+                <span>
+                  I:E <strong className="text-cyan-300 font-mono">1:{calculatedIeRatio}</strong>
+                </span>
+              )}
+              <span className="text-zinc-500">•</span>
+              <span>
+                T_i: <strong className="text-emerald-300 font-mono">{effectiveTi.toFixed(2)}s</strong>
+              </span>
+              <span className="text-zinc-500">•</span>
+              <span>
+                T_e: <strong className="text-teal-300 font-mono">{calculatedTe.toFixed(2)}s</strong>
+              </span>
+              {(mode === 'VCV' || mode === 'SIMV_VC') && (
+                <>
+                  <span className="text-zinc-500">•</span>
+                  <span>
+                    Fluxo: <strong className="text-purple-300 font-mono">{draftSettings.inspiratoryFlow ?? 60} L/min</strong>
+                  </span>
+                </>
+              )}
+              {estMinuteVentilation && (
+                <>
+                  <span className="text-zinc-500">•</span>
+                  <span>
+                    VM est: <strong className="text-amber-300 font-mono">{estMinuteVentilation} L/min</strong>
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2. PARAMETERS DOCK: Horizontal Scrollable Touch Row for Tablet & Desktop */}
       <div className="p-2 sm:p-2.5 flex items-stretch gap-2 sm:gap-3 overflow-x-auto flex-1 min-h-0 scrollbar-thin snap-x touch-pan-x">
