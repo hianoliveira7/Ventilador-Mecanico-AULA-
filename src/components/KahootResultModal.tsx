@@ -13,6 +13,12 @@ import {
   BookOpen,
   ArrowRight,
   X,
+  Users,
+  Wind,
+  Stethoscope,
+  Syringe,
+  Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface KahootResultModalProps {
@@ -31,6 +37,9 @@ export const KahootResultModal: React.FC<KahootResultModalProps> = ({
   const { isLight } = useTheme();
 
   if (!isOpen || !result) return null;
+
+  const isTeam = Boolean(result.isTeamMode || result.teamName);
+  const bd = result.roleBreakdown;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-lg p-4 animate-fadeIn">
@@ -53,12 +62,23 @@ export const KahootResultModal: React.FC<KahootResultModalProps> = ({
           <div className="relative z-10 space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-400 text-slate-950 font-mono font-black text-xs uppercase rounded-full shadow-lg">
               <Trophy className="w-4 h-4" />
-              <span>RESULTADO FINAL KAHOOT</span>
+              <span>{isTeam ? '🏆 PONTUAÇÃO COLETIVA DO GRUPO' : 'RESULTADO FINAL KAHOOT'}</span>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-display font-black tracking-tight drop-shadow-md">
-              {result.studentName}
-            </h2>
+            {isTeam && result.teamName ? (
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-display font-black tracking-tight drop-shadow-md text-amber-300">
+                  {result.teamName}
+                </h2>
+                <p className="text-xs font-mono text-zinc-200 mt-0.5">
+                  Desafio concluído colaborativamente • Aluno: {result.studentName} {result.role ? `(${result.role})` : ''}
+                </p>
+              </div>
+            ) : (
+              <h2 className="text-2xl sm:text-3xl font-display font-black tracking-tight drop-shadow-md">
+                {result.studentName}
+              </h2>
+            )}
 
             <div className="text-3xl sm:text-4xl font-mono font-black text-amber-300 drop-shadow-md">
               {result.score} <span className="text-lg font-normal text-amber-100">/ {result.maxScore} Pts</span>
@@ -118,6 +138,100 @@ export const KahootResultModal: React.FC<KahootResultModalProps> = ({
 
         {/* Scrollable Detailed Feedback & Mistake Breakdown */}
         <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {/* Interprofessional Team Score Breakdown (When in Team Mode) */}
+          {bd && (
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              isLight ? 'bg-indigo-50/60 border-indigo-200' : 'bg-[#0f1426] border-indigo-900/60'
+            }`}>
+              <div className="flex items-center justify-between border-b pb-2 border-inherit">
+                <span className="text-xs font-mono font-bold uppercase text-indigo-400 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-indigo-400" />
+                  Desempenho Colaborativo por Especialidade da Equipe:
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  Equipe Multidisciplinar
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* 🫁 FISIOTERAPIA */}
+                <div className={`p-3 rounded-xl border space-y-1.5 ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#121c2e] border-cyan-900/50'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold">
+                    <span className="text-cyan-400 flex items-center gap-1">
+                      <Wind className="w-3.5 h-3.5" /> Fisio
+                    </span>
+                    <span className="text-cyan-300 font-black">{bd.physioScore}/{bd.physioMaxScore}</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-cyan-400 h-full rounded-full transition-all"
+                      style={{ width: `${Math.round((bd.physioScore / bd.physioMaxScore) * 100)}%` }}
+                    />
+                  </div>
+                  <ul className="text-[10px] font-mono text-zinc-400 space-y-0.5 pt-0.5">
+                    {bd.physioFeedback.map((f, i) => (
+                      <li key={i} className="truncate">• {f}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* 🩺 MEDICINA */}
+                <div className={`p-3 rounded-xl border space-y-1.5 ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#18152e] border-indigo-900/50'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold">
+                    <span className="text-indigo-400 flex items-center gap-1">
+                      <Stethoscope className="w-3.5 h-3.5" /> Médico
+                    </span>
+                    <span className="text-indigo-300 font-black">{bd.doctorScore}/{bd.doctorMaxScore}</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-indigo-400 h-full rounded-full transition-all"
+                      style={{ width: `${Math.round((bd.doctorScore / bd.doctorMaxScore) * 100)}%` }}
+                    />
+                  </div>
+                  <ul className="text-[10px] font-mono text-zinc-400 space-y-0.5 pt-0.5">
+                    {bd.doctorFeedback.map((f, i) => (
+                      <li key={i} className="truncate">• {f}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* 💊 ENFERMAGEM */}
+                <div className={`p-3 rounded-xl border space-y-1.5 ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#1c1229] border-purple-900/50'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold">
+                    <span className="text-purple-400 flex items-center gap-1">
+                      <Syringe className="w-3.5 h-3.5" /> Enfermagem
+                    </span>
+                    <span className="text-purple-300 font-black">{bd.nurseScore}/{bd.nurseMaxScore}</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-purple-400 h-full rounded-full transition-all"
+                      style={{ width: `${Math.round((bd.nurseScore / bd.nurseMaxScore) * 100)}%` }}
+                    />
+                  </div>
+                  <ul className="text-[10px] font-mono text-zinc-400 space-y-0.5 pt-0.5">
+                    {bd.nurseFeedback.map((f, i) => (
+                      <li key={i} className="truncate">• {f}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Sinergia & Gasometria */}
+              <div className="flex items-center justify-between pt-1 border-t border-inherit text-xs font-mono">
+                <span className="text-zinc-400">Sinergia e Equilíbrio Gasométrico:</span>
+                <span className="font-bold text-emerald-400">{bd.teamScore}/{bd.teamMaxScore} pts</span>
+              </div>
+            </div>
+          )}
+
           {/* Strengths Section */}
           {result.strengths.length > 0 && (
             <div className="space-y-2">

@@ -255,52 +255,62 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                 />
               </div>
 
-              <div className={`p-4 rounded-2xl border ${
-                isLight ? 'bg-purple-50/50 border-purple-200' : 'bg-[#150f25] border-purple-900/40'
-              }`}>
-                <label className="block text-xs font-mono font-bold uppercase text-purple-400 mb-1 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5" />
-                  2. Nome da Equipe / Grupo (Trabalho em Equipe):
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Equipe UTI Alfa"
-                  value={teamName}
-                  onChange={(e) => {
-                    setTeamName(e.target.value);
-                    localStorage.setItem('simulador_team_name', e.target.value);
-                  }}
-                  className={`w-full px-3 py-2 rounded-xl text-sm font-mono border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                    isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-purple-200'
-                  }`}
-                />
-              </div>
+              {/* Conditional Team Name Input */}
+              {localDatabase.getRoomByCode(inputRoomCode)?.mode === 'team' && (
+                <div className={`p-4 rounded-2xl border ${
+                  isLight ? 'bg-purple-50/50 border-purple-200' : 'bg-[#150f25] border-purple-900/40'
+                }`}>
+                  <label className="block text-xs font-mono font-bold uppercase text-purple-400 mb-1 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5" />
+                    2. Nome da Equipe / Grupo (Trabalho em Equipe):
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Equipe UTI Alfa"
+                    value={teamName}
+                    onChange={(e) => {
+                      setTeamName(e.target.value);
+                      localStorage.setItem('simulador_team_name', e.target.value);
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl text-sm font-mono border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-purple-200'
+                    }`}
+                  />
+                </div>
+              )}
 
               <div className={`p-4 rounded-2xl border space-y-2 ${
                 isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-[#0f1325] border-indigo-900/40'
               }`}>
                 <label className="block text-xs font-mono font-bold uppercase text-indigo-400">
-                  2. Função na Equipe de UTI (Modo Cooperativo):
+                  {localDatabase.getRoomByCode(inputRoomCode)?.mode === 'team' ? '3. Função na Equipe (Unica):' : '2. Função Desejada:'}
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: 'Fisioterapeuta Respiratório', label: '🫁 Fisioterapeuta' },
                     { id: 'Médico Intensivista', label: '🩺 Médico(a)' },
                     { id: 'Enfermeiro(a) UTI', label: '💊 Enfermeiro(a)' },
-                  ].map((role) => (
-                    <button
-                      key={role.id}
-                      type="button"
-                      onClick={() => setTeamRole(role.id)}
-                      className={`py-2 px-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer text-center ${
-                        teamRole === role.id
-                          ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
-                          : isLight ? 'bg-white border-slate-300 text-slate-700' : 'bg-[#0a0d18] border-zinc-700 text-zinc-300'
-                      }`}
-                    >
-                      {role.label}
-                    </button>
-                  ))}
+                  ].map((role) => {
+                    const isTaken = localDatabase.getResults().some(r => r.roomCode === inputRoomCode && (localDatabase.getRoomByCode(inputRoomCode)?.mode === 'team' ? r.teamName === teamName : true) && r.role === role.id);
+                    return (
+                      <button
+                        key={role.id}
+                        type="button"
+                        onClick={() => !isTaken && setTeamRole(role.id)}
+                        disabled={isTaken}
+                        className={`py-2 px-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer text-center ${
+                          teamRole === role.id
+                            ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
+                            : isTaken
+                            ? 'bg-zinc-800 border-zinc-700 text-zinc-500 cursor-not-allowed opacity-50'
+                            : isLight ? 'bg-white border-slate-300 text-slate-700' : 'bg-[#0a0d18] border-zinc-700 text-zinc-300'
+                        }`}
+                      >
+                        {role.label}
+                        {isTaken && <span className="block text-[8px] font-normal">Indisponível</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

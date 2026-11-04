@@ -296,6 +296,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Consolidated "Estudos" Dropdown */}
         <div className="relative" ref={estudosRef}>
           <button
+            id="tour-cases-quiz"
             type="button"
             onClick={() => {
               audioEngine.playClick(950);

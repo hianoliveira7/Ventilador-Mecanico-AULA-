@@ -13,6 +13,7 @@ interface ParameterControlsProps {
   onDiscard: () => void;
   isReadOnly?: boolean;
   readOnlyNotice?: string;
+  activeTeamRole?: string;
 }
 
 interface QuickPresets {
@@ -31,6 +32,13 @@ const PARAM_PRESETS: QuickPresets = {
   inspiratoryPausePercent: [0, 5, 10, 15, 20],
   expiratorySensitivity: [15, 20, 25, 30, 35, 40],
   simvPs: [5, 8, 10, 12, 15],
+  pHigh: [16, 18, 20, 22, 25, 28, 30],
+  pLow: [0, 2, 4, 6],
+  tHigh: [2.5, 3.0, 3.5, 4.0, 5.0],
+  tLow: [0.4, 0.5, 0.6, 0.7, 0.8],
+  inspiratoryFlow: [30, 40, 50, 60, 70, 80],
+  pressureRiseTime: [0.05, 0.1, 0.15, 0.2, 0.25],
+  backupApneaTime: [15, 20, 25, 30],
 };
 
 interface TouchParamTileProps {
@@ -339,6 +347,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
   onDiscard,
   isReadOnly = false,
   readOnlyNotice,
+  activeTeamRole,
 }) => {
   const { isLight } = useTheme();
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
@@ -420,6 +429,22 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
     { id: 'CPAP', label: 'CPAP', sub: 'Pressão Contínua' },
   ];
 
+  // Derived clinical reference indicators
+  const effectiveRr = draftSettings.mode === 'SIMV_VC' 
+    ? (draftSettings.simvRate ?? 10) 
+    : draftSettings.mode === 'APRV' 
+      ? Number((60 / ((draftSettings.tHigh ?? 4.0) + (draftSettings.tLow ?? 0.6))).toFixed(1))
+      : (draftSettings.respiratoryRate ?? 12);
+  
+  const effectiveTi = draftSettings.inspiratoryTimePCV ?? 1.0;
+  const cycleTime = effectiveRr > 0 ? 60 / effectiveRr : 5.0;
+  const calculatedTe = Math.max(0.1, cycleTime - effectiveTi);
+  const calculatedIeRatio = effectiveTi > 0 ? (calculatedTe / effectiveTi).toFixed(1) : '2.0';
+
+  const estMinuteVentilation = (draftSettings.mode === 'VCV' || draftSettings.mode === 'SIMV_VC')
+    ? (((draftSettings.tidalVolume ?? 450) * effectiveRr) / 1000).toFixed(1)
+    : null;
+
   return (
     <div
       className={`rounded-2xl border shadow-xl flex flex-col h-full overflow-hidden select-none transition-colors ${
@@ -493,6 +518,38 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
               );
             })}
           </div>
+        </div>
+
+        {/* Center: Live Clinical Calculators (I:E, Flow, Exp. MV) */}
+        <div className={`hidden md:flex items-center gap-2 px-2.5 py-1 rounded-xl border text-[11px] font-mono shrink-0 select-none ${
+          isLight ? 'bg-slate-50 border-slate-200 shadow-xs' : 'bg-[#101426] border-zinc-800'
+        }`}>
+          {mode !== 'APRV' && (
+            <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>
+              I:E <strong className={isLight ? 'text-cyan-800' : 'text-cyan-300'}>1:{calculatedIeRatio}</strong>
+            </span>
+          )}
+          {mode === 'VCV' && (
+            <>
+              <span className="text-zinc-500">•</span>
+              <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>
+                Fluxo: <strong className={isLight ? 'text-purple-800' : 'text-purple-300'}>{draftSettings.inspiratoryFlow ?? 60} L/min</strong>
+              </span>
+            </>
+          )}
+          {estMinuteVentilation && (
+            <>
+              <span className="text-zinc-500">•</span>
+              <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>
+                VM est: <strong className={isLight ? 'text-emerald-800' : 'text-emerald-300'}>{estMinuteVentilation} L/min</strong>
+              </span>
+            </>
+          )}
+          {mode === 'APRV' && (
+            <span className={isLight ? 'text-slate-600' : 'text-zinc-400'}>
+              Freq. Ciclo: <strong className={isLight ? 'text-amber-800' : 'text-amber-300'}>{effectiveRr} cpm</strong>
+            </span>
+          )}
         </div>
 
         {/* Right: Advanced Toggle & Confirmation / Discard Dock */}
@@ -619,6 +676,86 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           />
         )}
 
+        {/* APRV Specific High / Low Pressures and Times */}
+        {mode === 'APRV' && (
+          <>
+            <TouchParamTile
+              title="Pressão Alta"
+              acronym="Palta"
+              field="pHigh"
+              value={draftSettings.pHigh ?? 20}
+              activeVal={settings.pHigh}
+              min={10}
+              max={40}
+              step={1}
+              unit="cmH₂O"
+              themeColor="cyan"
+              onUpdate={updateField}
+              isReadOnly={isReadOnly}
+            />
+            <TouchParamTile
+              title="Pressão Baixa"
+              acronym="Pbaixa"
+              field="pLow"
+              value={draftSettings.pLow ?? 0}
+              activeVal={settings.pLow}
+              min={0}
+              max={15}
+              step={1}
+              unit="cmH₂O"
+              themeColor="blue"
+              onUpdate={updateField}
+              isReadOnly={isReadOnly}
+            />
+            <TouchParamTile
+              title="Tempo Alto"
+              acronym="Talto"
+              field="tHigh"
+              value={draftSettings.tHigh ?? 4.0}
+              activeVal={settings.tHigh}
+              min={1.0}
+              max={10.0}
+              step={0.5}
+              unit="s"
+              themeColor="purple"
+              onUpdate={updateField}
+              isReadOnly={isReadOnly}
+            />
+            <TouchParamTile
+              title="Tempo Baixo"
+              acronym="Tbaixo"
+              field="tLow"
+              value={draftSettings.tLow ?? 0.6}
+              activeVal={settings.tLow}
+              min={0.2}
+              max={2.0}
+              step={0.1}
+              unit="s"
+              themeColor="teal"
+              onUpdate={updateField}
+              isReadOnly={isReadOnly}
+            />
+          </>
+        )}
+
+        {/* SIMV Spontaneous Pressure Support */}
+        {mode === 'SIMV_VC' && (
+          <TouchParamTile
+            title="PS Espontânea"
+            acronym="PS"
+            field="simvPs"
+            value={draftSettings.simvPs ?? 10}
+            activeVal={settings.simvPs}
+            min={0}
+            max={30}
+            step={1}
+            unit="cmH₂O"
+            themeColor="teal"
+            onUpdate={updateField}
+            isReadOnly={isReadOnly}
+          />
+        )}
+
         {/* 2. Respiratory Rate / Frequency */}
         {mode === 'SIMV_VC' && (
           <TouchParamTile
@@ -637,7 +774,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           />
         )}
 
-        {mode !== 'PSV' && mode !== 'CPAP' && mode !== 'SIMV_VC' && (
+        {mode !== 'PSV' && mode !== 'CPAP' && mode !== 'SIMV_VC' && mode !== 'APRV' && (
           <TouchParamTile
             title="Frequência Resp."
             acronym="FR"
@@ -655,7 +792,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
         )}
 
         {/* 3. Inspiratory Time (Ti) */}
-        {mode !== 'PSV' && mode !== 'CPAP' && (
+        {mode !== 'PSV' && mode !== 'CPAP' && mode !== 'APRV' && (
           <TouchParamTile
             title="Tempo Insp."
             acronym="Ti"
@@ -672,21 +809,23 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
           />
         )}
 
-        {/* 4. PEEP */}
-        <TouchParamTile
-          title="PEEP / CPAP"
-          acronym="PEEP"
-          field="peep"
-          value={draftSettings.peep}
-          activeVal={settings.peep}
-          min={0}
-          max={24}
-          step={1}
-          unit="cmH₂O"
-          themeColor="blue"
-          onUpdate={updateField}
-          isReadOnly={isReadOnly}
-        />
+        {/* 4. PEEP (not shown in APRV as it uses Plow) */}
+        {mode !== 'APRV' && (
+          <TouchParamTile
+            title="PEEP / CPAP"
+            acronym="PEEP"
+            field="peep"
+            value={draftSettings.peep}
+            activeVal={settings.peep}
+            min={0}
+            max={24}
+            step={1}
+            unit="cmH₂O"
+            themeColor="blue"
+            onUpdate={updateField}
+            isReadOnly={isReadOnly}
+          />
+        )}
 
         {/* 5. FiO2 */}
         <TouchParamTile
@@ -882,6 +1021,24 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
               </div>
             )}
 
+            {/* Inspiratory Flow (VCV / SIMV_VC) */}
+            {(mode === 'VCV' || mode === 'SIMV_VC') && (
+              <TouchParamTile
+                title="Fluxo Insp."
+                acronym="Fluxo"
+                field="inspiratoryFlow"
+                value={draftSettings.inspiratoryFlow ?? 60}
+                activeVal={settings.inspiratoryFlow}
+                min={20}
+                max={120}
+                step={5}
+                unit="L/min"
+                themeColor="purple"
+                onUpdate={updateField}
+                isReadOnly={isReadOnly}
+              />
+            )}
+
             {/* Inspiratory Pause % */}
             {(mode === 'VCV' || mode === 'SIMV_VC') && (
               <TouchParamTile
@@ -900,6 +1057,24 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
               />
             )}
 
+            {/* Rise Time / Rampa de Subida (PCV) */}
+            {mode === 'PCV' && (
+              <TouchParamTile
+                title="Rampa Subida"
+                acronym="RiseT"
+                field="pressureRiseTime"
+                value={draftSettings.pressureRiseTime ?? 0.15}
+                activeVal={settings.pressureRiseTime}
+                min={0.05}
+                max={0.5}
+                step={0.05}
+                unit="s"
+                themeColor="teal"
+                onUpdate={updateField}
+                isReadOnly={isReadOnly}
+              />
+            )}
+
             {/* Expiratory Sensitivity % */}
             {(mode === 'PSV' || mode === 'CPAP') && (
               <TouchParamTile
@@ -913,6 +1088,24 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                 step={5}
                 unit="%"
                 themeColor="teal"
+                onUpdate={updateField}
+                isReadOnly={isReadOnly}
+              />
+            )}
+
+            {/* Backup Apnea Time (PSV / CPAP) */}
+            {(mode === 'PSV' || mode === 'CPAP') && (
+              <TouchParamTile
+                title="Tempo Apneia"
+                acronym="Apneia"
+                field="backupApneaTime"
+                value={draftSettings.backupApneaTime ?? 20}
+                activeVal={settings.backupApneaTime}
+                min={10}
+                max={60}
+                step={5}
+                unit="s"
+                themeColor="amber"
                 onUpdate={updateField}
                 isReadOnly={isReadOnly}
               />

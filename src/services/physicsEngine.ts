@@ -349,7 +349,8 @@ export class VentilationPhysicsEngine {
       }
       case 'PSV':
       case 'CPAP': {
-        const activeRate = patient.spontaneousDrive ? dynamicSpontRate : (60 / currentActiveSettings.backupApneaTime);
+        const apneaTime = Math.max(5, currentActiveSettings.backupApneaTime || 20);
+        const activeRate = patient.spontaneousDrive ? dynamicSpontRate : (60 / apneaTime);
         cycleDuration = 60 / Math.max(activeRate, 3);
         inspTime = cycleDuration * (patient.spontaneousDutyCycle || 0.33);
         totalInspDuration = inspTime;
@@ -357,16 +358,18 @@ export class VentilationPhysicsEngine {
         break;
       }
       case 'APRV': {
+        const safeTHigh = Math.max(0.5, currentActiveSettings.tHigh || 3.5);
+        const safeTLow = Math.max(0.1, currentActiveSettings.tLow || 0.5);
         if (patient.spontaneousDrive) {
           cycleDuration = 60 / Math.max(dynamicSpontRate, 3);
           inspTime = cycleDuration * 0.65;
           totalInspDuration = inspTime;
           expTime = Math.max(0.12, cycleDuration - inspTime);
         } else {
-          cycleDuration = currentActiveSettings.tHigh + currentActiveSettings.tLow;
-          inspTime = currentActiveSettings.tHigh;
+          cycleDuration = safeTHigh + safeTLow;
+          inspTime = safeTHigh;
           totalInspDuration = inspTime;
-          expTime = Math.max(0.10, currentActiveSettings.tLow);
+          expTime = Math.max(0.10, safeTLow);
         }
         break;
       }

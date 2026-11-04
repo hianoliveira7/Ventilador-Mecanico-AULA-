@@ -33,6 +33,7 @@ interface RoleActionPanelProps {
   onUpdatePatient: (updated: Partial<PatientParameters>) => void;
   onUpdateSettings: (updated: Partial<VentilatorSettings>) => void;
   roomCode?: string;
+  teamName?: string;
   isLight?: boolean;
 }
 
@@ -44,6 +45,7 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
   onUpdatePatient,
   onUpdateSettings,
   roomCode,
+  teamName,
   isLight = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'role_actions' | 'interprofessional_status'>('role_actions');
@@ -61,18 +63,27 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
     setTimeout(() => setActionFeedback(null), 3500);
   };
 
-  const syncStateToCloud = async (patientUpdates: Partial<PatientParameters>, settingsUpdates?: Partial<VentilatorSettings>) => {
-    if (roomCode) {
-      await localDatabase.publishRoomState(roomCode, {
-        patient: { ...patient, ...patientUpdates },
-        ...(settingsUpdates ? { settings: { ...settings, ...settingsUpdates } } : {}),
-      });
-    }
-  };
-
   const canEditPhysio = teamRole === 'Fisioterapeuta Respiratório' || teamRole === 'Todos';
   const canEditDoctor = teamRole === 'Médico Intensivista' || teamRole === 'Todos';
   const canEditNurse = teamRole === 'Enfermeiro(a) UTI' || teamRole === 'Todos';
+
+  const syncStateToCloud = async (patientUpdates: Partial<PatientParameters>, settingsUpdates?: Partial<VentilatorSettings>) => {
+    if (roomCode) {
+      if (settingsUpdates && !canEditPhysio) {
+        console.warn(`[Kahoot Collab] ⛔ RoleActionPanel blocked ventilator settings push by unauthorized role "${teamRole}".`);
+      }
+      const stateToPublish: Record<string, any> = {
+        patient: { ...patient, ...patientUpdates },
+      };
+      if (settingsUpdates && canEditPhysio) {
+        stateToPublish.settings = { ...settings, ...settingsUpdates };
+      }
+      await localDatabase.publishRoomState(roomCode, stateToPublish, teamName, {
+        role: teamRole,
+        actionType: 'role_action',
+      });
+    }
+  };
 
   // 🩺 DOCTOR ACTIONS
   const handleApplySedationRASS = async (newRass: number) => {
@@ -404,6 +415,14 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
             </div>
 
             {/* Doctor Action Controls */}
+            {!canEditDoctor && (
+              <div className="text-xs font-mono text-indigo-300 bg-indigo-950/60 border border-indigo-700/50 rounded-xl p-2.5 flex items-center gap-2 shadow-xs">
+                <ShieldAlert className="w-4 h-4 text-indigo-400 shrink-0" />
+                <span>
+                  🔒 Prescrições Médicas: Estas ações pertencem exclusivamente ao <strong>Médico Intensivista</strong> do seu grupo.
+                </span>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Sedation RASS */}
               <div className={`p-3 rounded-xl border space-y-2 ${
@@ -419,13 +438,14 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
                       key={lvl}
                       type="button"
                       onClick={() => handleApplySedationRASS(lvl)}
-                      className={`flex-1 py-1 rounded text-[11px] font-mono font-bold cursor-pointer transition-all ${
+                      title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode alterar o RASS" : `Ajustar RASS para ${lvl}`}
+                      className={`flex-1 py-1 rounded text-[11px] font-mono font-bold transition-all ${
                         rassLevel === lvl
                           ? 'bg-amber-400 text-slate-950 font-black'
                           : isLight
                           ? 'bg-slate-100 hover:bg-slate-200 text-slate-800'
                           : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
-                      } ${!canEditDoctor ? 'opacity-70' : ''}`}
+                      } ${!canEditDoctor ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       {lvl}
                     </button>
@@ -446,11 +466,12 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleNMB}
-                  className={`w-full py-2 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer ${
+                  title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode prescrever bloqueio neuromuscular" : undefined}
+                  className={`w-full py-2 rounded-xl text-xs font-mono font-bold transition-all ${
                     isNmbActive
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg'
                       : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
-                  } ${!canEditDoctor ? 'opacity-70' : ''}`}
+                  } ${!canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-indigo-700/60' : 'cursor-pointer'}`}
                 >
                   {!canEditDoctor && '🔒 '}
                   {isNmbActive ? '✓ Suspender Bloqueador Neuromuscular' : '⚡ Iniciar Cisatracúrio (Paralisia)'}
@@ -468,8 +489,9 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
                 <button
                   type="button"
                   onClick={handleApplyBronchodilator}
-                  className={`w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    !canEditDoctor ? 'opacity-70' : ''
+                  title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode prescrever broncodilatador" : undefined}
+                  className={`w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                    !canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-amber-600/60' : 'cursor-pointer'
                   }`}
                 >
                   {!canEditDoctor && '🔒'}
@@ -489,8 +511,9 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
                 <button
                   type="button"
                   onClick={handleDrainPneumothorax}
-                  className={`w-full py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-mono font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    !canEditDoctor ? 'opacity-70' : ''
+                  title={!canEditDoctor ? "🔒 Procedimento invasivo exclusivo do Médico Intensivista" : undefined}
+                  className={`w-full py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                    !canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-rose-600/60' : 'cursor-pointer'
                   }`}
                 >
                   {!canEditDoctor && '🔒'}
@@ -520,6 +543,14 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
             </div>
 
             {/* Nurse Action Controls */}
+            {!canEditNurse && (
+              <div className="text-xs font-mono text-purple-300 bg-purple-950/60 border border-purple-700/50 rounded-xl p-2.5 flex items-center gap-2 shadow-xs">
+                <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0" />
+                <span>
+                  🔒 Cuidados Críticos de Enfermagem: Estas intervenções pertencem exclusivamente ao <strong>Enfermeiro(a) UTI</strong> do seu grupo.
+                </span>
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Endotracheal Suctioning */}
               <div className={`p-3 rounded-xl border space-y-2 ${
@@ -538,8 +569,9 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
                 <button
                   type="button"
                   onClick={handlePerformSuction}
-                  className={`w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    !canEditNurse ? 'opacity-70' : ''
+                  title={!canEditNurse ? "🔒 Procedimento restrito ao Enfermeiro(a) UTI da equipe" : undefined}
+                  className={`w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                    !canEditNurse ? 'opacity-60 cursor-not-allowed border border-dashed border-purple-700/60' : 'cursor-pointer'
                   }`}
                 >
                   {!canEditNurse && '🔒'}
@@ -565,8 +597,9 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
                 <button
                   type="button"
                   onClick={handleFixCuffLeak}
-                  className={`w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    !canEditNurse ? 'opacity-70' : ''
+                  title={!canEditNurse ? "🔒 Calibração de balonete restrita ao Enfermeiro(a) UTI da equipe" : undefined}
+                  className={`w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                    !canEditNurse ? 'opacity-60 cursor-not-allowed border border-dashed border-cyan-700/60' : 'cursor-pointer'
                   }`}
                 >
                   {!canEditNurse && '🔒'}
@@ -588,11 +621,12 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
                 <button
                   type="button"
                   onClick={handleTogglePronePosition}
-                  className={`w-full py-2 rounded-xl font-mono font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  title={!canEditNurse ? "🔒 Manobra de posicionamento restrita ao Enfermeiro(a) UTI da equipe" : undefined}
+                  className={`w-full py-2 rounded-xl font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
                     isProned
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                       : 'bg-purple-600 hover:bg-purple-500 text-white'
-                  } ${!canEditNurse ? 'opacity-70' : ''}`}
+                  } ${!canEditNurse ? 'opacity-60 cursor-not-allowed border border-dashed border-purple-700/60' : 'cursor-pointer'}`}
                 >
                   {!canEditNurse && '🔒'}
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -611,11 +645,12 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
                 <button
                   type="button"
                   onClick={handleHmeFilterHygiene}
-                  className={`w-full py-2 rounded-xl font-mono font-bold text-xs border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  title={!canEditNurse ? "🔒 Manutenção do circuito restrita ao Enfermeiro(a) UTI da equipe" : undefined}
+                  className={`w-full py-2 rounded-xl font-mono font-bold text-xs border transition-all flex items-center justify-center gap-1.5 ${
                     isLight
                       ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
                       : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border-zinc-700'
-                  } ${!canEditNurse ? 'opacity-70' : ''}`}
+                  } ${!canEditNurse ? 'opacity-60 cursor-not-allowed border border-dashed border-zinc-700/60' : 'cursor-pointer'}`}
                 >
                   {!canEditNurse && '🔒'}
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, VolumeX, Play, User, Activity, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, GripVertical, Heart, SlidersHorizontal } from 'lucide-react';
+import { Volume2, VolumeX, Play, User, Activity, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, GripVertical, Heart, SlidersHorizontal, Lock, Users } from 'lucide-react';
 import {
   VentilatorSettings,
   PatientParameters,
@@ -122,9 +122,26 @@ export default function App() {
     setDraftSettings(updater);
   };
 
+  const isFisioterapeutaRole = (role: TeamRole | string, roomMode?: 'team' | 'individual'): boolean => {
+    if (roomMode === 'individual') return true;
+    return role === 'Fisioterapeuta Respiratório' || role === 'Todos';
+  };
+
   const hasChanges = JSON.stringify(draftSettings) !== JSON.stringify(settings);
 
   const handleConfirmSettings = () => {
+    // Role verification for Kahoot team session: Only Fisioterapeuta can change ventilator settings
+    if (activeKahootSession && activeKahootSession.room.mode === 'team') {
+      const isFisio = isFisioterapeutaRole(activeTeamRole, activeKahootSession.room.mode);
+      if (!isFisio) {
+        console.warn(
+          `[Kahoot Collaboration] ⛔ handleConfirmSettings Blocked: Role "${activeTeamRole}" (${activeKahootSession.studentName}) attempted to confirm ventilator parameters in team mode. Only "Fisioterapeuta Respiratório" can modify ventilator settings.`
+        );
+        audioEngine.playClick(600);
+        return;
+      }
+    }
+
     audioEngine.playConfirmBeep();
 
     // Record clinical interventions for debriefing report
@@ -322,6 +339,13 @@ export default function App() {
     setCaseElapsedSeconds(0);
     const timeLimitSeconds = room.timeLimitMinutes * 60;
     const effectiveTeamName = teamName || (room.mode === 'team' ? 'Equipe UTI Alfa' : undefined);
+    // Reset collaboration sync refs to clean slate for new session
+    lastProcessedTimestampRef.current = 0;
+    lastPublishedSettingsHashRef.current = '';
+    lastPublishedPatientHashRef.current = '';
+    lastPublishedVentilatingRef.current = null;
+    isApplyingRemoteSettingsRef.current = false;
+    isApplyingRemotePatientRef.current = false;
     setActiveKahootSession({
       studentName,
       room,
@@ -336,6 +360,7 @@ export default function App() {
     setActiveKahootSession((currentSession) => {
       if (!currentSession) return null;
       const elapsedSeconds = currentSession.timeLimitSeconds - currentSession.remainingSeconds;
+      const isTeam = currentSession.room.mode === 'team' || Boolean(currentSession.teamName);
       const result = localDatabase.evaluateStudentPerformance(
         currentSession.studentName,
         currentSession.room.code,
@@ -346,13 +371,33 @@ export default function App() {
         elapsedSeconds,
         currentSession.timeLimitSeconds,
         currentSession.teamName,
-        currentSession.room.mode === 'team' || Boolean(currentSession.teamName)
+        isTeam,
+        activeTeamRole
       );
+
+      // In team mode, publish the final teamResult to the shared team state doc so all teammates receive the exact same score simultaneously
+      if (isTeam && currentSession.teamName) {
+        console.log(`[Kahoot Collaboration] 📢 Publishing unified teamResult to team "${currentSession.teamName}"`);
+        localDatabase.publishRoomState(
+          currentSession.room.code,
+          {
+            teamResult: result,
+            sessionStatus: 'completed',
+          },
+          currentSession.teamName,
+          {
+            role: activeTeamRole,
+            author: currentSession.studentName,
+            actionType: 'team_completed',
+          }
+        );
+      }
+
       setKahootResult(result);
       setIsKahootResultModalOpen(true);
       return null;
     });
-  }, [monitored, settings, patient]);
+  }, [monitored, settings, patient, activeTeamRole]);
 
   // Live Kahoot Timer Countdown
   useEffect(() => {
@@ -463,38 +508,110 @@ export default function App() {
     alarmLimitsRef.current = alarmLimits;
   }, [settings, draftSettings, patient, maneuverState, alarmLimits]);
 
-  // Kahoot Real-time State Synchronization across devices
+  // Kahoot Real-time State Synchronization & Race Condition Controls
+  const isApplyingRemoteSettingsRef = useRef<boolean>(false);
+  const isApplyingRemotePatientRef = useRef<boolean>(false);
+  const lastProcessedTimestampRef = useRef<number>(0);
+  const lastPublishedSettingsHashRef = useRef<string>('');
+  const lastPublishedPatientHashRef = useRef<string>('');
+  const lastPublishedVentilatingRef = useRef<boolean | null>(null);
+
+  // Kahoot Ingestion Channel: Listen for verified remote updates from peers & teacher
   useEffect(() => {
     if (!activeKahootSession) return;
 
     const roomCode = activeKahootSession.room.code;
     const teamName = activeKahootSession.teamName;
+    const isTeamMode = activeKahootSession.room.mode === 'team';
+
+    console.log(
+      `[Kahoot Collaboration] 🚀 Initializing sync for room "${roomCode}" [Mode: "${activeKahootSession.room.mode}" | Team: "${teamName || 'Principal'}" | Role: "${activeTeamRole}" | Student: "${activeKahootSession.studentName}"]`
+    );
 
     // Subscribe to remote updates from other devices in the same room & group
     const unsubscribe = localDatabase.subscribeRoomState(roomCode, (remoteState) => {
       if (!remoteState) return;
 
+      // 1. Race Condition Guard: Stale / Out-of-Order Packet Detection
+      if (remoteState.updatedAt && remoteState.updatedAt < lastProcessedTimestampRef.current) {
+        console.warn(
+          `[Kahoot Collaboration] ⚠️ Race condition prevented: Dropping stale out-of-order update. Received t=${remoteState.updatedAt} < Last processed t=${lastProcessedTimestampRef.current}`
+        );
+        return;
+      }
+      if (remoteState.updatedAt) {
+        lastProcessedTimestampRef.current = remoteState.updatedAt;
+      }
+
+      console.log(
+        `[Kahoot Collaboration] 📥 Received remote state update in room "${roomCode}" from "${remoteState.senderAuthor || remoteState.senderId}" [Role: "${remoteState.senderRole || 'unspecified'}" | Action: "${remoteState.actionType || 'general'}"]`
+      );
+
+      // 2. State Verification: Only apply incoming settings if authorized
       if (remoteState.settings) {
-        const curSettings = settingsRef.current;
-        if (JSON.stringify(remoteState.settings) !== JSON.stringify(curSettings)) {
-          setSettings(remoteState.settings);
-          // Only overwrite draftSettings if student has no pending unconfirmed draft
-          setDraftSettings((prevDraft) => {
-            const isEditing = JSON.stringify(prevDraft) !== JSON.stringify(curSettings);
-            return isEditing ? prevDraft : remoteState.settings;
-          });
+        const senderRole = remoteState.senderRole;
+        const isUnauthorizedSender = isTeamMode && senderRole && senderRole !== 'Fisioterapeuta Respiratório' && senderRole !== 'Todos';
+
+        if (isUnauthorizedSender) {
+          console.warn(
+            `[Kahoot Collaboration] ⛔ Ingestion Verification Blocked: Remote settings sent by "${remoteState.senderAuthor || 'unknown'}" with role "${senderRole}". Only "Fisioterapeuta Respiratório" can modify ventilator parameters in a team session. Ignoring incoming settings.`
+          );
+        } else {
+          const curSettings = settingsRef.current;
+          const settingsHash = JSON.stringify(remoteState.settings);
+          if (JSON.stringify(curSettings) !== settingsHash) {
+            console.log(
+              `[Kahoot Collaboration] 🔄 Applying verified remote ventilator settings (Mode: ${remoteState.settings.mode}, Vt: ${remoteState.settings.tidalVolume}, PEEP: ${remoteState.settings.peep}, FiO2: ${remoteState.settings.fio2}, RR: ${remoteState.settings.respiratoryRate})`
+            );
+            isApplyingRemoteSettingsRef.current = true;
+            setSettings(remoteState.settings);
+            lastPublishedSettingsHashRef.current = settingsHash;
+            // Only overwrite draftSettings if student has no pending unconfirmed draft
+            setDraftSettings((prevDraft) => {
+              const isEditing = JSON.stringify(prevDraft) !== JSON.stringify(curSettings);
+              return isEditing ? prevDraft : remoteState.settings;
+            });
+          }
         }
       }
+
+      // 3. Apply Patient Interventions (Doctor/Nurse actions: sedation, bronchodilator, suction, cuff, etc.)
       if (remoteState.patient) {
-        if (JSON.stringify(remoteState.patient) !== JSON.stringify(patientRef.current)) {
+        const curPatient = patientRef.current;
+        const patientHash = JSON.stringify(remoteState.patient);
+        if (JSON.stringify(curPatient) !== patientHash) {
+          console.log(
+            `[Kahoot Collaboration] 🩺 Applying remote patient physiological update from "${remoteState.senderRole || 'Peer'}":`,
+            {
+              compliance: remoteState.patient.compliance,
+              resistance: remoteState.patient.resistance,
+              spontaneousDrive: remoteState.patient.spontaneousDrive,
+              secretions: remoteState.patient.secretionsSeverity,
+              leak: remoteState.patient.circuitLeakPercent,
+            }
+          );
+          isApplyingRemotePatientRef.current = true;
           setPatient(remoteState.patient);
+          lastPublishedPatientHashRef.current = patientHash;
         }
       }
+
+      // 4. Ventilation power state (Start / Standby)
       if (typeof remoteState.isVentilating === 'boolean') {
-        setIsVentilating((prev) => (prev !== remoteState.isVentilating ? remoteState.isVentilating : prev));
+        setIsVentilating((prev) => {
+          if (prev !== remoteState.isVentilating) {
+            console.log(`[Kahoot Collaboration] ⚡ Ventilation power state synced remotely: isVentilating = ${remoteState.isVentilating}`);
+            lastPublishedVentilatingRef.current = remoteState.isVentilating;
+            return remoteState.isVentilating;
+          }
+          return prev;
+        });
       }
+
+      // 5. Teacher Surprise Events
       if (remoteState.surpriseEvent && remoteState.surpriseEvent.timestamp > lastSurpriseTimestampRef.current) {
         lastSurpriseTimestampRef.current = remoteState.surpriseEvent.timestamp;
+        console.log(`[Kahoot Collaboration] 🚨 Teacher surprise event received: "${remoteState.surpriseEvent.title}"`);
         setDeteriorationWarning(`${remoteState.surpriseEvent.title}: ${remoteState.surpriseEvent.description}`);
         audioEngine.triggerAlarmPattern('high');
         if (remoteState.surpriseEvent.complianceOverride) {
@@ -505,26 +622,146 @@ export default function App() {
           }));
         }
       }
+
+      // 6. Unified Team Completion: When any teammate completes the session, sync score to all teammates
+      if (remoteState.teamResult) {
+        console.log(`[Kahoot Collaboration] 🏆 Group session completed by teammate! Synchronizing unified group result:`, remoteState.teamResult);
+        setKahootResult(remoteState.teamResult);
+        setIsKahootResultModalOpen(true);
+        setActiveKahootSession(null);
+      }
     }, teamName);
 
     return () => {
+      console.log(`[Kahoot Collaboration] 🔌 Disconnecting sync listener for room "${roomCode}"`);
       unsubscribe();
     };
-  }, [activeKahootSession?.room.code, activeKahootSession?.teamName]);
+  }, [activeKahootSession?.room.code, activeKahootSession?.teamName, activeKahootSession?.room.mode, activeTeamRole]);
 
-  // Publish local state changes to Firestore room state when in active Kahoot session
+  // Publish Channel A: Ventilator Parameters & Power (STRICTLY RESTRICTED TO FISIOTERAPEUTA)
   useEffect(() => {
     if (!activeKahootSession) return;
 
+    // Echo prevention: if this state change was caused by a remote update, do not re-broadcast
+    if (isApplyingRemoteSettingsRef.current) {
+      isApplyingRemoteSettingsRef.current = false;
+      return;
+    }
+
     const roomCode = activeKahootSession.room.code;
     const teamName = activeKahootSession.teamName;
-    localDatabase.publishRoomState(roomCode, {
-      settings,
-      patient,
-      isVentilating,
-      activeCaseId: activeClinicalCase?.id,
-    }, teamName);
-  }, [settings, patient, isVentilating, activeClinicalCase?.id, activeKahootSession?.room.code, activeKahootSession?.teamName]);
+    const settingsHash = JSON.stringify(settings);
+    const hasSettingsChanged = settingsHash !== lastPublishedSettingsHashRef.current;
+    const hasVentilatingChanged = isVentilating !== lastPublishedVentilatingRef.current;
+
+    if (!hasSettingsChanged && !hasVentilatingChanged) {
+      return;
+    }
+
+    // ROLE VERIFICATION: Only Fisioterapeuta (or Todos / individual mode) can push ventilator changes
+    const isAuthorized = isFisioterapeutaRole(activeTeamRole, activeKahootSession.room.mode);
+
+    if (!isAuthorized) {
+      if (hasSettingsChanged) {
+        console.warn(
+          `[Kahoot Collaboration] ⛔ STATE VERIFICATION BLOCKED: Student "${activeKahootSession.studentName}" has role "${activeTeamRole}" and attempted to modify ventilator parameters. Only "Fisioterapeuta Respiratório" has authority to push ventilator settings in team mode. Changes were NOT pushed to shared session state.`
+        );
+      }
+      return;
+    }
+
+    // Role verified: Push ventilator parameter updates
+    lastPublishedSettingsHashRef.current = settingsHash;
+    lastPublishedVentilatingRef.current = isVentilating;
+
+    console.log(
+      `[Kahoot Collaboration] ✅ STATE VERIFICATION PASSED: Fisioterapeuta "${activeKahootSession.studentName}" pushing verified ventilator settings to room "${roomCode}" [Team: "${teamName || 'Principal'}"]`,
+      {
+        mode: settings.mode,
+        tidalVolume: settings.tidalVolume,
+        peep: settings.peep,
+        fio2: settings.fio2,
+        respiratoryRate: settings.respiratoryRate,
+        isVentilating,
+      }
+    );
+
+    localDatabase.publishRoomState(
+      roomCode,
+      {
+        settings,
+        isVentilating,
+        activeCaseId: activeClinicalCase?.id,
+      },
+      teamName,
+      {
+        role: activeTeamRole,
+        author: activeKahootSession.studentName,
+        actionType: 'ventilator_parameters',
+      }
+    );
+  }, [
+    settings,
+    isVentilating,
+    activeTeamRole,
+    activeKahootSession?.room.code,
+    activeKahootSession?.teamName,
+    activeKahootSession?.room.mode,
+    activeKahootSession?.studentName,
+    activeClinicalCase?.id,
+  ]);
+
+  // Publish Channel B: Patient Physiological Interventions (Doctor, Nurse, Multidisciplinary actions)
+  useEffect(() => {
+    if (!activeKahootSession) return;
+
+    // Echo prevention: if this state change was caused by a remote update, do not re-broadcast
+    if (isApplyingRemotePatientRef.current) {
+      isApplyingRemotePatientRef.current = false;
+      return;
+    }
+
+    const patientHash = JSON.stringify(patient);
+    if (patientHash === lastPublishedPatientHashRef.current) {
+      return;
+    }
+
+    lastPublishedPatientHashRef.current = patientHash;
+    const roomCode = activeKahootSession.room.code;
+    const teamName = activeKahootSession.teamName;
+
+    console.log(
+      `[Kahoot Collaboration] 🩺 Role "${activeTeamRole}" (${activeKahootSession.studentName}) pushing clinical patient updates to room "${roomCode}" [Team: "${teamName || 'Principal'}"] (WITHOUT overwriting ventilator settings):`,
+      {
+        compliance: patient.compliance,
+        resistance: patient.resistance,
+        spontaneousDrive: patient.spontaneousDrive,
+        secretions: patient.secretionsSeverity,
+        leak: patient.circuitLeakPercent,
+      }
+    );
+
+    localDatabase.publishRoomState(
+      roomCode,
+      {
+        patient,
+        activeCaseId: activeClinicalCase?.id,
+      },
+      teamName,
+      {
+        role: activeTeamRole,
+        author: activeKahootSession.studentName,
+        actionType: 'patient_parameters',
+      }
+    );
+  }, [
+    patient,
+    activeTeamRole,
+    activeKahootSession?.room.code,
+    activeKahootSession?.teamName,
+    activeKahootSession?.studentName,
+    activeClinicalCase?.id,
+  ]);
 
   // Track browser tab visibility (pause simulation when backgrounded or hidden)
   const [isDocumentVisible, setIsDocumentVisible] = useState<boolean>(
@@ -943,6 +1180,13 @@ export default function App() {
   };
 
   const handleToggleInspHold = () => {
+    if (activeKahootSession && !isFisioterapeutaRole(activeTeamRole, activeKahootSession.room.mode)) {
+      audioEngine.playClick(600);
+      setDeteriorationWarning(
+        `🔒 Competência Exclusiva: Sua função é "${activeTeamRole}". Manobras de pausa inspiratória e medição de Pplat são restritas ao Fisioterapeuta Respiratório.`
+      );
+      return;
+    }
     setManeuverState((prev) => ({
       ...prev,
       inspiratoryHoldActive: !prev.inspiratoryHoldActive,
@@ -951,6 +1195,13 @@ export default function App() {
   };
 
   const handleStartInspHold = () => {
+    if (activeKahootSession && !isFisioterapeutaRole(activeTeamRole, activeKahootSession.room.mode)) {
+      audioEngine.playClick(600);
+      setDeteriorationWarning(
+        `🔒 Competência Exclusiva: Sua função é "${activeTeamRole}". Manobras de pausa inspiratória e medição de Pplat são restritas ao Fisioterapeuta Respiratório.`
+      );
+      return;
+    }
     setManeuverState((prev) => ({
       ...prev,
       inspiratoryHoldActive: true,
@@ -966,6 +1217,13 @@ export default function App() {
   };
 
   const handleToggleExpHold = () => {
+    if (activeKahootSession && !isFisioterapeutaRole(activeTeamRole, activeKahootSession.room.mode)) {
+      audioEngine.playClick(600);
+      setDeteriorationWarning(
+        `🔒 Competência Exclusiva: Sua função é "${activeTeamRole}". Manobras de pausa expiratória e medição de Auto-PEEP são restritas ao Fisioterapeuta Respiratório.`
+      );
+      return;
+    }
     setManeuverState((prev) => ({
       ...prev,
       expiratoryHoldActive: !prev.expiratoryHoldActive,
@@ -990,6 +1248,13 @@ export default function App() {
   };
 
   const handleToggleRecruitment = () => {
+    if (activeKahootSession && !isFisioterapeutaRole(activeTeamRole, activeKahootSession.room.mode)) {
+      audioEngine.playClick(600);
+      setDeteriorationWarning(
+        `🔒 Competência Exclusiva: Sua função é "${activeTeamRole}". Manobras de recrutamento alveolar são restritas ao Fisioterapeuta Respiratório em conjunto com a equipe médica.`
+      );
+      return;
+    }
     setManeuverState((prev) => ({
       ...prev,
       recruitmentManeuverActive: !prev.recruitmentManeuverActive,
@@ -1335,6 +1600,7 @@ export default function App() {
               timeLimitSeconds={activeKahootSession.timeLimitSeconds}
               onFinishKahootSession={handleFinishKahootSession}
               teamName={activeKahootSession.teamName}
+              teamRole={activeTeamRole}
             />
           )}
 
@@ -1621,61 +1887,79 @@ export default function App() {
               <div
                 id="tour-parameters"
                 style={{
-                  height: `${Math.max(165, paramPanelHeight)}px`,
+                  height: activeKahootSession && isRoleActionPanelOpen
+                    ? `${Math.max(380, paramPanelHeight + 210)}px`
+                    : `${Math.max(165, paramPanelHeight)}px`,
                 }}
                 className="shrink-0 overflow-y-auto lg:overflow-hidden transition-all flex flex-col"
               >
                 {/* Role Action & Collaboration Bar (Only active during Kahoot Cooperative Session) */}
-                {activeKahootSession && (
-                  <div className={`px-3 py-1.5 border-b flex flex-wrap items-center justify-between gap-2 shrink-0 ${
-                    isLight ? 'bg-slate-100 border-slate-200' : 'bg-[#0a0d18] border-zinc-800'
-                  }`}>
-                    <div className="flex items-center gap-1.5 overflow-x-auto">
-                      <span className="text-[10px] font-mono font-bold uppercase text-indigo-400 mr-1">
-                        Função na UTI:
-                      </span>
-                      {[
-                        { id: 'Fisioterapeuta Respiratório', label: '🫁 Fisio' },
-                        { id: 'Médico Intensivista', label: '🩺 Médico' },
-                        { id: 'Enfermeiro(a) UTI', label: '💊 Enfermagem' },
-                        { id: 'Todos', label: '🤝 Todos' },
-                      ].map((r) => (
-                        <button
-                          key={r.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveTeamRole(r.id as TeamRole);
-                            setIsRoleActionPanelOpen(true);
-                          }}
-                          className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border ${
-                            activeTeamRole === r.id
-                              ? 'bg-amber-400 text-slate-950 border-amber-300 font-black shadow-sm'
-                              : isLight
-                              ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                              : 'bg-[#121626] text-zinc-400 border-zinc-800 hover:text-white'
-                          }`}
-                        >
-                          {r.label}
-                        </button>
-                      ))}
-                    </div>
+                {activeKahootSession && (() => {
+                  const isTeamSession = Boolean(
+                    activeKahootSession.room.mode === 'team' || activeKahootSession.teamName
+                  );
+                  return (
+                    <div className={`px-3 py-1.5 border-b flex flex-wrap items-center justify-between gap-2 shrink-0 ${
+                      isLight ? 'bg-slate-100 border-slate-200' : 'bg-[#0a0d18] border-zinc-800'
+                    }`}>
+                      <div className="flex items-center gap-1.5 overflow-x-auto">
+                        {isTeamSession ? (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-400/15 border border-amber-400/40 text-amber-300 text-xs font-mono font-bold">
+                            <span className="text-[11px] opacity-80">🔒 Sua Função no Grupo:</span>
+                            <span className="px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-black text-xs uppercase shadow-sm">
+                              {activeTeamRole}
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="text-[10px] font-mono font-bold uppercase text-indigo-400 mr-1">
+                              Função na UTI:
+                            </span>
+                            {[
+                              { id: 'Fisioterapeuta Respiratório', label: '🫁 Fisio' },
+                              { id: 'Médico Intensivista', label: '🩺 Médico' },
+                              { id: 'Enfermeiro(a) UTI', label: '💊 Enfermagem' },
+                              { id: 'Todos', label: '🤝 Todos' },
+                            ].map((r) => (
+                              <button
+                                key={r.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveTeamRole(r.id as TeamRole);
+                                  setIsRoleActionPanelOpen(true);
+                                }}
+                                className={`px-2 py-0.5 rounded-lg text-[11px] font-mono font-bold transition-all cursor-pointer border ${
+                                  activeTeamRole === r.id
+                                    ? 'bg-amber-400 text-slate-950 border-amber-300 font-black shadow-sm'
+                                    : isLight
+                                    ? 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                                    : 'bg-[#121626] text-zinc-400 border-zinc-800 hover:text-white'
+                                }`}
+                              >
+                                {r.label}
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setIsRoleActionPanelOpen((prev) => !prev)}
-                      className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
-                        isRoleActionPanelOpen
-                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                          : isLight
-                          ? 'bg-slate-200 text-slate-800 border-slate-300 hover:bg-slate-300'
-                          : 'bg-zinc-800 text-zinc-200 border-zinc-700 hover:bg-zinc-700'
-                      }`}
-                    >
-                      <SlidersHorizontal className="w-3.5 h-3.5" />
-                      <span>{isRoleActionPanelOpen ? 'Ocultar Painel Multidisciplinar' : '⚡ Ações da Equipe UTI'}</span>
-                    </button>
-                  </div>
-                )}
+                      <button
+                        type="button"
+                        onClick={() => setIsRoleActionPanelOpen((prev) => !prev)}
+                        className={`px-2.5 py-0.5 rounded-lg text-[11px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isRoleActionPanelOpen
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                            : isLight
+                            ? 'bg-slate-200 text-slate-800 border-slate-300 hover:bg-slate-300'
+                            : 'bg-zinc-800 text-zinc-200 border-zinc-700 hover:bg-zinc-700'
+                        }`}
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                        <span>{isRoleActionPanelOpen ? 'Ocultar Painel Multidisciplinar' : '⚡ Ações da Equipe UTI'}</span>
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {activeKahootSession && isRoleActionPanelOpen && (
                   <div className="p-2 shrink-0 max-h-72 overflow-y-auto">
@@ -1686,25 +1970,34 @@ export default function App() {
                       monitored={monitored}
                       onUpdatePatient={(upd) => setPatient((prev) => ({ ...prev, ...upd }))}
                       onUpdateSettings={(upd) => {
+                        if (!isFisioterapeutaRole(activeTeamRole, activeKahootSession?.room.mode)) {
+                          console.warn(
+                            `[Kahoot Collaboration] ⛔ Blocked onUpdateSettings in RoleActionPanel by non-Fisio role "${activeTeamRole}". Only Fisioterapeuta can adjust ventilator parameters.`
+                          );
+                          return;
+                        }
                         setSettings((prev) => ({ ...prev, ...upd }));
                         setDraftSettings((prev) => ({ ...prev, ...upd }));
                       }}
                       roomCode={activeKahootSession?.room.code}
+                      teamName={activeKahootSession?.teamName}
                       isLight={isLight}
                     />
                   </div>
                 )}
 
-                <ParameterControls
-                  settings={settings}
-                  draftSettings={draftSettings}
-                  onUpdateDraft={handleUpdateDraft}
-                  hasChanges={hasChanges}
-                  onConfirm={handleConfirmSettings}
-                  onDiscard={handleDiscardSettings}
-                  isReadOnly={activeKahootSession !== null && activeTeamRole !== 'Fisioterapeuta Respiratório' && activeTeamRole !== 'Todos'}
-                  readOnlyNotice={activeTeamRole}
-                />
+                <div className="flex-1 min-h-[145px]">
+                  <ParameterControls
+                    settings={settings}
+                    draftSettings={draftSettings}
+                    onUpdateDraft={handleUpdateDraft}
+                    hasChanges={hasChanges}
+                    onConfirm={handleConfirmSettings}
+                    onDiscard={handleDiscardSettings}
+                    isReadOnly={activeKahootSession !== null && !isFisioterapeutaRole(activeTeamRole, activeKahootSession?.room.mode)}
+                    readOnlyNotice={activeTeamRole}
+                  />
+                </div>
               </div>
             )}
           </div>

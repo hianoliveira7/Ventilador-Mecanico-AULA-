@@ -94,10 +94,8 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
           onPointerUp={handleInspHoldUp}
           onPointerLeave={handleInspHoldUp}
           onPointerCancel={handleInspHoldUp}
-          onTouchStart={handleInspHoldDown}
-          onTouchEnd={handleInspHoldUp}
           onContextMenu={(e) => e.preventDefault()}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap active:scale-95 ${
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap active:scale-95 touch-none select-none ${
             maneuverState.inspiratoryHoldActive
               ? isLight
                 ? 'bg-cyan-600 text-white shadow-md ring-2 ring-cyan-400 animate-pulse'
