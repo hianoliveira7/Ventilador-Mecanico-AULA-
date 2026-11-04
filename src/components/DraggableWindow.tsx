@@ -64,6 +64,11 @@ export const DraggableWindow: React.FC<DraggableWindowProps> = ({
     // Only drag from header, not buttons
     if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
+    const target = e.currentTarget;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {}
+
     setIsDragging(true);
     dragStartRef.current = {
       startX: e.clientX,
@@ -82,14 +87,21 @@ export const DraggableWindow: React.FC<DraggableWindowProps> = ({
       setPosition({ x: newX, y: newY });
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (upEvt: PointerEvent) => {
       setIsDragging(false);
+      try {
+        if (target.hasPointerCapture(upEvt.pointerId)) {
+          target.releasePointerCapture(upEvt.pointerId);
+        }
+      } catch {}
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
     };
 
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
   };
 
   return (

@@ -344,7 +344,8 @@ export default function App() {
     sessionStartTimeRef.current = sessionStart;
 
     // Reset collaboration sync refs to clean slate for new session
-    lastProcessedTimestampRef.current = sessionStart;
+    lastSettingsTimestampRef.current = sessionStart;
+    lastPatientTimestampRef.current = sessionStart;
     lastPublishedSettingsHashRef.current = '';
     lastPublishedPatientHashRef.current = '';
     lastPublishedVentilatingRef.current = null;
@@ -566,9 +567,11 @@ export default function App() {
   // Kahoot Real-time State Synchronization & Race Condition Controls
   const isApplyingRemoteSettingsRef = useRef<boolean>(false);
   const isApplyingRemotePatientRef = useRef<boolean>(false);
-  const lastProcessedTimestampRef = useRef<number>(0);
+  const lastSettingsTimestampRef = useRef<number>(0);
+  const lastPatientTimestampRef = useRef<number>(0);
   const lastPublishedSettingsHashRef = useRef<string>('');
   const lastPublishedPatientHashRef = useRef<string>('');
+  const lastPublishedMonitoredHashRef = useRef<string>('');
   const lastPublishedVentilatingRef = useRef<boolean | null>(null);
   const sessionStartTimeRef = useRef<number>(0);
 
@@ -588,68 +591,71 @@ export default function App() {
     const unsubscribe = localDatabase.subscribeRoomState(roomCode, (remoteState) => {
       if (!remoteState) return;
 
-      // 1. Race Condition Guard: Stale / Out-of-Order Packet Detection
-      if (remoteState.updatedAt && remoteState.updatedAt < lastProcessedTimestampRef.current) {
-        console.warn(
-          `[Kahoot Collaboration] ⚠️ Race condition prevented: Dropping stale out-of-order update. Received t=${remoteState.updatedAt} < Last processed t=${lastProcessedTimestampRef.current}`
-        );
-        return;
-      }
-      if (remoteState.updatedAt) {
-        lastProcessedTimestampRef.current = remoteState.updatedAt;
-      }
+      const packetTime = remoteState.updatedAt || Date.now();
 
-      console.log(
-        `[Kahoot Collaboration] 📥 Received remote state update in room "${roomCode}" from "${remoteState.senderAuthor || remoteState.senderId}" [Role: "${remoteState.senderRole || 'unspecified'}" | Action: "${remoteState.actionType || 'general'}"]`
-      );
-
-      // 2. State Verification: Only apply incoming settings if authorized
+      // 1. Settings Synchronization (Restricted to Fisioterapeuta)
       if (remoteState.settings) {
-        const senderRole = remoteState.senderRole;
-        const isUnauthorizedSender = isTeamMode && senderRole && senderRole !== 'Fisioterapeuta Respiratório' && senderRole !== 'Todos';
+        if (!remoteState.updatedAt || packetTime >= lastSettingsTimestampRef.current) {
+          if (remoteState.updatedAt) lastSettingsTimestampRef.current = remoteState.updatedAt;
 
-        if (isUnauthorizedSender) {
-          console.warn(
-            `[Kahoot Collaboration] ⛔ Ingestion Verification Blocked: Remote settings sent by "${remoteState.senderAuthor || 'unknown'}" with role "${senderRole}". Only "Fisioterapeuta Respiratório" can modify ventilator parameters in a team session. Ignoring incoming settings.`
-          );
-        } else {
-          const curSettings = settingsRef.current;
-          const settingsHash = JSON.stringify(remoteState.settings);
-          if (JSON.stringify(curSettings) !== settingsHash) {
-            console.log(
-              `[Kahoot Collaboration] 🔄 Applying verified remote ventilator settings (Mode: ${remoteState.settings.mode}, Vt: ${remoteState.settings.tidalVolume}, PEEP: ${remoteState.settings.peep}, FiO2: ${remoteState.settings.fio2}, RR: ${remoteState.settings.respiratoryRate})`
+          const senderRole = remoteState.senderRole;
+          const isUnauthorizedSender = isTeamMode && senderRole && senderRole !== 'Fisioterapeuta Respiratório' && senderRole !== 'Todos';
+
+          if (isUnauthorizedSender) {
+            console.warn(
+              `[Kahoot Collaboration] ⛔ Ingestion Verification Blocked: Remote settings sent by "${remoteState.senderAuthor || 'unknown'}" with role "${senderRole}". Only "Fisioterapeuta Respiratório" can modify ventilator parameters in a team session. Ignoring incoming settings.`
             );
-            isApplyingRemoteSettingsRef.current = true;
-            setSettings(remoteState.settings);
-            lastPublishedSettingsHashRef.current = settingsHash;
-            // Only overwrite draftSettings if student has no pending unconfirmed draft
-            setDraftSettings((prevDraft) => {
-              const isEditing = JSON.stringify(prevDraft) !== JSON.stringify(curSettings);
-              return isEditing ? prevDraft : remoteState.settings;
-            });
+          } else {
+            const curSettings = settingsRef.current;
+            const settingsHash = JSON.stringify(remoteState.settings);
+            if (JSON.stringify(curSettings) !== settingsHash) {
+              console.log(
+                `[Kahoot Collaboration] 🔄 Applying verified remote ventilator settings (Mode: ${remoteState.settings.mode}, Vt: ${remoteState.settings.tidalVolume}, PEEP: ${remoteState.settings.peep}, FiO2: ${remoteState.settings.fio2}, RR: ${remoteState.settings.respiratoryRate})`
+              );
+              isApplyingRemoteSettingsRef.current = true;
+              setSettings(remoteState.settings);
+              lastPublishedSettingsHashRef.current = settingsHash;
+              // Only overwrite draftSettings if student has no pending unconfirmed draft
+              setDraftSettings((prevDraft) => {
+                const isEditing = JSON.stringify(prevDraft) !== JSON.stringify(curSettings);
+                return isEditing ? prevDraft : remoteState.settings;
+              });
+            }
           }
         }
       }
 
-      // 3. Apply Patient Interventions (Doctor/Nurse actions: sedation, bronchodilator, suction, cuff, etc.)
+      // 2. Apply Patient Interventions (Doctor/Nurse actions: sedation, bronchodilator, suction, cuff, etc.)
       if (remoteState.patient) {
-        const curPatient = patientRef.current;
-        const patientHash = JSON.stringify(remoteState.patient);
-        if (JSON.stringify(curPatient) !== patientHash) {
-          console.log(
-            `[Kahoot Collaboration] 🩺 Applying remote patient physiological update from "${remoteState.senderRole || 'Peer'}":`,
-            {
-              compliance: remoteState.patient.compliance,
-              resistance: remoteState.patient.resistance,
-              spontaneousDrive: remoteState.patient.spontaneousDrive,
-              secretions: remoteState.patient.secretionsSeverity,
-              leak: remoteState.patient.circuitLeakPercent,
-            }
-          );
-          isApplyingRemotePatientRef.current = true;
-          setPatient(remoteState.patient);
-          lastPublishedPatientHashRef.current = patientHash;
+        if (!remoteState.updatedAt || packetTime >= lastPatientTimestampRef.current) {
+          if (remoteState.updatedAt) lastPatientTimestampRef.current = remoteState.updatedAt;
+
+          const curPatient = patientRef.current;
+          const patientHash = JSON.stringify(remoteState.patient);
+          if (JSON.stringify(curPatient) !== patientHash) {
+            console.log(
+              `[Kahoot Collaboration] 🩺 Applying remote patient physiological update from "${remoteState.senderRole || 'Peer'}":`,
+              {
+                compliance: remoteState.patient.compliance,
+                resistance: remoteState.patient.resistance,
+                spontaneousDrive: remoteState.patient.spontaneousDrive,
+                secretions: remoteState.patient.secretionsSeverity,
+                leak: remoteState.patient.circuitLeakPercent,
+              }
+            );
+            isApplyingRemotePatientRef.current = true;
+            setPatient(remoteState.patient);
+            lastPublishedPatientHashRef.current = patientHash;
+          }
         }
+      }
+
+      // 3. Apply Telemetry / Vitals (SpO2, PaO2, PaCO2, pH, HR, BP, PIP, Vte, MV)
+      if (remoteState.monitored) {
+        setMonitored((prev) => ({
+          ...prev,
+          ...remoteState.monitored,
+        }));
       }
 
       // 4. Ventilation power state (Start / Standby)
@@ -821,6 +827,66 @@ export default function App() {
     activeKahootSession?.teamName,
     activeKahootSession?.studentName,
     activeClinicalCase?.id,
+  ]);
+
+  // Publish Channel C: Real-Time Telemetry & Vitals (SpO2, PaO2, PaCO2, pH, HR, BP, PIP, Vte)
+  useEffect(() => {
+    if (!activeKahootSession) return;
+
+    // Only active simulator drivers or Fisioterapeuta broadcast telemetry to prevent write thrashing
+    const isPrimaryDriver = isFisioterapeutaRole(activeTeamRole, activeKahootSession.room.mode);
+    if (!isPrimaryDriver) return;
+
+    const roomCode = activeKahootSession.room.code;
+    const teamName = activeKahootSession.teamName;
+
+    const telemetryTimer = setInterval(() => {
+      const curMon = monitored;
+      const monHash = `${curMon.spo2}_${curMon.peakPressure}_${curMon.vte}_${curMon.pao2}_${curMon.ph}_${curMon.heartRate}`;
+
+      if (monHash !== lastPublishedMonitoredHashRef.current) {
+        lastPublishedMonitoredHashRef.current = monHash;
+        localDatabase.publishRoomState(
+          roomCode,
+          {
+            monitored: {
+              spo2: curMon.spo2,
+              pao2: curMon.pao2,
+              paco2: curMon.paco2,
+              ph: curMon.ph,
+              hco3: curMon.hco3,
+              peakPressure: curMon.peakPressure,
+              plateauPressure: curMon.plateauPressure,
+              peepTotal: curMon.peepTotal,
+              autoPeep: curMon.autoPeep,
+              drivingPressure: curMon.drivingPressure,
+              vte: curMon.vte,
+              minuteVolume: curMon.minuteVolume,
+              totalRate: curMon.totalRate,
+              heartRate: curMon.heartRate,
+              systolicBP: curMon.systolicBP,
+              diastolicBP: curMon.diastolicBP,
+              meanArterialPressure: curMon.meanArterialPressure,
+            },
+          },
+          teamName,
+          {
+            role: activeTeamRole,
+            author: activeKahootSession.studentName,
+            actionType: 'telemetry_vitals',
+          }
+        );
+      }
+    }, 1000);
+
+    return () => clearInterval(telemetryTimer);
+  }, [
+    monitored,
+    activeTeamRole,
+    activeKahootSession?.room.code,
+    activeKahootSession?.teamName,
+    activeKahootSession?.room.mode,
+    activeKahootSession?.studentName,
   ]);
 
   // Track browser tab visibility (pause simulation when backgrounded or hidden)
@@ -1622,7 +1688,7 @@ export default function App() {
 
   return (
     <div
-      className={`flex flex-col h-screen w-screen overflow-hidden font-sans select-none transition-colors ${
+      className={`flex flex-col fixed inset-0 h-dvh w-dvw overflow-hidden font-sans select-none touch-none transition-colors ${
         isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#050505] text-zinc-100'
       }`}
     >
