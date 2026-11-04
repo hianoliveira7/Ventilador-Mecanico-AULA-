@@ -877,15 +877,21 @@ export default function App() {
   const [windowWidth, setWindowWidth] = useState<number>(() =>
     typeof window !== 'undefined' ? window.innerWidth : 1200
   );
+  const [windowHeight, setWindowHeight] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerHeight : 800
+  );
   const [tabletView, setTabletView] = useState<'waveforms' | 'monitor' | 'split'>('split');
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      setWindowHeight(window.innerHeight);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isTabletOrCompact = windowWidth < 1024;
+  const isTabletOrCompact = windowWidth < 1200;
 
   // 8b. Resizable Clinical Panel & Splitter State
   const [rightPanelWidth, setRightPanelWidth] = useState<number>(330);
@@ -1260,11 +1266,27 @@ export default function App() {
   };
 
   const handleToggleO2Suction = () => {
-    setManeuverState((prev) => ({
-      ...prev,
-      o2SuctionActive: !prev.o2SuctionActive,
-      o2SuctionTimeRemaining: !prev.o2SuctionActive ? 120 : 0,
-    }));
+    setManeuverState((prev) => {
+      const isActivating = !prev.o2SuctionActive;
+      if (isActivating) {
+        audioEngine.playConfirmBeep();
+        // Eliminate secretions and reduce airway resistance
+        setPatient((pat) => {
+          const hadSecretions = pat.secretionsSeverity !== 'none';
+          const newResistance = hadSecretions ? Math.max(6, Math.round(pat.resistance * 0.7)) : pat.resistance;
+          return {
+            ...pat,
+            secretionsSeverity: 'none',
+            resistance: newResistance,
+          };
+        });
+      }
+      return {
+        ...prev,
+        o2SuctionActive: isActivating,
+        o2SuctionTimeRemaining: isActivating ? 120 : 0,
+      };
+    });
   };
 
   const handleToggleNebulizer = () => {
@@ -1943,8 +1965,8 @@ export default function App() {
                 id="tour-parameters"
                 style={{
                   height: activeKahootSession && isRoleActionPanelOpen
-                    ? `${Math.max(380, paramPanelHeight + 210)}px`
-                    : `${Math.max(165, paramPanelHeight)}px`,
+                    ? `${Math.min(Math.floor(windowHeight * 0.45), Math.max(280, paramPanelHeight + 180))}px`
+                    : `${Math.min(Math.floor(windowHeight * 0.32), Math.max(145, paramPanelHeight))}px`,
                 }}
                 className="shrink-0 overflow-y-auto lg:overflow-hidden transition-all flex flex-col"
               >
@@ -2118,7 +2140,7 @@ export default function App() {
               width: isTabletOrCompact
                 ? tabletView === 'monitor'
                   ? '100%'
-                  : `${Math.min(rightPanelWidth, Math.max(260, Math.floor(windowWidth * 0.40)))}px`
+                  : `${Math.min(rightPanelWidth, Math.max(220, Math.floor(windowWidth * 0.32)))}px`
                 : `${rightPanelWidth}px`,
             }}
             className={`h-full min-h-0 overflow-hidden ${
