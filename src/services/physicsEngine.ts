@@ -1175,6 +1175,25 @@ export class VentilationPhysicsEngine {
   }
 
   /**
+   * Synchronizes internal blood gas and physiological vitals from remote group telemetry.
+   * Prevents local physics engine state drift on peer devices in Kahoot collaboration mode.
+   */
+  public syncRemoteMonitoredState(remoteMonitored: Partial<MonitoredData>) {
+    if (typeof remoteMonitored.spo2 === 'number') {
+      this.currentSpO2 = remoteMonitored.spo2;
+    }
+    if (typeof remoteMonitored.pao2 === 'number') {
+      this.currentPaO2 = remoteMonitored.pao2;
+    }
+    if (typeof remoteMonitored.paco2 === 'number') {
+      this.currentPaCO2 = remoteMonitored.paco2;
+    }
+    if (typeof remoteMonitored.ph === 'number') {
+      this.currentpH = remoteMonitored.ph;
+    }
+  }
+
+  /**
    * Retrieves the state buffer containing historical breath cycle mechanics.
    */
   public getStateBuffer(): MechanicsStateBuffer {

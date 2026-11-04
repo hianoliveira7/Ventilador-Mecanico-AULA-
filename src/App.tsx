@@ -553,6 +553,7 @@ export default function App() {
   const settingsRef = useRef(settings);
   const draftSettingsRef = useRef(draftSettings);
   const patientRef = useRef(patient);
+  const monitoredRef = useRef(monitored);
   const maneuverStateRef = useRef(maneuverState);
   const alarmLimitsRef = useRef(alarmLimits);
 
@@ -560,9 +561,10 @@ export default function App() {
     settingsRef.current = settings;
     draftSettingsRef.current = draftSettings;
     patientRef.current = patient;
+    monitoredRef.current = monitored;
     maneuverStateRef.current = maneuverState;
     alarmLimitsRef.current = alarmLimits;
-  }, [settings, draftSettings, patient, maneuverState, alarmLimits]);
+  }, [settings, draftSettings, patient, monitored, maneuverState, alarmLimits]);
 
   // Kahoot Real-time State Synchronization & Race Condition Controls
   const isApplyingRemoteSettingsRef = useRef<boolean>(false);
@@ -613,6 +615,7 @@ export default function App() {
                 `[Kahoot Collaboration] 🔄 Applying verified remote ventilator settings (Mode: ${remoteState.settings.mode}, Vt: ${remoteState.settings.tidalVolume}, PEEP: ${remoteState.settings.peep}, FiO2: ${remoteState.settings.fio2}, RR: ${remoteState.settings.respiratoryRate})`
               );
               isApplyingRemoteSettingsRef.current = true;
+              settingsRef.current = remoteState.settings;
               setSettings(remoteState.settings);
               lastPublishedSettingsHashRef.current = settingsHash;
               // Only overwrite draftSettings if student has no pending unconfirmed draft
@@ -644,6 +647,7 @@ export default function App() {
               }
             );
             isApplyingRemotePatientRef.current = true;
+            patientRef.current = remoteState.patient;
             setPatient(remoteState.patient);
             lastPublishedPatientHashRef.current = patientHash;
           }
@@ -652,6 +656,7 @@ export default function App() {
 
       // 3. Apply Telemetry / Vitals (SpO2, PaO2, PaCO2, pH, HR, BP, PIP, Vte, MV)
       if (remoteState.monitored) {
+        physicsEngine.syncRemoteMonitoredState(remoteState.monitored);
         setMonitored((prev) => ({
           ...prev,
           ...remoteState.monitored,
@@ -841,7 +846,7 @@ export default function App() {
     const teamName = activeKahootSession.teamName;
 
     const telemetryTimer = setInterval(() => {
-      const curMon = monitored;
+      const curMon = monitoredRef.current;
       const monHash = `${curMon.spo2}_${curMon.peakPressure}_${curMon.vte}_${curMon.pao2}_${curMon.ph}_${curMon.heartRate}`;
 
       if (monHash !== lastPublishedMonitoredHashRef.current) {
@@ -877,7 +882,7 @@ export default function App() {
           }
         );
       }
-    }, 1000);
+    }, 200);
 
     return () => clearInterval(telemetryTimer);
   }, [
