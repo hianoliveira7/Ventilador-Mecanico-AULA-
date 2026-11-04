@@ -64,7 +64,11 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   const [roomCreatedSuccess, setRoomCreatedSuccess] = useState('');
 
   const cases = localDatabase.getClinicalCases();
-  const [rooms, setRooms] = useState<KahootRoom[]>(() => localDatabase.getRooms());
+  const [rooms, setRooms] = useState<KahootRoom[]>(() => {
+    const allRooms = localDatabase.getRooms();
+    const uniqueRooms = Array.from(new Map(allRooms.map(item => [item.code, item])).values());
+    return uniqueRooms;
+  });
   const [results, setResults] = useState<StudentGameResult[]>(() => localDatabase.getResults());
 
   const [takenRolesMap, setTakenRolesMap] = useState<Record<string, string>>({});

@@ -135,14 +135,10 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
               <Activity className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
               <span>Simulador de Ventilação Mecânica em UTI</span>
             </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-tight leading-tight">
-              {viewStep === 'student_hub' ? 'Central do Aluno: Para Onde Você Quer Ir?' : 'Portal de Acesso & Aprendizagem Clínica'}
-            </h1>
-            <p className="text-xs sm:text-sm font-sans opacity-90 max-w-xl mx-auto">
-              {viewStep === 'student_hub'
-                ? `Olá, ${studentName.trim() || 'Estudante'}! Selecione abaixo qual ambiente interativo deseja acessar:`
-                : 'Identifique o seu perfil para acessar ferramentas personalizadas de estudo ou gestão pedagógica docente.'}
-            </p>
+            <div className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-tight leading-tight">
+              {viewStep === 'student_hub' ? 'Central do Aluno' : 'Portal de Acesso'}
+            </div>
+            
           </div>
         </div>
 
@@ -189,8 +185,8 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   </span>
                 </div>
 
-                <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-zinc-300'}`}>
-                  Acesse salas do Kahoot, biblioteca de casos clínicos, banco de questões com gabarito ou a simulação no leito. Digite seu nome para salvar suas pontuações.
+                <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
+                  Acesse casos clínicos, Kahoot e simulações.
                 </p>
 
                 {/* Student Identification Input */}
@@ -275,8 +271,8 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
                   </span>
                 </div>
 
-                <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-zinc-300'}`}>
-                  Gerencie salas de desafios Kahoot com PIN e tempo limite, cadastre novos casos clínicos e questões, e acompanhe o progresso das suas turmas.
+                <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
+                  Gestão pedagógica, Kahoot e Casos Clínicos.
                 </p>
 
                 <div className={`p-4 rounded-2xl border space-y-2 text-xs font-mono ${
@@ -566,21 +562,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
           </div>
         )}
 
-        {/* Footer info */}
-        <div
-          className={`px-6 py-3 border-t text-center text-[11px] font-mono flex items-center justify-between ${
-            isLight ? 'bg-slate-100/80 border-slate-200 text-slate-600' : 'bg-[#0a0d17] border-zinc-800 text-zinc-400'
-          }`}
-        >
-          <span>Você poderá alternar o perfil de Aluno / Professor ou alterar o ambiente no menu a qualquer momento.</span>
-          <button
-            type="button"
-            onClick={() => handleNavigateDestination(onEnterSimulatorDirectly)}
-            className="hover:underline text-cyan-500 font-bold cursor-pointer"
-          >
-            Pular e Ir para o Ventilador →
-          </button>
-        </div>
+        {/* Footer removed */}
       </div>
 
       {/* Teacher Password Validation Modal */}

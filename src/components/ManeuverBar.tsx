@@ -95,105 +95,101 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
           MANOBRAS:
         </span>
 
-        {/* Inspiratory Pause (Hold to Pause) */}
-        <button
-          id="insp-hold-btn"
-          type="button"
-          onPointerDown={handleInspHoldDown}
-          onPointerUp={handleInspHoldUp}
-          onPointerLeave={handleInspHoldUp}
-          onPointerCancel={handleInspHoldUp}
-          onContextMenu={(e) => e.preventDefault()}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap active:scale-95 touch-none select-none ${
-            maneuverState.inspiratoryHoldActive
-              ? isLight
-                ? 'bg-cyan-600 text-white shadow-md ring-2 ring-cyan-400 animate-pulse'
-                : 'bg-cyan-500 text-zinc-950 shadow-md shadow-cyan-500/40 ring-1 ring-cyan-200 animate-pulse'
-              : isLight
-              ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300'
-              : 'bg-[#12141e] hover:bg-[#1a1d2d] text-cyan-300 border border-cyan-800/50'
-          }`}
-          title="Mantenha pressionado durante a inspiração para pausar e medir Pplat e Cst"
-        >
-          <Pause className="w-3.5 h-3.5" />
-          <span>
-            {maneuverState.inspiratoryHoldActive ? '⏸️ Pausa Insp.' : 'Pausa Insp.'}
-          </span>
-        </button>
+          {/* Inspiratory Pause */}
+          <button
+            id="insp-hold-btn"
+            type="button"
+            onPointerDown={handleInspHoldDown}
+            onPointerUp={handleInspHoldUp}
+            onPointerLeave={handleInspHoldUp}
+            onPointerCancel={handleInspHoldUp}
+            onContextMenu={(e) => e.preventDefault()}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap active:scale-95 touch-none select-none border ${
+              maneuverState.inspiratoryHoldActive
+                ? 'bg-blue-600 text-white border-blue-400 shadow-md ring-2 ring-blue-300 animate-pulse'
+                : isLight
+                ? 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300'
+                : 'bg-[#0f1426] hover:bg-[#1a2340] text-blue-300 border-blue-900/50'
+            }`}
+            title="Mantenha pressionado durante a inspiração para pausar e medir Pplat e Cst"
+          >
+            <Pause className="w-3.5 h-3.5" />
+            <span>
+              {maneuverState.inspiratoryHoldActive ? '⏸️ Pausa Insp.' : 'Pausa Insp.'}
+            </span>
+          </button>
 
-        {/* Expiratory Pause */}
-        <button
-          id="exp-hold-btn"
-          onClick={() => {
-            audioEngine.playClick(900);
-            onToggleExpHold();
-          }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap ${
-            maneuverState.expiratoryHoldActive
-              ? isLight
-                ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400 animate-pulse'
-                : 'bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/40 ring-1 ring-amber-200 animate-pulse'
-              : isLight
-              ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300'
-              : 'bg-[#12141e] hover:bg-[#1a1d2d] text-amber-300 border border-amber-800/50'
-          }`}
-          title="Manter para medir Auto-PEEP"
-        >
-          <Pause className="w-3.5 h-3.5" />
-          <span>Pausa Exp.</span>
-        </button>
+          {/* Expiratory Pause */}
+          <button
+            id="exp-hold-btn"
+            onClick={() => {
+              audioEngine.playClick(900);
+              onToggleExpHold();
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap border ${
+              maneuverState.expiratoryHoldActive
+                ? 'bg-blue-600 text-white border-blue-400 shadow-md ring-2 ring-blue-300 animate-pulse'
+                : isLight
+                ? 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300'
+                : 'bg-[#0f1426] hover:bg-[#1a2340] text-blue-300 border-blue-900/50'
+            }`}
+            title="Manter para medir Auto-PEEP"
+          >
+            <Pause className="w-3.5 h-3.5" />
+            <span>Pausa Exp.</span>
+          </button>
 
-        {/* O2 100% */}
-        <button
-          onClick={() => {
-            audioEngine.playClick(850);
-            onToggleO2Suction();
-          }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap ${
-            maneuverState.o2SuctionActive
-              ? 'bg-rose-600 text-white shadow-md shadow-rose-950 ring-1 ring-rose-300'
-              : isLight
-              ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300'
-              : 'bg-[#12141e] hover:bg-[#1a1d2d] text-rose-300 border border-rose-900/50'
-          }`}
-        >
-          <Flame className="w-3.5 h-3.5" />
-          <span>{maneuverState.o2SuctionActive ? `O₂ 100% (${maneuverState.o2SuctionTimeRemaining}s)` : 'O₂ 100%'}</span>
-        </button>
+          {/* O2 100% */}
+          <button
+            onClick={() => {
+              audioEngine.playClick(850);
+              onToggleO2Suction();
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap border ${
+              maneuverState.o2SuctionActive
+                ? 'bg-blue-600 text-white border-blue-400 shadow-md ring-2 ring-blue-300'
+                : isLight
+                ? 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300'
+                : 'bg-[#0f1426] hover:bg-[#1a2340] text-blue-300 border-blue-900/50'
+            }`}
+          >
+            <Flame className="w-3.5 h-3.5" />
+            <span>{maneuverState.o2SuctionActive ? `O₂ 100% (${maneuverState.o2SuctionTimeRemaining}s)` : 'O₂ 100%'}</span>
+          </button>
 
-        {/* Recruitment Maneuver */}
-        <button
-          onClick={() => {
-            audioEngine.playClick(950);
-            onToggleRecruitment();
-          }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap ${
-            maneuverState.recruitmentManeuverActive
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950 ring-1 ring-indigo-300 animate-pulse'
-              : isLight
-              ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-300'
-              : 'bg-[#12141e] hover:bg-[#1a1d2d] text-indigo-300 border border-indigo-900/50'
-          }`}
-        >
-          <Wind className="w-3.5 h-3.5" />
-          <span>{maneuverState.recruitmentManeuverActive ? `Recrut. (${maneuverState.recruitmentTimeRemaining}s)` : 'Recrutamento'}</span>
-        </button>
+          {/* Recruitment Maneuver */}
+          <button
+            onClick={() => {
+              audioEngine.playClick(950);
+              onToggleRecruitment();
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap border ${
+              maneuverState.recruitmentManeuverActive
+                ? 'bg-blue-600 text-white border-blue-400 shadow-md ring-2 ring-blue-300 animate-pulse'
+                : isLight
+                ? 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300'
+                : 'bg-[#0f1426] hover:bg-[#1a2340] text-blue-300 border-blue-900/50'
+            }`}
+          >
+            <Wind className="w-3.5 h-3.5" />
+            <span>{maneuverState.recruitmentManeuverActive ? `Recrut. (${maneuverState.recruitmentTimeRemaining}s)` : 'Recrutamento'}</span>
+          </button>
 
-        {/* Manual Breath */}
-        <button
-          onClick={() => {
-            audioEngine.playClick(1100);
-            onManualBreath();
-          }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs cursor-pointer transition-all shadow-xs shrink-0 whitespace-nowrap ${
-            isLight
-              ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300'
-              : 'bg-[#12141e] hover:bg-[#1a1d2d] text-amber-300 border border-amber-800/50'
-          }`}
-        >
-          <Zap className="w-3.5 h-3.5 text-amber-500" />
-          <span>Insp. Manual</span>
-        </button>
+          {/* Manual Breath */}
+          <button
+            onClick={() => {
+              audioEngine.playClick(1100);
+              onManualBreath();
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs cursor-pointer transition-all shadow-xs shrink-0 whitespace-nowrap border ${
+              isLight
+                ? 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300'
+                : 'bg-[#0f1426] hover:bg-[#1a2340] text-blue-300 border-blue-900/50'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Insp. Manual</span>
+          </button>
 
         {/* Aspiração Traqueal */}
         <button

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap, Sparkles, Award, Trophy, RotateCcw } from 'lucide-react';
+import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap, Sparkles, Award, Trophy, RotateCcw, Volume2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 
@@ -48,14 +48,9 @@ export const MenuModal: React.FC<MenuModalProps> = ({
   onOpenKahoot,
   onResetSimulation,
 }) => {
-  const { theme, toggleTheme, isLight } = useTheme();
+  const { isLight } = useTheme();
 
   if (!isOpen) return null;
-
-  const handleToggleTheme = () => {
-    audioEngine.playClick(1050);
-    toggleTheme();
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
@@ -96,33 +91,53 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           {onResetSimulation && (
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                onResetSimulation();
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group shadow-sm ${
-                isLight
-                  ? 'bg-rose-50 hover:bg-rose-100 border-rose-300 text-rose-950'
-                  : 'bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/80 text-rose-200'
-              }`}
+              onClick={() => { onClose(); onResetSimulation(); }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl border border-blue-800/60 bg-blue-950/20 hover:bg-blue-900/40 text-blue-100 text-left transition-all cursor-pointer group"
             >
-              <div
-                className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-rose-600 text-white' : 'bg-rose-900/80 text-rose-300'
-                }`}
-              >
+              <div className="p-2.5 rounded-lg bg-blue-900/80 text-blue-300">
                 <RotateCcw className="w-5 h-5" />
               </div>
               <div className="flex-1">
-                <span className="block text-sm font-display font-bold text-rose-700 dark:text-rose-300">
-                  Reiniciar Simulação (Tela de Admissão)
+                <span className="block text-sm font-display font-bold text-blue-100">
+                  Reiniciar Simulação
                 </span>
-                <span className={`text-xs ${isLight ? 'text-rose-900/80' : 'text-rose-300/80'}`}>
-                  Retornar à admissão do paciente e zerar os parâmetros
+                <span className="text-xs text-blue-300/70">
+                  Retornar à admissão e zerar parâmetros
                 </span>
               </div>
             </button>
           )}
+
+          {/* Alarmes */}
+          <button
+            onClick={() => { onClose(); onOpenAlarms(); }}
+            className="w-full flex items-center gap-3 p-3 rounded-xl border border-blue-800/60 bg-blue-950/20 hover:bg-blue-900/40 text-blue-100 text-left transition-all cursor-pointer group"
+          >
+            <div className="p-2.5 rounded-lg bg-blue-900/80 text-blue-300">
+              <Bell className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <span className="block text-sm font-display font-bold text-blue-100">Configuração de Alarmes</span>
+              <span className="text-xs text-blue-300/70">Ajustar limites de monitorização</span>
+            </div>
+          </button>
+
+          {/* Áudio */}
+          <button
+            onClick={() => { onClose(); onOpenAudio(); }}
+            className="w-full flex items-center gap-3 p-3 rounded-xl border border-blue-800/60 bg-blue-950/20 hover:bg-blue-900/40 text-blue-100 text-left transition-all cursor-pointer group"
+          >
+            <div className="p-2.5 rounded-lg bg-blue-900/80 text-blue-300">
+              <Volume2 className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <span className="block text-sm font-display font-bold text-blue-100">Configuração de Áudio</span>
+              <span className="text-xs text-blue-300/70">Volume e alertas sonoros</span>
+            </div>
+          </button>
+          
+          {/* ... (keep other buttons but apply blue theme) */}
+
           {/* Role Portal / Change Profile */}
           {onOpenRolePortal && (
             <button
@@ -215,42 +230,6 @@ export const MenuModal: React.FC<MenuModalProps> = ({
             </button>
           )}
 
-          {/* Light / Dark Mode Toggle */}
-          <button
-            onClick={handleToggleTheme}
-            className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer group ${
-              isLight
-                ? 'bg-amber-50/70 hover:bg-amber-100/70 border-amber-200 text-slate-900'
-                : 'bg-[#151722] hover:bg-[#1d2133] border-zinc-800 text-white'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20'
-                }`}
-              >
-                {isLight ? <Moon className="w-5 h-5 text-indigo-600" /> : <Sun className="w-5 h-5" />}
-              </div>
-              <div className="text-left">
-                <span className="block text-sm font-display font-bold">
-                  {isLight ? 'Modo Escuro (Interface Noturna)' : 'Modo Claro (Interface Clínica Clara)'}
-                </span>
-                <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                  {isLight ? 'Ativar visual escuro padrão de monitor' : 'Ativar visual claro de alta luminosidade'}
-                </span>
-              </div>
-            </div>
-            <span
-              className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg border ${
-                isLight
-                  ? 'bg-amber-200/80 text-amber-900 border-amber-300'
-                  : 'bg-zinc-800 text-amber-300 border-zinc-700'
-              }`}
-            >
-              {isLight ? 'Claro Ativo' : 'Escuro Ativo'}
-            </span>
-          </button>
 
           {onOpenKahoot && (
             <button
@@ -328,61 +307,7 @@ export const MenuModal: React.FC<MenuModalProps> = ({
             </button>
           )}
 
-          {onOpenDebriefing && (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenDebriefing();
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-                isLight
-                  ? 'bg-purple-50/70 hover:bg-purple-100/90 border-purple-300 text-purple-950'
-                  : 'bg-purple-950/40 hover:bg-purple-900/50 border-purple-800/80 text-purple-200'
-              }`}
-            >
-              <div
-                className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-purple-200 text-purple-800' : 'bg-purple-500/20 text-purple-300 group-hover:bg-purple-500/30'
-                }`}
-              >
-                <Award className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="block text-sm font-display font-bold">Relatório de Debriefing (AAR)</span>
-                <span className={`text-xs ${isLight ? 'text-purple-800/80' : 'text-purple-300/80'}`}>
-                  After Action Review do caso ativo com linha do tempo de intervenções e score
-                </span>
-              </div>
-            </button>
-          )}
 
-          {onOpenGasometry && (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenGasometry();
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-                isLight
-                  ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                  : 'bg-[#151722] hover:bg-[#1d2133] border-zinc-800 text-white'
-              }`}
-            >
-              <div
-                className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-cyan-100 text-cyan-700' : 'bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20'
-                }`}
-              >
-                <FileText className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="block text-sm font-display font-bold">Gasometria Arterial (Janela Flutuante)</span>
-                <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                  pH, PaCO₂, PaO₂, HCO₃⁻, Base Excess e relação P/F
-                </span>
-              </div>
-            </button>
-          )}
 
           {onOpenMissions && (
             <button
