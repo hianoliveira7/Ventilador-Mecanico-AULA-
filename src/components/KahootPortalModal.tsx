@@ -65,6 +65,8 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   const [rooms, setRooms] = useState<KahootRoom[]>(() => localDatabase.getRooms());
   const [results, setResults] = useState<StudentGameResult[]>(() => localDatabase.getResults());
 
+  const [takenRolesMap, setTakenRolesMap] = useState<Record<string, string>>({});
+
   useEffect(() => {
     if (isOpen) {
       const savedName = localStorage.getItem('simulador_student_name');
@@ -81,6 +83,19 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
       };
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!inputRoomCode || !teamName) {
+      setTakenRolesMap({});
+      return;
+    }
+    const unsub = localDatabase.subscribeRoomState(inputRoomCode, (state) => {
+      if (state && state.takenRoles) {
+        setTakenRolesMap(state.takenRoles);
+      }
+    }, teamName);
+    return () => unsub();
+  }, [inputRoomCode, teamName]);
 
   const handleDeleteRoom = async (code: string) => {
     if (confirm(`Tem certeza que deseja excluir a sala "${code}"?`)) {
@@ -117,9 +132,25 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
       return;
     }
 
+    const effectiveTeamName = room.mode === 'team' || teamName.trim() ? (teamName.trim() || 'Equipe UTI Alfa') : undefined;
+
+    if (effectiveTeamName && takenRolesMap[teamRole] && takenRolesMap[teamRole].trim().toLowerCase() !== studentName.trim().toLowerCase()) {
+      setErrorMsg(`A função "${teamRole}" já foi escolhida por ${takenRolesMap[teamRole]} nesta equipe. Escolha outra função disponível.`);
+      return;
+    }
+
+    if (effectiveTeamName) {
+      const updatedRoles = { ...takenRolesMap, [teamRole]: studentName.trim() };
+      await localDatabase.publishRoomState(
+        room.code,
+        { takenRoles: updatedRoles },
+        effectiveTeamName,
+        { role: teamRole, author: studentName, actionType: 'role_taken' }
+      );
+    }
+
     const targetCase = cases.find((c) => c.id === room.caseId) || cases[0];
     setErrorMsg('');
-    const effectiveTeamName = room.mode === 'team' || teamName.trim() ? (teamName.trim() || 'Equipe UTI Alfa') : undefined;
     await localDatabase.registerStudent(studentName, room.code, teamRole, effectiveTeamName);
     onStartKahootSession(studentName, room, targetCase, teamRole, effectiveTeamName);
     onClose();
@@ -291,7 +322,8 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                     { id: 'Médico Intensivista', label: '🩺 Médico(a)' },
                     { id: 'Enfermeiro(a) UTI', label: '💊 Enfermeiro(a)' },
                   ].map((role) => {
-                    const isTaken = localDatabase.getResults().some(r => r.roomCode === inputRoomCode && (localDatabase.getRoomByCode(inputRoomCode)?.mode === 'team' ? r.teamName === teamName : true) && r.role === role.id);
+                    const takenBy = takenRolesMap[role.id];
+                    const isTaken = Boolean(takenBy && takenBy.trim().toLowerCase() !== studentName.trim().toLowerCase());
                     return (
                       <button
                         key={role.id}
@@ -307,7 +339,7 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                         }`}
                       >
                         {role.label}
-                        {isTaken && <span className="block text-[8px] font-normal">Indisponível</span>}
+                        {isTaken && <span className="block text-[8px] font-normal text-rose-400">Ocupado ({takenBy})</span>}
                       </button>
                     );
                   })}

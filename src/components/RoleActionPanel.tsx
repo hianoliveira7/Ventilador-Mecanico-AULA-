@@ -341,193 +341,198 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
       {activeTab === 'role_actions' && (
         <div className="space-y-4 animate-fadeIn">
           {/* 🫁 FISIOTERAPEUTA RESPIRATÓRIO */}
-          <div className={`p-3.5 rounded-2xl border space-y-3 ${
-            isLight ? 'bg-cyan-50/70 border-cyan-200' : 'bg-[#0c1825] border-cyan-900/50'
-          }`}>
-            <div className="flex items-center justify-between border-b pb-2 border-cyan-800/30">
-              <div className="flex items-center gap-2">
-                <Wind className="w-4 h-4 text-cyan-400" />
-                <h5 className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400">
-                  🫁 Fisioterapeuta Respiratório: Ajustes Ventilatórios & Diagnóstico
-                </h5>
-              </div>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
-                canEditPhysio ? 'bg-cyan-950 text-cyan-300 border-cyan-700/50' : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-              }`}>
-                {canEditPhysio ? 'Controle Exclusivo' : '🔒 Visualização Leitura'}
-              </span>
-            </div>
-
-            <p className="text-xs font-sans text-zinc-300 leading-relaxed">
-              {canEditPhysio
-                ? 'Você é o especialista responsável por ajustar os parâmetros do ventilador mecânico (Vt, RR, PEEP, FiO₂, Ti, Flow, PS), prevenir VILI mantendo ΔP ≤ 14 cmH₂O e realizar manobras estáticas de mecânica.'
-                : '🔒 Os parâmetros do ventilador mecânico (Volume Corrente, PEEP, FiO₂, Frequência, etc.) são ajustados exclusivamente pelo Fisioterapeuta Respiratório da equipe. Você pode acompanhar as métricas em tempo real.'}
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-xs">
-              <div className={`p-2.5 rounded-xl border text-center ${
-                isLight ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-zinc-800'
-              }`}>
-                <span className="text-[10px] text-zinc-400 block font-bold">Driving Pressure</span>
-                <span className={`text-base font-black ${
-                  monitored.drivingPressure <= 14 ? 'text-emerald-400' : 'text-rose-400 animate-pulse'
-                }`}>
-                  {monitored.drivingPressure.toFixed(1)} cmH₂O
-                </span>
-              </div>
-
-              <div className={`p-2.5 rounded-xl border text-center ${
-                isLight ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-zinc-800'
-              }`}>
-                <span className="text-[10px] text-zinc-400 block font-bold">Complacência Estática</span>
-                <span className="text-base font-black text-cyan-400">
-                  {patient.compliance} mL/cmH₂O
-                </span>
-              </div>
-
-              <div className={`p-2.5 rounded-xl border text-center ${
-                isLight ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-zinc-800'
-              }`}>
-                <span className="text-[10px] text-zinc-400 block font-bold">Resistência Raw</span>
-                <span className="text-base font-black text-amber-400">
-                  {patient.resistance} cmH₂O/(L/s)
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* 🩺 MÉDICO INTENSIVISTA */}
-          <div className={`p-3.5 rounded-2xl border space-y-3 ${
-            isLight ? 'bg-indigo-50/70 border-indigo-200' : 'bg-[#121428] border-indigo-900/50'
-          }`}>
-            <div className="flex items-center justify-between border-b pb-2 border-indigo-800/30">
-              <div className="flex items-center gap-2">
-                <Stethoscope className="w-4 h-4 text-indigo-400" />
-                <h5 className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-400">
-                  🩺 Médico Intensivista: Prescrições & Intervenções Médicas
-                </h5>
-              </div>
-              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
-                canEditDoctor ? 'bg-indigo-950 text-indigo-300 border-indigo-700/50' : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-              }`}>
-                {canEditDoctor ? 'Prescrição Médica' : '🔒 Visualização Leitura'}
-              </span>
-            </div>
-
-            {/* Doctor Action Controls */}
-            {!canEditDoctor && (
-              <div className="text-xs font-mono text-indigo-300 bg-indigo-950/60 border border-indigo-700/50 rounded-xl p-2.5 flex items-center gap-2 shadow-xs">
-                <ShieldAlert className="w-4 h-4 text-indigo-400 shrink-0" />
-                <span>
-                  🔒 Prescrições Médicas: Estas ações pertencem exclusivamente ao <strong>Médico Intensivista</strong> do seu grupo.
-                </span>
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Sedation RASS */}
-              <div className={`p-3 rounded-xl border space-y-2 ${
-                isLight ? 'bg-white border-slate-200' : 'bg-[#161a33] border-zinc-800'
-              }`}>
-                <div className="flex items-center justify-between text-xs font-mono font-bold">
-                  <span className="text-indigo-300">Nível de Sedação (RASS):</span>
-                  <span className="text-amber-400 font-black">{rassLevel} ({rassLevel <= -3 ? 'Profunda' : 'Leve/Agitado'})</span>
-                </div>
+          {canEditPhysio && (
+            <div className={`p-3.5 rounded-2xl border space-y-3 ${
+              isLight ? 'bg-cyan-50/70 border-cyan-200' : 'bg-[#0c1825] border-cyan-900/50'
+            }`}>
+              <div className="flex items-center justify-between border-b pb-2 border-cyan-800/30">
                 <div className="flex items-center gap-2">
-                  {[-5, -4, -3, -2, -1, 0, 1].map((lvl) => (
-                    <button
-                      key={lvl}
-                      type="button"
-                      onClick={() => handleApplySedationRASS(lvl)}
-                      title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode alterar o RASS" : `Ajustar RASS para ${lvl}`}
-                      className={`flex-1 py-1 rounded text-[11px] font-mono font-bold transition-all ${
-                        rassLevel === lvl
-                          ? 'bg-amber-400 text-slate-950 font-black'
-                          : isLight
-                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-800'
-                          : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
-                      } ${!canEditDoctor ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      {lvl}
-                    </button>
-                  ))}
+                  <Wind className="w-4 h-4 text-cyan-400" />
+                  <h5 className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400">
+                    🫁 Fisioterapeuta Respiratório: Ajustes Ventilatórios & Diagnóstico
+                  </h5>
                 </div>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                  canEditPhysio ? 'bg-cyan-950 text-cyan-300 border-cyan-700/50' : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                }`}>
+                  {canEditPhysio ? 'Controle Exclusivo' : '🔒 Visualização Leitura'}
+                </span>
               </div>
 
-              {/* Neuromuscular Blockade */}
-              <div className={`p-3 rounded-xl border space-y-2 ${
-                isLight ? 'bg-white border-slate-200' : 'bg-[#161a33] border-zinc-800'
-              }`}>
-                <div className="flex items-center justify-between text-xs font-mono font-bold">
-                  <span className="text-indigo-300">Bloqueio Neuromuscular:</span>
-                  <span className={`font-black ${isNmbActive ? 'text-emerald-400' : 'text-zinc-400'}`}>
-                    {isNmbActive ? 'ATIVO (Cisatracúrio)' : 'Inativo'}
+              <p className="text-xs font-sans text-zinc-300 leading-relaxed">
+                {canEditPhysio
+                  ? 'Você é o especialista responsável por ajustar os parâmetros do ventilador mecânico (Vt, RR, PEEP, FiO₂, Ti, Flow, PS), prevenir VILI mantendo ΔP ≤ 14 cmH₂O e realizar manobras estáticas de mecânica.'
+                  : '🔒 Os parâmetros do ventilador mecânico (Volume Corrente, PEEP, FiO₂, Frequência, etc.) são ajustados exclusivamente pelo Fisioterapeuta Respiratório da equipe. Você pode acompanhar as métricas em tempo real.'}
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-xs">
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-zinc-800'
+                }`}>
+                  <span className="text-[10px] text-zinc-400 block font-bold">Driving Pressure</span>
+                  <span className={`text-base font-black ${
+                    monitored.drivingPressure <= 14 ? 'text-emerald-400' : 'text-rose-400 animate-pulse'
+                  }`}>
+                    {monitored.drivingPressure.toFixed(1)} cmH₂O
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleToggleNMB}
-                  title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode prescrever bloqueio neuromuscular" : undefined}
-                  className={`w-full py-2 rounded-xl text-xs font-mono font-bold transition-all ${
-                    isNmbActive
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg'
-                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
-                  } ${!canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-indigo-700/60' : 'cursor-pointer'}`}
-                >
-                  {!canEditDoctor && '🔒 '}
-                  {isNmbActive ? '✓ Suspender Bloqueador Neuromuscular' : '⚡ Iniciar Cisatracúrio (Paralisia)'}
-                </button>
-              </div>
 
-              {/* Bronchodilator */}
-              <div className={`p-3 rounded-xl border space-y-2 ${
-                isLight ? 'bg-white border-slate-200' : 'bg-[#161a33] border-zinc-800'
-              }`}>
-                <div className="flex items-center justify-between text-xs font-mono font-bold">
-                  <span className="text-indigo-300">Broncoespasmo / Raw Elevada:</span>
-                  <span className="text-amber-400">{patient.resistance} cmH₂O/(L/s)</span>
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-zinc-800'
+                }`}>
+                  <span className="text-[10px] text-zinc-400 block font-bold">Complacência Estática</span>
+                  <span className="text-base font-black text-cyan-400">
+                    {patient.compliance} mL/cmH₂O
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleApplyBronchodilator}
-                  title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode prescrever broncodilatador" : undefined}
-                  className={`w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
-                    !canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-amber-600/60' : 'cursor-pointer'
-                  }`}
-                >
-                  {!canEditDoctor && '🔒'}
-                  <Syringe className="w-3.5 h-3.5" />
-                  <span>Prescrever Salbutamol Inalatório (-45% Raw)</span>
-                </button>
-              </div>
 
-              {/* Thoracostomy Pneumothorax */}
-              <div className={`p-3 rounded-xl border space-y-2 ${
-                isLight ? 'bg-white border-slate-200' : 'bg-[#161a33] border-zinc-800'
-              }`}>
-                <div className="flex items-center justify-between text-xs font-mono font-bold">
-                  <span className="text-indigo-300">Drenagem de Tórax (Pneumotórax):</span>
-                  <span className="text-cyan-400">{patient.compliance} mL/cmH₂O</span>
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#111c2e] border-zinc-800'
+                }`}>
+                  <span className="text-[10px] text-zinc-400 block font-bold">Resistência Raw</span>
+                  <span className="text-base font-black text-amber-400">
+                    {patient.resistance} cmH₂O/(L/s)
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDrainPneumothorax}
-                  title={!canEditDoctor ? "🔒 Procedimento invasivo exclusivo do Médico Intensivista" : undefined}
-                  className={`w-full py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
-                    !canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-rose-600/60' : 'cursor-pointer'
-                  }`}
-                >
-                  {!canEditDoctor && '🔒'}
-                  <Activity className="w-3.5 h-3.5" />
-                  <span>Realizar Drenagem Torácica de Emergência</span>
-                </button>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* 🩺 MÉDICO INTENSIVISTA */}
+          {canEditDoctor && (
+            <div className={`p-3.5 rounded-2xl border space-y-3 ${
+              isLight ? 'bg-indigo-50/70 border-indigo-200' : 'bg-[#121428] border-indigo-900/50'
+            }`}>
+              <div className="flex items-center justify-between border-b pb-2 border-indigo-800/30">
+                <div className="flex items-center gap-2">
+                  <Stethoscope className="w-4 h-4 text-indigo-400" />
+                  <h5 className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-400">
+                    🩺 Médico Intensivista: Prescrições & Intervenções Médicas
+                  </h5>
+                </div>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                  canEditDoctor ? 'bg-indigo-950 text-indigo-300 border-indigo-700/50' : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                }`}>
+                  {canEditDoctor ? 'Prescrição Médica' : '🔒 Visualização Leitura'}
+                </span>
+              </div>
+
+              {/* Doctor Action Controls */}
+              {!canEditDoctor && (
+                <div className="text-xs font-mono text-indigo-300 bg-indigo-950/60 border border-indigo-700/50 rounded-xl p-2.5 flex items-center gap-2 shadow-xs">
+                  <ShieldAlert className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span>
+                    🔒 Prescrições Médicas: Estas ações pertencem exclusivamente ao <strong>Médico Intensivista</strong> do seu grupo.
+                  </span>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Sedation RASS */}
+                <div className={`p-3 rounded-xl border space-y-2 ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#161a33] border-zinc-800'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold">
+                    <span className="text-indigo-300">Nível de Sedação (RASS):</span>
+                    <span className="text-amber-400 font-black">{rassLevel} ({rassLevel <= -3 ? 'Profunda' : 'Leve/Agitado'})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {[-5, -4, -3, -2, -1, 0, 1].map((lvl) => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => handleApplySedationRASS(lvl)}
+                        title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode alterar o RASS" : `Ajustar RASS para ${lvl}`}
+                        className={`flex-1 py-1 rounded text-[11px] font-mono font-bold transition-all ${
+                          rassLevel === lvl
+                            ? 'bg-amber-400 text-slate-950 font-black'
+                            : isLight
+                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-800'
+                            : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300'
+                        } ${!canEditDoctor ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        {lvl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Neuromuscular Blockade */}
+                <div className={`p-3 rounded-xl border space-y-2 ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#161a33] border-zinc-800'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold">
+                    <span className="text-indigo-300">Bloqueio Neuromuscular:</span>
+                    <span className={`font-black ${isNmbActive ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                      {isNmbActive ? 'ATIVO (Cisatracúrio)' : 'Inativo'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleNMB}
+                    title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode prescrever bloqueio neuromuscular" : undefined}
+                    className={`w-full py-2 rounded-xl text-xs font-mono font-bold transition-all ${
+                      isNmbActive
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg'
+                        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
+                    } ${!canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-indigo-700/60' : 'cursor-pointer'}`}
+                  >
+                    {!canEditDoctor && '🔒 '}
+                    {isNmbActive ? '✓ Suspender Bloqueador Neuromuscular' : '⚡ Iniciar Cisatracúrio (Paralisia)'}
+                  </button>
+                </div>
+
+                {/* Bronchodilator */}
+                <div className={`p-3 rounded-xl border space-y-2 ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#161a33] border-zinc-800'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold">
+                    <span className="text-indigo-300">Broncoespasmo / Raw Elevada:</span>
+                    <span className="text-amber-400">{patient.resistance} cmH₂O/(L/s)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApplyBronchodilator}
+                    title={!canEditDoctor ? "🔒 Apenas o Médico Intensivista pode prescrever broncodilatador" : undefined}
+                    className={`w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                      !canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-amber-600/60' : 'cursor-pointer'
+                    }`}
+                  >
+                    {!canEditDoctor && '🔒'}
+                    <Syringe className="w-3.5 h-3.5" />
+                    <span>Prescrever Salbutamol Inalatório (-45% Raw)</span>
+                  </button>
+                </div>
+
+                {/* Thoracostomy Pneumothorax */}
+                <div className={`p-3 rounded-xl border space-y-2 ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#161a33] border-zinc-800'
+                }`}>
+                  <div className="flex items-center justify-between text-xs font-mono font-bold">
+                    <span className="text-indigo-300">Drenagem de Tórax (Pneumotórax):</span>
+                    <span className="text-cyan-400">{patient.compliance} mL/cmH₂O</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDrainPneumothorax}
+                    title={!canEditDoctor ? "🔒 Procedimento invasivo exclusivo do Médico Intensivista" : undefined}
+                    className={`w-full py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-mono font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 ${
+                      !canEditDoctor ? 'opacity-60 cursor-not-allowed border border-dashed border-rose-600/60' : 'cursor-pointer'
+                    }`}
+                  >
+                    {!canEditDoctor && '🔒'}
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Realizar Drenagem Torácica de Emergência</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 💊 ENFERMEIRO(A) UTI */}
-          <div className={`p-3.5 rounded-2xl border space-y-3 ${
-            isLight ? 'bg-purple-50/70 border-purple-200' : 'bg-[#181126] border-purple-900/50'
-          }`}>
+          {canEditNurse && (
+            <div className={`p-3.5 rounded-2xl border space-y-3 ${
+              isLight ? 'bg-purple-50/70 border-purple-200' : 'bg-[#181126] border-purple-900/50'
+            }`}>
             <div className="flex items-center justify-between border-b pb-2 border-purple-800/30">
               <div className="flex items-center gap-2">
                 <Droplet className="w-4 h-4 text-purple-400" />
@@ -659,6 +664,7 @@ export const RoleActionPanel: React.FC<RoleActionPanelProps> = ({
               </div>
             </div>
           </div>
+          )}
         </div>
       )}
 

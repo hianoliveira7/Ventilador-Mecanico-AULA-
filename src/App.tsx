@@ -339,13 +339,36 @@ export default function App() {
     setCaseElapsedSeconds(0);
     const timeLimitSeconds = room.timeLimitMinutes * 60;
     const effectiveTeamName = teamName || (room.mode === 'team' ? 'Equipe UTI Alfa' : undefined);
+    
+    const sessionStart = Date.now();
+    sessionStartTimeRef.current = sessionStart;
+
     // Reset collaboration sync refs to clean slate for new session
-    lastProcessedTimestampRef.current = 0;
+    lastProcessedTimestampRef.current = sessionStart;
     lastPublishedSettingsHashRef.current = '';
     lastPublishedPatientHashRef.current = '';
     lastPublishedVentilatingRef.current = null;
     isApplyingRemoteSettingsRef.current = false;
     isApplyingRemotePatientRef.current = false;
+
+    // If team mode, clear any stale teamResult in cloud so new joiners don't get immediate completion
+    if (effectiveTeamName) {
+      localDatabase.publishRoomState(
+        room.code,
+        {
+          teamResult: null,
+          sessionStatus: 'active',
+          sessionStartedAt: sessionStart,
+        },
+        effectiveTeamName,
+        {
+          role: teamRole || activeTeamRole,
+          author: studentName,
+          actionType: 'session_start',
+        }
+      );
+    }
+
     setActiveKahootSession({
       studentName,
       room,
@@ -515,6 +538,7 @@ export default function App() {
   const lastPublishedSettingsHashRef = useRef<string>('');
   const lastPublishedPatientHashRef = useRef<string>('');
   const lastPublishedVentilatingRef = useRef<boolean | null>(null);
+  const sessionStartTimeRef = useRef<number>(0);
 
   // Kahoot Ingestion Channel: Listen for verified remote updates from peers & teacher
   useEffect(() => {
@@ -625,10 +649,14 @@ export default function App() {
 
       // 6. Unified Team Completion: When any teammate completes the session, sync score to all teammates
       if (remoteState.teamResult) {
-        console.log(`[Kahoot Collaboration] 🏆 Group session completed by teammate! Synchronizing unified group result:`, remoteState.teamResult);
-        setKahootResult(remoteState.teamResult);
-        setIsKahootResultModalOpen(true);
-        setActiveKahootSession(null);
+        if (!remoteState.teamResult.submittedAt || remoteState.teamResult.submittedAt >= sessionStartTimeRef.current - 2000) {
+          console.log(`[Kahoot Collaboration] 🏆 Group session completed by teammate! Synchronizing unified group result:`, remoteState.teamResult);
+          setKahootResult(remoteState.teamResult);
+          setIsKahootResultModalOpen(true);
+          setActiveKahootSession(null);
+        } else {
+          console.log(`[Kahoot Collaboration] ℹ️ Ignoring stale teamResult from previous session (submittedAt: ${remoteState.teamResult.submittedAt}, sessionStart: ${sessionStartTimeRef.current})`);
+        }
       }
     }, teamName);
 
@@ -1986,18 +2014,19 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="flex-1 min-h-[145px]">
-                  <ParameterControls
-                    settings={settings}
-                    draftSettings={draftSettings}
-                    onUpdateDraft={handleUpdateDraft}
-                    hasChanges={hasChanges}
-                    onConfirm={handleConfirmSettings}
-                    onDiscard={handleDiscardSettings}
-                    isReadOnly={activeKahootSession !== null && !isFisioterapeutaRole(activeTeamRole, activeKahootSession?.room.mode)}
-                    readOnlyNotice={activeTeamRole}
-                  />
-                </div>
+                {(activeTeamRole === 'Fisioterapeuta Respiratório' || activeTeamRole === 'Todos' || !activeKahootSession || activeKahootSession.room.mode === 'individual') && (
+                  <div className="flex-1 min-h-[145px]">
+                    <ParameterControls
+                      settings={settings}
+                      draftSettings={draftSettings}
+                      onUpdateDraft={handleUpdateDraft}
+                      hasChanges={hasChanges}
+                      onConfirm={handleConfirmSettings}
+                      onDiscard={handleDiscardSettings}
+                      isReadOnly={false}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
