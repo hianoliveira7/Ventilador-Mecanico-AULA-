@@ -46,6 +46,7 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
   onEndInspHold,
   onToggleExpHold,
   onToggleO2Suction,
+  onToggleNebulizer,
   onToggleRecruitment,
   onToggleSpontaneousDrive,
   onManualBreath,
@@ -184,6 +185,44 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
         >
           <Zap className="w-3.5 h-3.5 text-amber-500" />
           <span>Insp. Manual</span>
+        </button>
+
+        {/* Higiene Brônquica */}
+        <button
+          onClick={() => {
+            audioEngine.playClick(900);
+            if (onToggleNebulizer) onToggleNebulizer();
+          }}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap ${
+            maneuverState.nebulizerActive
+              ? 'bg-cyan-600 text-white shadow-md animate-pulse'
+              : isLight
+              ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-300'
+              : 'bg-[#12141e] hover:bg-[#1a1d2d] text-cyan-300 border border-cyan-800/50'
+          }`}
+          title="Realizar manobra de higiene brônquica e fluidificação"
+        >
+          <Wind className="w-3.5 h-3.5" />
+          <span>{maneuverState.nebulizerActive ? `Higiene Brônquica (${maneuverState.nebulizerTimeRemaining}s)` : 'Higiene Brônquica'}</span>
+        </button>
+
+        {/* Aspiração Traqueal */}
+        <button
+          onClick={() => {
+            audioEngine.playClick(850);
+            onToggleO2Suction();
+          }}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-mono font-bold text-[11px] sm:text-xs transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap ${
+            maneuverState.o2SuctionActive
+              ? 'bg-rose-600 text-white shadow-md shadow-rose-950 ring-1 ring-rose-300'
+              : isLight
+              ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300'
+              : 'bg-[#12141e] hover:bg-[#1a1d2d] text-rose-300 border border-rose-900/50'
+          }`}
+          title="Realizar aspiração traqueal de secreções e hiperoxigenação"
+        >
+          <Flame className="w-3.5 h-3.5" />
+          <span>{maneuverState.o2SuctionActive ? `Aspiração (${maneuverState.o2SuctionTimeRemaining}s)` : 'Aspiração Traqueal'}</span>
         </button>
 
         {/* Spontaneous Drive Toggle */}

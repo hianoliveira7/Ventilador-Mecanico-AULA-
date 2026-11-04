@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { localDatabase, KahootRoom, StudentGameResult } from '../services/localDatabase';
 import { ClinicalCase } from '../types/ventilation';
 import { useTheme } from '../context/ThemeContext';
+import { audioEngine } from '../services/audioEngine';
 import {
   Trophy,
   Play,
@@ -286,83 +287,12 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                 />
               </div>
 
-              {/* Conditional Team Name Input */}
-              {localDatabase.getRoomByCode(inputRoomCode)?.mode === 'team' && (
-                <div className={`p-4 rounded-2xl border ${
-                  isLight ? 'bg-purple-50/50 border-purple-200' : 'bg-[#150f25] border-purple-900/40'
-                }`}>
-                  <label className="block text-xs font-mono font-bold uppercase text-purple-400 mb-1 flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5" />
-                    2. Nome da Equipe / Grupo (Trabalho em Equipe):
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Equipe UTI Alfa"
-                    value={teamName}
-                    onChange={(e) => {
-                      setTeamName(e.target.value);
-                      localStorage.setItem('simulador_team_name', e.target.value);
-                    }}
-                    className={`w-full px-3 py-2 rounded-xl text-sm font-mono border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                      isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-purple-200'
-                    }`}
-                  />
-                </div>
-              )}
-
-              <div className={`p-4 rounded-2xl border space-y-2 ${
+              {/* 2. Room Code Selection FIRST */}
+              <div className={`p-4 rounded-2xl border space-y-3 ${
                 isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-[#0f1325] border-indigo-900/40'
               }`}>
-                <label className="block text-xs font-mono font-bold uppercase text-indigo-400">
-                  {localDatabase.getRoomByCode(inputRoomCode)?.mode === 'team' ? '3. Função na Equipe (Unica):' : '2. Função Desejada:'}
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {[
-                    { id: 'Fisioterapeuta Respiratório', label: '🫁 Fisioterapeuta' },
-                    { id: 'Médico Intensivista', label: '🩺 Médico(a)' },
-                    { id: 'Enfermeiro(a) UTI', label: '💊 Enfermeiro(a)' },
-                  ].map((role) => {
-                    const takenBy = takenRolesMap[role.id];
-                    const isSelf = Boolean(takenBy && takenBy.trim().toLowerCase() === studentName.trim().toLowerCase());
-                    const isTaken = Boolean(takenBy && !isSelf);
-                    return (
-                      <button
-                        key={role.id}
-                        type="button"
-                        onClick={() => !isTaken && setTeamRole(role.id)}
-                        disabled={isTaken}
-                        className={`p-3 rounded-2xl text-xs font-mono border transition-all cursor-pointer text-left flex flex-col justify-between gap-2 shadow-sm ${
-                          teamRole === role.id
-                            ? 'bg-indigo-600 border-indigo-400 text-white shadow-md ring-2 ring-indigo-400/30'
-                            : isTaken
-                            ? 'bg-zinc-900/80 border-zinc-800 text-zinc-500 cursor-not-allowed opacity-65'
-                            : isLight ? 'bg-white border-slate-300 text-slate-800 hover:border-indigo-400' : 'bg-[#0f1325] border-zinc-700 text-zinc-200 hover:border-indigo-500'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="font-bold tracking-tight">{role.label}</span>
-                          <span className="flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-black/30 border border-white/10 shrink-0">
-                            <span className={`w-2 h-2 rounded-full ${isTaken ? 'bg-rose-500 animate-ping' : isSelf ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
-                            <span className={isTaken ? 'text-rose-300 font-bold' : isSelf ? 'text-amber-300 font-bold' : 'text-emerald-300 font-bold'}>
-                              {isTaken ? 'Ocupado' : isSelf ? 'Você' : 'Disponível'}
-                            </span>
-                          </span>
-                        </div>
-                        <div className="text-[10px] font-mono opacity-90 truncate flex items-center gap-1 border-t pt-1.5 border-white/10">
-                          <span className="opacity-70">Status:</span>
-                          <span className="font-bold truncate">
-                            {isTaken ? `👤 ${takenBy}` : isSelf ? `👤 ${studentName || 'Você'} (Sua função)` : '🟢 Vago na sala'}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono font-bold uppercase text-zinc-400 mb-2">
-                  3. Digite o Código da Sala do Professor:
+                <label className="block text-xs font-mono font-bold uppercase text-indigo-400 mb-1">
+                  2. Digite ou Selecione o Código da Sala (PIN):
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -374,15 +304,153 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                       isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-amber-300'
                     }`}
                   />
-                  <button
-                    onClick={() => handleEnterRoom()}
-                    className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-mono font-bold text-sm rounded-xl shadow-lg flex items-center gap-2 cursor-pointer transition-all"
-                  >
-                    <Zap className="w-4 h-4 fill-current" />
-                    <span>ENTRAR</span>
-                  </button>
+                </div>
+
+                {/* Preset Available Rooms */}
+                <div className="pt-2">
+                  <span className="text-[10px] font-mono font-bold uppercase text-zinc-400 block mb-2">
+                    Salas Abertas / Desafios Ativos:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {rooms.map((room) => {
+                      const c = cases.find((item) => item.id === room.caseId);
+                      const isSelected = inputRoomCode === room.code.toUpperCase();
+                      return (
+                        <div
+                          key={room.code}
+                          onClick={() => {
+                            setInputRoomCode(room.code);
+                            audioEngine.playClick(800);
+                          }}
+                          className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                            isSelected
+                              ? 'bg-amber-400/20 border-amber-400 ring-1 ring-amber-400'
+                              : isLight
+                              ? 'bg-white border-slate-200 hover:border-indigo-400'
+                              : 'bg-[#0e1122] border-indigo-900/50 hover:border-amber-400/80'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="px-2 py-0.5 bg-amber-400 text-slate-950 rounded-lg text-[10px] font-mono font-black uppercase">
+                              {room.code}
+                            </span>
+                            <span className="text-[10px] font-mono text-indigo-400 flex items-center gap-1">
+                              {room.mode === 'individual' ? '👤 Individual' : '👥 Em Grupo'} • {room.timeLimitMinutes}m
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-display font-bold truncate leading-snug">
+                            {room.title}
+                          </h4>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+
+              {/* 3. Role & Team Configuration (ONLY AFTER ROOM IS CHOSEN) */}
+              {inputRoomCode.trim() && (() => {
+                const selectedRoom = localDatabase.getRoomByCode(inputRoomCode);
+                const isIndividualMode = selectedRoom?.mode === 'individual';
+
+                return (
+                  <div className="space-y-4 animate-fadeIn">
+                    {/* If Team Mode, show Team Name Input */}
+                    {!isIndividualMode && (
+                      <div className={`p-4 rounded-2xl border ${
+                        isLight ? 'bg-purple-50/50 border-purple-200' : 'bg-[#150f25] border-purple-900/40'
+                      }`}>
+                        <label className="block text-xs font-mono font-bold uppercase text-purple-400 mb-1 flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5" />
+                          3. Nome da Equipe / Grupo:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Equipe UTI Alfa"
+                          value={teamName}
+                          onChange={(e) => {
+                            setTeamName(e.target.value);
+                            localStorage.setItem('simulador_team_name', e.target.value);
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl text-sm font-mono border focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                            isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#080a14] border-zinc-700 text-purple-200'
+                          }`}
+                        />
+                      </div>
+                    )}
+
+                    {/* Role Selection */}
+                    <div className={`p-4 rounded-2xl border space-y-2 ${
+                      isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-[#0f1325] border-indigo-900/40'
+                    }`}>
+                      <label className="block text-xs font-mono font-bold uppercase text-indigo-400">
+                        {isIndividualMode ? '3. Função (Modo Individual):' : '4. Função na Equipe (Ocupado / Vago em Tempo Real):'}
+                      </label>
+
+                      {isIndividualMode ? (
+                        <div className="p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-200 text-xs font-mono flex items-center gap-3">
+                          <span className="text-lg">🫁</span>
+                          <div>
+                            <strong className="text-white block font-bold">Fisioterapeuta Respiratório (Única Função)</strong>
+                            <span className="text-[11px] opacity-80">Esta sala está configurada no modo individual. Você terá controle total sobre os parâmetros ventilatórios e manobras.</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          {[
+                            { id: 'Fisioterapeuta Respiratório', label: '🫁 Fisioterapeuta' },
+                            { id: 'Médico Intensivista', label: '🩺 Médico(a)' },
+                            { id: 'Enfermeiro(a) UTI', label: '💊 Enfermeiro(a)' },
+                          ].map((role) => {
+                            const takenBy = takenRolesMap[role.id];
+                            const isSelf = Boolean(takenBy && takenBy.trim().toLowerCase() === studentName.trim().toLowerCase());
+                            const isTaken = Boolean(takenBy && !isSelf);
+                            return (
+                              <button
+                                key={role.id}
+                                type="button"
+                                onClick={() => !isTaken && setTeamRole(role.id)}
+                                disabled={isTaken}
+                                className={`p-3 rounded-2xl text-xs font-mono border transition-all cursor-pointer text-left flex flex-col justify-between gap-2 shadow-sm ${
+                                  teamRole === role.id
+                                    ? 'bg-indigo-600 border-indigo-400 text-white shadow-md ring-2 ring-indigo-400/30'
+                                    : isTaken
+                                    ? 'bg-zinc-900/80 border-zinc-800 text-zinc-500 cursor-not-allowed opacity-65'
+                                    : isLight ? 'bg-white border-slate-300 text-slate-800 hover:border-indigo-400' : 'bg-[#0f1325] border-zinc-700 text-zinc-200 hover:border-indigo-500'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="font-bold tracking-tight">{role.label}</span>
+                                  <span className="flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-black/30 border border-white/10 shrink-0">
+                                    <span className={`w-2 h-2 rounded-full ${isTaken ? 'bg-rose-500 animate-ping' : isSelf ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
+                                    <span className={isTaken ? 'text-rose-300 font-bold' : isSelf ? 'text-amber-300 font-bold' : 'text-emerald-300 font-bold'}>
+                                      {isTaken ? 'Ocupado' : isSelf ? 'Você' : 'Disponível'}
+                                    </span>
+                                  </span>
+                                </div>
+                                <div className="text-[10px] font-mono opacity-90 truncate flex items-center gap-1 border-t pt-1.5 border-white/10">
+                                  <span className="opacity-70">Status:</span>
+                                  <span className="font-bold truncate">
+                                    {isTaken ? `🔴 Ocupado por ${takenBy}` : isSelf ? `🟡 Você (${studentName})` : '🟢 Vago na sala'}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleEnterRoom()}
+                      className="w-full py-3.5 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-mono font-black text-sm rounded-2xl shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    >
+                      <Zap className="w-5 h-5 fill-current" />
+                      <span>INICIAR DESAFIO NA SALA {inputRoomCode}</span>
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* Preset Available Rooms */}
               <div className="pt-2">
