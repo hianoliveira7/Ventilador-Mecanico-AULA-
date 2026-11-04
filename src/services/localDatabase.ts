@@ -1045,6 +1045,154 @@ class LocalDatabaseService {
       }
     };
   }
+
+  // Active Presence & Role Expiration Helpers
+  public cleanStaleRoles(
+    takenRolesDetails?: Record<string, { name: string; clientId: string; lastActive: number }>,
+    legacyTakenRoles?: Record<string, string>,
+    docUpdatedAt?: number
+  ): Record<string, string> {
+    const now = Date.now();
+    const STALE_THRESHOLD_MS = 25000; // 25s heartbeat expiration
+    const activeRoles: Record<string, string> = {};
+
+    if (takenRolesDetails && typeof takenRolesDetails === 'object') {
+      Object.entries(takenRolesDetails).forEach(([role, details]) => {
+        if (details && details.name && details.lastActive) {
+          if (now - details.lastActive <= STALE_THRESHOLD_MS) {
+            activeRoles[role] = details.name;
+          }
+        }
+      });
+    }
+
+    // Fallback for legacy format or docs updated recently
+    if (Object.keys(activeRoles).length === 0 && legacyTakenRoles && typeof legacyTakenRoles === 'object') {
+      // If doc was updated in the last 30s, trust legacy roles
+      if (docUpdatedAt && now - docUpdatedAt <= 30000) {
+        Object.entries(legacyTakenRoles).forEach(([role, name]) => {
+          if (name && typeof name === 'string' && name.trim()) {
+            activeRoles[role] = name.trim();
+          }
+        });
+      }
+    }
+
+    return activeRoles;
+  }
+
+  public async pingRolePresence(
+    roomCode: string,
+    teamRole: string,
+    studentName: string,
+    teamName?: string,
+    currentTakenDetails?: Record<string, { name: string; clientId: string; lastActive: number }>
+  ): Promise<void> {
+    if (!roomCode || !teamRole || !studentName) return;
+    const now = Date.now();
+    const updatedDetails = {
+      ...(currentTakenDetails || {}),
+      [teamRole]: {
+        name: studentName.trim(),
+        clientId: this.clientId,
+        lastActive: now,
+      },
+    };
+
+    // Keep legacy map synced
+    const activeRolesMap: Record<string, string> = {};
+    Object.entries(updatedDetails).forEach(([r, details]) => {
+      if (details && details.name && now - details.lastActive <= 25000) {
+        activeRolesMap[r] = details.name;
+      }
+    });
+
+    await this.publishRoomState(
+      roomCode,
+      {
+        takenRolesDetails: updatedDetails,
+        takenRoles: activeRolesMap,
+      },
+      teamName,
+      { role: teamRole, author: studentName, actionType: 'presence_ping' }
+    );
+  }
+
+  public async releaseRolePresence(
+    roomCode: string,
+    teamRole: string,
+    studentName: string,
+    teamName?: string,
+    currentTakenDetails?: Record<string, { name: string; clientId: string; lastActive: number }>
+  ): Promise<void> {
+    if (!roomCode) return;
+    const normalized = roomCode.trim().toUpperCase();
+    const teamSlug = teamName && teamName.trim()
+      ? teamName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')
+      : null;
+
+    const docRef = teamSlug
+      ? doc(db, 'kahootRooms', normalized, 'teams', teamSlug)
+      : doc(db, 'kahootRooms', normalized, 'state', 'current');
+
+    const now = Date.now();
+    const updatedDetails = { ...(currentTakenDetails || {}) };
+    delete updatedDetails[teamRole];
+
+    const activeRolesMap: Record<string, string> = {};
+    Object.entries(updatedDetails).forEach(([r, details]) => {
+      if (details && details.name && details.lastActive && now - details.lastActive <= 25000) {
+        if (r !== teamRole) {
+          activeRolesMap[r] = details.name;
+        }
+      }
+    });
+
+    console.log(`[Kahoot Presence] 🔓 Releasing role "${teamRole}" for student "${studentName}" in room ${normalized}`);
+
+    try {
+      await setDoc(
+        docRef,
+        {
+          takenRolesDetails: updatedDetails,
+          takenRoles: activeRolesMap,
+          updatedAt: now,
+          senderId: this.clientId,
+        },
+        { merge: true }
+      );
+    } catch (err) {
+      console.warn('Could not release role in Firestore:', err);
+    }
+  }
+
+  public async clearAllTeamRoles(roomCode: string, teamName?: string): Promise<void> {
+    if (!roomCode) return;
+    const normalized = roomCode.trim().toUpperCase();
+    const teamSlug = teamName && teamName.trim()
+      ? teamName.trim().toLowerCase().replace(/[^a-z0-9]/g, '_')
+      : null;
+
+    const docRef = teamSlug
+      ? doc(db, 'kahootRooms', normalized, 'teams', teamSlug)
+      : doc(db, 'kahootRooms', normalized, 'state', 'current');
+
+    try {
+      await setDoc(
+        docRef,
+        {
+          takenRolesDetails: {},
+          takenRoles: {},
+          updatedAt: Date.now(),
+          senderId: this.clientId,
+        },
+        { merge: true }
+      );
+      console.log(`[Kahoot Presence] 🧹 All occupied roles cleared for room ${normalized} team ${teamSlug || 'main'}`);
+    } catch (err) {
+      console.warn('Could not clear team roles:', err);
+    }
+  }
 }
 
 export const localDatabase = new LocalDatabaseService();

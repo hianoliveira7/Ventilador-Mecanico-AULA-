@@ -17,6 +17,7 @@ import {
   History,
   Users,
   Trash2,
+  RotateCcw,
 } from 'lucide-react';
 
 interface KahootPortalModalProps {
@@ -67,6 +68,7 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
   const [results, setResults] = useState<StudentGameResult[]>(() => localDatabase.getResults());
 
   const [takenRolesMap, setTakenRolesMap] = useState<Record<string, string>>({});
+  const [takenRolesDetails, setTakenRolesDetails] = useState<Record<string, { name: string; clientId: string; lastActive: number }>>({});
 
   useEffect(() => {
     if (isOpen) {
@@ -85,18 +87,63 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
     }
   }, [isOpen]);
 
+  // Subscribe to room state & auto-clean stale roles (>25s without heartbeat)
   useEffect(() => {
     if (!inputRoomCode || !teamName) {
       setTakenRolesMap({});
+      setTakenRolesDetails({});
       return;
     }
     const unsub = localDatabase.subscribeRoomState(inputRoomCode, (state) => {
-      if (state && state.takenRoles) {
-        setTakenRolesMap(state.takenRoles);
+      if (state) {
+        const details = state.takenRolesDetails || {};
+        const legacyMap = state.takenRoles || {};
+        setTakenRolesDetails(details);
+        const activeMap = localDatabase.cleanStaleRoles(details, legacyMap, state.updatedAt);
+        setTakenRolesMap(activeMap);
       }
     }, teamName);
-    return () => unsub();
+
+    // Local interval to purge stale roles every 3s even if no new Firestore event arrives
+    const interval = setInterval(() => {
+      setTakenRolesDetails((prevDetails) => {
+        const activeMap = localDatabase.cleanStaleRoles(prevDetails);
+        setTakenRolesMap(activeMap);
+        return prevDetails;
+      });
+    }, 3000);
+
+    return () => {
+      unsub();
+      clearInterval(interval);
+    };
   }, [inputRoomCode, teamName]);
+
+  const handleResetTeamRoles = async () => {
+    if (!inputRoomCode.trim()) return;
+    audioEngine.playConfirmBeep();
+    await localDatabase.clearAllTeamRoles(inputRoomCode, teamName);
+    setTakenRolesMap({});
+    setTakenRolesDetails({});
+    setErrorMsg('');
+  };
+
+  const handleReleaseMyRole = async (roleToRelease: string) => {
+    if (!inputRoomCode.trim()) return;
+    audioEngine.playClick(900);
+    await localDatabase.releaseRolePresence(
+      inputRoomCode,
+      roleToRelease,
+      studentName,
+      teamName,
+      takenRolesDetails
+    );
+    setTakenRolesMap((prev) => {
+      const copy = { ...prev };
+      delete copy[roleToRelease];
+      return copy;
+    });
+  };
 
   const handleDeleteRoom = async (code: string) => {
     if (confirm(`Tem certeza que deseja excluir a sala "${code}"?`)) {
@@ -135,18 +182,24 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
 
     const effectiveTeamName = room.mode === 'team' || teamName.trim() ? (teamName.trim() || 'Equipe UTI Alfa') : undefined;
 
-    if (effectiveTeamName && takenRolesMap[teamRole] && takenRolesMap[teamRole].trim().toLowerCase() !== studentName.trim().toLowerCase()) {
-      setErrorMsg(`A função "${teamRole}" já foi escolhida por ${takenRolesMap[teamRole]} nesta equipe. Escolha outra função disponível.`);
+    // Check if role is currently taken by someone else and active (<25s)
+    const currentOccupant = takenRolesMap[teamRole];
+    const isOccupiedByOther = Boolean(
+      currentOccupant && currentOccupant.trim().toLowerCase() !== studentName.trim().toLowerCase()
+    );
+
+    if (effectiveTeamName && isOccupiedByOther) {
+      setErrorMsg(`A função "${teamRole}" está ocupada por ${currentOccupant}. Se a vaga estiver abandonada, clique em "Resetar Vagas Ocupadas".`);
       return;
     }
 
     if (effectiveTeamName) {
-      const updatedRoles = { ...takenRolesMap, [teamRole]: studentName.trim() };
-      await localDatabase.publishRoomState(
+      await localDatabase.pingRolePresence(
         room.code,
-        { takenRoles: updatedRoles },
+        teamRole,
+        studentName,
         effectiveTeamName,
-        { role: teamRole, author: studentName, actionType: 'role_taken' }
+        takenRolesDetails
       );
     }
 
@@ -383,9 +436,22 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                     <div className={`p-4 rounded-2xl border space-y-2 ${
                       isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-[#0f1325] border-indigo-900/40'
                     }`}>
-                      <label className="block text-xs font-mono font-bold uppercase text-indigo-400">
-                        {isIndividualMode ? '3. Função (Modo Individual):' : '4. Função na Equipe (Ocupado / Vago em Tempo Real):'}
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-mono font-bold uppercase text-indigo-400">
+                          {isIndividualMode ? '3. Função (Modo Individual):' : '4. Função na Equipe (Ocupado / Vago em Tempo Real):'}
+                        </label>
+                        {!isIndividualMode && Object.keys(takenRolesMap).length > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleResetTeamRoles}
+                            className="px-2 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1"
+                            title="Limpar vagas ocupadas por alunos que fecharam ou saíram do app"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Resetar Vagas Ocupadas</span>
+                          </button>
+                        )}
+                      </div>
 
                       {isIndividualMode ? (
                         <div className="p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-200 text-xs font-mono flex items-center gap-3">
@@ -406,35 +472,48 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                             const isSelf = Boolean(takenBy && takenBy.trim().toLowerCase() === studentName.trim().toLowerCase());
                             const isTaken = Boolean(takenBy && !isSelf);
                             return (
-                              <button
+                              <div
                                 key={role.id}
-                                type="button"
-                                onClick={() => !isTaken && setTeamRole(role.id)}
-                                disabled={isTaken}
-                                className={`p-3 rounded-2xl text-xs font-mono border transition-all cursor-pointer text-left flex flex-col justify-between gap-2 shadow-sm ${
+                                className={`p-3 rounded-2xl text-xs font-mono border transition-all flex flex-col justify-between gap-2 shadow-sm ${
                                   teamRole === role.id
                                     ? 'bg-indigo-600 border-indigo-400 text-white shadow-md ring-2 ring-indigo-400/30'
                                     : isTaken
-                                    ? 'bg-zinc-900/80 border-zinc-800 text-zinc-500 cursor-not-allowed opacity-65'
+                                    ? 'bg-zinc-900/80 border-zinc-800 text-zinc-500 opacity-80'
                                     : isLight ? 'bg-white border-slate-300 text-slate-800 hover:border-indigo-400' : 'bg-[#0f1325] border-zinc-700 text-zinc-200 hover:border-indigo-500'
                                 }`}
                               >
-                                <div className="flex items-center justify-between w-full">
-                                  <span className="font-bold tracking-tight">{role.label}</span>
-                                  <span className="flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-black/30 border border-white/10 shrink-0">
-                                    <span className={`w-2 h-2 rounded-full ${isTaken ? 'bg-rose-500 animate-ping' : isSelf ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
-                                    <span className={isTaken ? 'text-rose-300 font-bold' : isSelf ? 'text-amber-300 font-bold' : 'text-emerald-300 font-bold'}>
-                                      {isTaken ? 'Ocupado' : isSelf ? 'Você' : 'Disponível'}
+                                <button
+                                  type="button"
+                                  onClick={() => !isTaken && setTeamRole(role.id)}
+                                  disabled={isTaken}
+                                  className="w-full text-left flex flex-col justify-between gap-2 cursor-pointer disabled:cursor-not-allowed"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="font-bold tracking-tight">{role.label}</span>
+                                    <span className="flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-black/30 border border-white/10 shrink-0">
+                                      <span className={`w-2 h-2 rounded-full ${isTaken ? 'bg-rose-500 animate-ping' : isSelf ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
+                                      <span className={isTaken ? 'text-rose-300 font-bold' : isSelf ? 'text-amber-300 font-bold' : 'text-emerald-300 font-bold'}>
+                                        {isTaken ? 'Ocupado' : isSelf ? 'Você' : 'Disponível'}
+                                      </span>
                                     </span>
-                                  </span>
-                                </div>
-                                <div className="text-[10px] font-mono opacity-90 truncate flex items-center gap-1 border-t pt-1.5 border-white/10">
-                                  <span className="opacity-70">Status:</span>
-                                  <span className="font-bold truncate">
-                                    {isTaken ? `🔴 Ocupado por ${takenBy}` : isSelf ? `🟡 Você (${studentName})` : '🟢 Vago na sala'}
-                                  </span>
-                                </div>
-                              </button>
+                                  </div>
+                                  <div className="text-[10px] font-mono opacity-90 truncate flex items-center justify-between gap-1 border-t pt-1.5 border-white/10">
+                                    <span className="font-bold truncate">
+                                      {isTaken ? `🔴 Ocupado por ${takenBy}` : isSelf ? `🟡 Você (${studentName})` : '🟢 Vago na sala'}
+                                    </span>
+                                  </div>
+                                </button>
+                                {isSelf && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReleaseMyRole(role.id)}
+                                    className="w-full py-1 px-2 rounded-lg bg-rose-900/80 hover:bg-rose-800 text-white font-mono font-bold text-[10px] flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-xs"
+                                    title="Desocupar e liberar minha função para outros colegas"
+                                  >
+                                    <span>🔓 Desocupar Minha Função</span>
+                                  </button>
+                                )}
+                              </div>
                             );
                           })}
                         </div>

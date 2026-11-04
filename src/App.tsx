@@ -422,7 +422,7 @@ export default function App() {
     });
   }, [monitored, settings, patient, activeTeamRole]);
 
-  // Live Kahoot Timer Countdown
+  // Live Kahoot Timer Countdown & Presence Heartbeat
   useEffect(() => {
     if (!activeKahootSession) return;
 
@@ -443,6 +443,38 @@ export default function App() {
 
     return () => clearTimeout(timer);
   }, [activeKahootSession?.remainingSeconds, activeKahootSession === null, handleFinishKahootSession]);
+
+  // Real-time Role Presence Heartbeat & Tab Unload Cleanup
+  useEffect(() => {
+    if (!activeKahootSession) return;
+
+    const roomCode = activeKahootSession.room.code;
+    const studentName = activeKahootSession.studentName;
+    const teamName = activeKahootSession.teamName;
+
+    // Send initial presence ping
+    localDatabase.pingRolePresence(roomCode, activeTeamRole, studentName, teamName);
+
+    // Heartbeat ping every 8 seconds
+    const heartbeatInterval = setInterval(() => {
+      localDatabase.pingRolePresence(roomCode, activeTeamRole, studentName, teamName);
+    }, 8000);
+
+    // Release role on tab close or page hide
+    const handleUnload = () => {
+      localDatabase.releaseRolePresence(roomCode, activeTeamRole, studentName, teamName);
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
+      localDatabase.releaseRolePresence(roomCode, activeTeamRole, studentName, teamName);
+    };
+  }, [activeKahootSession?.room.code, activeKahootSession?.studentName, activeKahootSession?.teamName, activeTeamRole]);
 
 
 
