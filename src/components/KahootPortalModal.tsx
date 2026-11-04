@@ -316,30 +316,44 @@ export const KahootPortalModal: React.FC<KahootPortalModalProps> = ({
                 <label className="block text-xs font-mono font-bold uppercase text-indigo-400">
                   {localDatabase.getRoomByCode(inputRoomCode)?.mode === 'team' ? '3. Função na Equipe (Unica):' : '2. Função Desejada:'}
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {[
                     { id: 'Fisioterapeuta Respiratório', label: '🫁 Fisioterapeuta' },
                     { id: 'Médico Intensivista', label: '🩺 Médico(a)' },
                     { id: 'Enfermeiro(a) UTI', label: '💊 Enfermeiro(a)' },
                   ].map((role) => {
                     const takenBy = takenRolesMap[role.id];
-                    const isTaken = Boolean(takenBy && takenBy.trim().toLowerCase() !== studentName.trim().toLowerCase());
+                    const isSelf = Boolean(takenBy && takenBy.trim().toLowerCase() === studentName.trim().toLowerCase());
+                    const isTaken = Boolean(takenBy && !isSelf);
                     return (
                       <button
                         key={role.id}
                         type="button"
                         onClick={() => !isTaken && setTeamRole(role.id)}
                         disabled={isTaken}
-                        className={`py-2 px-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer text-center ${
+                        className={`p-3 rounded-2xl text-xs font-mono border transition-all cursor-pointer text-left flex flex-col justify-between gap-2 shadow-sm ${
                           teamRole === role.id
-                            ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
+                            ? 'bg-indigo-600 border-indigo-400 text-white shadow-md ring-2 ring-indigo-400/30'
                             : isTaken
-                            ? 'bg-zinc-800 border-zinc-700 text-zinc-500 cursor-not-allowed opacity-50'
-                            : isLight ? 'bg-white border-slate-300 text-slate-700' : 'bg-[#0a0d18] border-zinc-700 text-zinc-300'
+                            ? 'bg-zinc-900/80 border-zinc-800 text-zinc-500 cursor-not-allowed opacity-65'
+                            : isLight ? 'bg-white border-slate-300 text-slate-800 hover:border-indigo-400' : 'bg-[#0f1325] border-zinc-700 text-zinc-200 hover:border-indigo-500'
                         }`}
                       >
-                        {role.label}
-                        {isTaken && <span className="block text-[8px] font-normal text-rose-400">Ocupado ({takenBy})</span>}
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-bold tracking-tight">{role.label}</span>
+                          <span className="flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-black/30 border border-white/10 shrink-0">
+                            <span className={`w-2 h-2 rounded-full ${isTaken ? 'bg-rose-500 animate-ping' : isSelf ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
+                            <span className={isTaken ? 'text-rose-300 font-bold' : isSelf ? 'text-amber-300 font-bold' : 'text-emerald-300 font-bold'}>
+                              {isTaken ? 'Ocupado' : isSelf ? 'Você' : 'Disponível'}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="text-[10px] font-mono opacity-90 truncate flex items-center gap-1 border-t pt-1.5 border-white/10">
+                          <span className="opacity-70">Status:</span>
+                          <span className="font-bold truncate">
+                            {isTaken ? `👤 ${takenBy}` : isSelf ? `👤 ${studentName || 'Você'} (Sua função)` : '🟢 Vago na sala'}
+                          </span>
+                        </div>
                       </button>
                     );
                   })}

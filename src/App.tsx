@@ -1589,35 +1589,62 @@ export default function App() {
           currentPatient={patient}
         />
       ) : !isVentilating ? (
-        <VentilatorAdmissionScreen
-          currentCase={activeClinicalCase}
-          patient={patient}
-          initialSettings={settings}
-          onStartVentilation={(configuredSettings) => {
-            const safeSettings = { ...configuredSettings };
-            if (!safeSettings.inspiratoryTimePCV || safeSettings.inspiratoryTimePCV <= 0) {
-              if (safeSettings.mode === 'VCV' || safeSettings.mode === 'SIMV_VC') {
-                const calcFactor = safeSettings.flowWaveform === 'decelerating' ? 0.65 : 1.0;
-                const flow = safeSettings.inspiratoryFlow || 45;
-                const vt = safeSettings.tidalVolume || 420;
-                safeSettings.inspiratoryTimePCV = Number(((vt * 0.06) / (flow * calcFactor)).toFixed(2));
-              } else {
-                safeSettings.inspiratoryTimePCV = 1.0;
+        activeKahootSession && activeKahootSession.room.mode === 'team' && activeTeamRole !== 'Fisioterapeuta Respiratório' && activeTeamRole !== 'Todos' ? (
+          <div className="flex-1 flex items-center justify-center p-6 bg-[#0a0c16] text-zinc-100">
+            <div className="max-w-md w-full p-8 rounded-3xl border border-indigo-900/60 bg-[#0f1325] text-center space-y-6 shadow-2xl animate-fadeIn">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/40 flex items-center justify-center">
+                <Activity className="w-8 h-8 animate-pulse text-cyan-400" />
+              </div>
+              <div className="space-y-2">
+                <span className="text-xs font-mono font-bold uppercase tracking-widest text-cyan-400">
+                  Sala de Espera da UTI • {activeTeamRole}
+                </span>
+                <h3 className="text-xl font-display font-black">
+                  Aguardando Início da Ventilação
+                </h3>
+                <p className="text-xs font-sans text-zinc-300 leading-relaxed">
+                  Você está logado na equipe <strong className="text-indigo-300">{activeKahootSession.teamName}</strong> como <strong className="text-cyan-300">{activeTeamRole}</strong>. O Fisioterapeuta Respiratório da equipe está configurando a admissão do paciente. A simulação iniciará automaticamente assim que a ventilação for acionada.
+                </p>
+              </div>
+              <div className="p-4 rounded-2xl bg-black/40 border border-indigo-900/40 flex items-center justify-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-amber-400 animate-ping" />
+                <span className="text-xs font-mono text-amber-300 font-bold">
+                  Sincronizado em tempo real com a equipe...
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <VentilatorAdmissionScreen
+            currentCase={activeClinicalCase}
+            patient={patient}
+            initialSettings={settings}
+            onStartVentilation={(configuredSettings) => {
+              const safeSettings = { ...configuredSettings };
+              if (!safeSettings.inspiratoryTimePCV || safeSettings.inspiratoryTimePCV <= 0) {
+                if (safeSettings.mode === 'VCV' || safeSettings.mode === 'SIMV_VC') {
+                  const calcFactor = safeSettings.flowWaveform === 'decelerating' ? 0.65 : 1.0;
+                  const flow = safeSettings.inspiratoryFlow || 45;
+                  const vt = safeSettings.tidalVolume || 420;
+                  safeSettings.inspiratoryTimePCV = Number(((vt * 0.06) / (flow * calcFactor)).toFixed(2));
+                } else {
+                  safeSettings.inspiratoryTimePCV = 1.0;
+                }
               }
-            }
-            setSettings(safeSettings);
-            setDraftSettings(safeSettings);
-            setIsVentilating(true);
-            setCaseElapsedSeconds(0);
-            physicsEngine.reset(patient.compliance, patient.resistance, safeSettings.peep);
-            audioEngine.playConfirmBeep();
-            if (!educationalStorage.hasCompletedTour()) {
-              setIsInteractiveTourOpen(true);
-            }
-          }}
-          onOpenCasesList={() => setCurrentPage('clinical_cases')}
-          onUpdatePatient={setPatient}
-        />
+              setSettings(safeSettings);
+              setDraftSettings(safeSettings);
+              setIsVentilating(true);
+              setCaseElapsedSeconds(0);
+              physicsEngine.reset(patient.compliance, patient.resistance, safeSettings.peep);
+              audioEngine.playConfirmBeep();
+              if (!educationalStorage.hasCompletedTour()) {
+                setIsInteractiveTourOpen(true);
+              }
+            }}
+            onOpenCasesList={() => setCurrentPage('clinical_cases')}
+            onUpdatePatient={setPatient}
+          />
+        )
       ) : (
         <>
           {activeKahootSession && (
