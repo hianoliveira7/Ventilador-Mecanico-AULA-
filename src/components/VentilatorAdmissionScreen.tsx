@@ -440,17 +440,6 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                   PROGRAMAÇÃO DA PRESCRIÇÃO INICIAL
                 </h2>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleApplyDefaultPrescription}
-                  className="px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/20 text-[11px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                  title="Preencher prescrição inicial padrão protetora (6 mL/kg, PEEP 5, FR 14)"
-                >
-                  <Flame className="w-3 h-3 text-teal-400" />
-                  <span>Sugerir Prescrição (6 mL/kg)</span>
-                </button>
-              </div>
             </div>
 
             {/* Validation Error Warning Banner */}
@@ -536,7 +525,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                           )}
                         </div>
                         <span className="text-[10px] font-mono text-zinc-400">
-                          Alvo protetor: 4 a 6 mL/kg de IBW (Sugerido: {Math.round(ibw * 6)} mL)
+                          Faixa protetora recomendada: 4 a 8 mL/kg de IBW
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

@@ -255,11 +255,15 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display font-black text-sm sm:text-base tracking-wider uppercase">
-                  🚨 PARADA CARDIORRESPIRATÓRIA (PCR) • PAPEL: {teamRole}
+                  {monitored.meanArterialPressure > 0 && monitored.meanArterialPressure <= 40
+                    ? `🚨 PCR POR CHOQUE REFRATÁRIO & COLAPSO CIRCULATÓRIO • PAPEL: ${teamRole}`
+                    : `🚨 PARADA CARDIORRESPIRATÓRIA (PCR) • PAPEL: ${teamRole}`}
                 </span>
               </div>
               <p className="text-xs text-rose-100 font-medium">
-                Saturação crítica e colapso circulatório! A equipe interprofissional deve atuar em conjunto.
+                {monitored.meanArterialPressure > 0 && monitored.meanArterialPressure <= 40
+                  ? `PAM criticamente baixa (${monitored.meanArterialPressure} mmHg)! Hipotensão refratária e colapso de retorno venoso por choque/PEEP elevadíssima.`
+                  : 'Saturação crítica e colapso circulatório! A equipe interprofissional deve atuar em conjunto.'}
               </p>
             </div>
           </div>
@@ -291,16 +295,24 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
                   💀 PACIENTE EVOLUIU A ÓBITO (EQUIPE)
                 </h3>
                 <p className="text-xs text-rose-200/90 max-w-lg mx-auto leading-relaxed">
-                  O tempo limite de 20 segundos expirou sem que todos os membros da equipe (Fisioterapeuta, Médico e Enfermeiro) concluíssem suas condutas de resgate adequadas. O óbito foi declarado para toda a equipe simultaneamente.
+                  O tempo limite de 20 segundos expirou sem que todas as condutas de resgate fossem aplicadas corretamente pela equipe (Fisioterapeuta, Médico e Enfermeiro). O óbito foi declarado para toda a equipe.
                 </p>
               </div>
 
               <div className="p-3 bg-black/60 rounded-xl border border-zinc-800 text-left space-y-1 text-xs font-mono text-zinc-300">
                 <div className="flex justify-between text-zinc-400 text-[11px] pb-1 border-b border-zinc-800">
                   <span>DESFECHO CLÍNICO:</span>
-                  <span className="text-rose-400 font-bold">Óbito por PCR Refratária (Falha na Sincronia da Equipe)</span>
+                  <span className="text-rose-400 font-bold">
+                    {monitored.meanArterialPressure > 0 && monitored.meanArterialPressure <= 40
+                      ? 'Óbito por Choque Circulatório Refratário & Hipoperfusão Tecidual'
+                      : 'Óbito por PCR Refratária / Hipóxia Severa'}
+                  </span>
                 </div>
                 <div className="flex justify-between pt-1">
+                  <span>PAM / PAS Terminal:</span>
+                  <span className="text-rose-400 font-bold">{monitored.meanArterialPressure} mmHg / {monitored.systolicBP} mmHg</span>
+                </div>
+                <div className="flex justify-between pt-0.5">
                   <span>SpO₂ Terminal:</span>
                   <span className="text-rose-400 font-bold">{monitored.spo2}%</span>
                 </div>

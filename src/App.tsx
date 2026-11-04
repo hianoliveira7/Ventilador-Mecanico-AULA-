@@ -1538,17 +1538,20 @@ export default function App() {
         setHighPlateauSeconds((s) => s + 1);
       }
 
-      // Critical Cardiac Arrest (PCR) Trigger: SpO2 <= 35% in any case
+      // Critical Cardiac Arrest (PCR) / Refractory Shock Trigger: SpO2 <= 35% OR Mean Arterial Pressure (PAM) <= 38 mmHg
+      const isSevereHypoxia = monitored.spo2 > 0 && monitored.spo2 <= 35;
+      const isSevereShock = monitored.meanArterialPressure > 0 && monitored.meanArterialPressure <= 38;
+      const isCriticalEmergency = isSevereHypoxia || isSevereShock;
+
       if (
         !isPatientDeceased &&
-        monitored.spo2 > 0 &&
-        monitored.spo2 <= 35 &&
+        isCriticalEmergency &&
         !isCardiacArrestModalOpen &&
         !hasTriggeredPcrRef.current
       ) {
         hasTriggeredPcrRef.current = true;
         setIsCardiacArrestModalOpen(true);
-      } else if (monitored.spo2 > 40) {
+      } else if (monitored.spo2 > 40 && monitored.meanArterialPressure > 45) {
         hasTriggeredPcrRef.current = false;
       }
 
