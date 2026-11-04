@@ -169,8 +169,8 @@ export function computeRespiratoryMechanics(input: MechanicsWorkerInput): Mechan
   calcPaO2 = Math.min(pAlveolarO2 - 4, calcPaO2);
   const targetPaO2 = Math.max(5, Math.round(calcPaO2));
 
-  // Responsive Gas Exchange Transition Time Constant (tauABG ~ 2.5s for dynamic interactive simulation)
-  const tauABG = maneuvers.o2SuctionActive ? 1.0 : 2.5;
+  // Realistic Physiological Gas Exchange Time Constant (tauABG ~ 18.0s for smooth clinical ICU kinetics)
+  const tauABG = maneuvers.o2SuctionActive ? 1.0 : 18.0;
   const alphaABG = 1 - Math.exp(-dt / tauABG);
   const newPaCO2 = state.currentPaCO2 + (targetPaCO2 - state.currentPaCO2) * alphaABG;
   const newPaO2 = state.currentPaO2 + (targetPaO2 - state.currentPaO2) * alphaABG;

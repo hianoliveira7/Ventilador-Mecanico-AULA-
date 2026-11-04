@@ -1077,13 +1077,15 @@ export class VentilationPhysicsEngine {
         const basePAD = patient.baselineDiastolicBP || 80;
         const baseMAP = (basePAS + 2 * basePAD) / 3;
         const meanPawVal = (this.displayedPeak * inspTime + setPeep * expTime) / cycleDuration;
-        const volSens = patient.volumeStatus === 'hypovolemic' ? 2.2 : (patient.volumeStatus === 'hypervolemic' ? 0.6 : 1.0);
-        const vrFactor = Math.max(0.45, 1.0 - ((Math.max(0, meanPawVal - 8) * 0.022 + Math.max(0, totalPeep - 8) * 0.032) * volSens));
-        const sv = Math.max(25, Math.min(115, Math.round(70 * (patient.idealBodyWeightKg / 70) * vrFactor)));
+        const isShockState = patient.volumeStatus === 'hypovolemic' || (patient.pathology as string) === 'sepsis';
+        const volSens = isShockState ? 3.4 : (patient.volumeStatus === 'hypervolemic' ? 0.5 : 1.0);
+        const excessPeep = Math.max(0, totalPeep - 10);
+        const vrFactor = Math.max(0.25, 1.0 - ((Math.max(0, meanPawVal - 6) * 0.028 + excessPeep * 0.042) * volSens));
+        const sv = Math.max(18, Math.min(115, Math.round(70 * (patient.idealBodyWeightKg / 70) * vrFactor)));
         const acidosisDrop = Math.max(0, (7.25 - this.currentpH) * 0.55);
         const coRatio = ((75 * sv) / 1000) / 5.0;
-        const mapVal = Math.max(30, Math.min(150, Math.round(baseMAP * Math.pow(coRatio, 0.65) * (1 - acidosisDrop))));
-        const pp = Math.max(18, Math.min(65, Math.round(40 * (sv / 70))));
+        const mapVal = Math.max(25, Math.min(150, Math.round(baseMAP * Math.pow(coRatio, 0.70) * (1 - acidosisDrop))));
+        const pp = Math.max(14, Math.min(65, Math.round(40 * (sv / 70))));
         return Math.round(mapVal + (pp * 2) / 3);
       })(),
       diastolicBP: (() => {
@@ -1091,26 +1093,30 @@ export class VentilationPhysicsEngine {
         const basePAD = patient.baselineDiastolicBP || 80;
         const baseMAP = (basePAS + 2 * basePAD) / 3;
         const meanPawVal = (this.displayedPeak * inspTime + setPeep * expTime) / cycleDuration;
-        const volSens = patient.volumeStatus === 'hypovolemic' ? 2.2 : (patient.volumeStatus === 'hypervolemic' ? 0.6 : 1.0);
-        const vrFactor = Math.max(0.45, 1.0 - ((Math.max(0, meanPawVal - 8) * 0.022 + Math.max(0, totalPeep - 8) * 0.032) * volSens));
-        const sv = Math.max(25, Math.min(115, Math.round(70 * (patient.idealBodyWeightKg / 70) * vrFactor)));
+        const isShockState = patient.volumeStatus === 'hypovolemic' || (patient.pathology as string) === 'sepsis';
+        const volSens = isShockState ? 3.4 : (patient.volumeStatus === 'hypervolemic' ? 0.5 : 1.0);
+        const excessPeep = Math.max(0, totalPeep - 10);
+        const vrFactor = Math.max(0.25, 1.0 - ((Math.max(0, meanPawVal - 6) * 0.028 + excessPeep * 0.042) * volSens));
+        const sv = Math.max(18, Math.min(115, Math.round(70 * (patient.idealBodyWeightKg / 70) * vrFactor)));
         const acidosisDrop = Math.max(0, (7.25 - this.currentpH) * 0.55);
         const coRatio = ((75 * sv) / 1000) / 5.0;
-        const mapVal = Math.max(30, Math.min(150, Math.round(baseMAP * Math.pow(coRatio, 0.65) * (1 - acidosisDrop))));
-        const pp = Math.max(18, Math.min(65, Math.round(40 * (sv / 70))));
-        return Math.max(20, Math.round(mapVal - pp / 3));
+        const mapVal = Math.max(25, Math.min(150, Math.round(baseMAP * Math.pow(coRatio, 0.70) * (1 - acidosisDrop))));
+        const pp = Math.max(14, Math.min(65, Math.round(40 * (sv / 70))));
+        return Math.max(15, Math.round(mapVal - pp / 3));
       })(),
       meanArterialPressure: (() => {
         const basePAS = patient.baselineSystolicBP || 120;
         const basePAD = patient.baselineDiastolicBP || 80;
         const baseMAP = (basePAS + 2 * basePAD) / 3;
         const meanPawVal = (this.displayedPeak * inspTime + setPeep * expTime) / cycleDuration;
-        const volSens = patient.volumeStatus === 'hypovolemic' ? 2.2 : (patient.volumeStatus === 'hypervolemic' ? 0.6 : 1.0);
-        const vrFactor = Math.max(0.45, 1.0 - ((Math.max(0, meanPawVal - 8) * 0.022 + Math.max(0, totalPeep - 8) * 0.032) * volSens));
-        const sv = Math.max(25, Math.min(115, Math.round(70 * (patient.idealBodyWeightKg / 70) * vrFactor)));
+        const isShockState = patient.volumeStatus === 'hypovolemic' || (patient.pathology as string) === 'sepsis';
+        const volSens = isShockState ? 3.4 : (patient.volumeStatus === 'hypervolemic' ? 0.5 : 1.0);
+        const excessPeep = Math.max(0, totalPeep - 10);
+        const vrFactor = Math.max(0.25, 1.0 - ((Math.max(0, meanPawVal - 6) * 0.028 + excessPeep * 0.042) * volSens));
+        const sv = Math.max(18, Math.min(115, Math.round(70 * (patient.idealBodyWeightKg / 70) * vrFactor)));
         const acidosisDrop = Math.max(0, (7.25 - this.currentpH) * 0.55);
         const coRatio = ((75 * sv) / 1000) / 5.0;
-        return Math.max(30, Math.min(150, Math.round(baseMAP * Math.pow(coRatio, 0.65) * (1 - acidosisDrop))));
+        return Math.max(25, Math.min(150, Math.round(baseMAP * Math.pow(coRatio, 0.70) * (1 - acidosisDrop))));
       })(),
       strokeVolume: (() => {
         const meanPawVal = (this.displayedPeak * inspTime + setPeep * expTime) / cycleDuration;

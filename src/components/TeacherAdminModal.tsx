@@ -39,6 +39,7 @@ import {
   RefreshCw,
   Search,
   Filter,
+  Tv,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -52,6 +53,7 @@ interface TeacherAdminModalProps {
   onClose: () => void;
   onLoadCaseInSimulator?: (clinicalCase: ClinicalCase) => void;
   onPedagogicalSettingsChange?: (settings: PedagogicalSettings) => void;
+  onOpenMirrorGrid?: () => void;
 }
 
 export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
@@ -59,6 +61,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   onClose,
   onLoadCaseInSimulator,
   onPedagogicalSettingsChange,
+  onOpenMirrorGrid,
 }) => {
   const { isLight } = useTheme();
   const [activeTab, setActiveTab] = useState<'kahoot' | 'quiz' | 'cases' | 'new_quiz' | 'new_case' | 'pedagogy' | 'reports' | 'password'>('kahoot');
@@ -805,6 +808,20 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenMirrorGrid && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenMirrorGrid();
+                }}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-mono font-black text-xs border border-amber-300 flex items-center gap-1.5 cursor-pointer shadow-md transition-transform active:scale-95"
+                title="Abrir Modo Espelho em Grade para Projetor / TV da Sala de Aula"
+              >
+                <Tv className="w-3.5 h-3.5 fill-current" />
+                <span>Modo Espelho TV</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}

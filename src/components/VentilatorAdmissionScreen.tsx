@@ -59,6 +59,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
   const [inspiratoryTimePCV, setInspiratoryTimePCV] = useState<number>(0);
   const [pressureSupport, setPressureSupport] = useState<number>(0);
   const [triggerSensitivity, setTriggerSensitivity] = useState<number>(0);
+  const [validationError, setValidationError] = useState<string[] | null>(null);
 
   const ibw = calculateIBW(patient.heightCm, patient.gender);
   const vtPerKg = Number((tidalVolume / ibw).toFixed(1));
@@ -120,7 +121,63 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
     handleVtChange(newVt);
   };
 
+  const getMissingParameters = (): string[] => {
+    const missing: string[] = [];
+
+    if (mode === 'VCV') {
+      if (tidalVolume <= 0) missing.push('Volume Corrente (Vt)');
+      if (respiratoryRate <= 0) missing.push('Frequência Respiratória (FR)');
+      if (peep <= 0) missing.push('PEEP');
+      if (inspiratoryFlow <= 0 && calculatedTiVCV <= 0) missing.push('Fluxo Inspiratório');
+    } else if (mode === 'PCV') {
+      if (inspiratoryPressure <= 0) missing.push('Pressão Inspiratória (Pinsp)');
+      if (respiratoryRate <= 0) missing.push('Frequência Respiratória (FR)');
+      if (inspiratoryTimePCV <= 0) missing.push('Tempo Inspiratório (Tinsp)');
+      if (peep <= 0) missing.push('PEEP');
+    } else if (mode === 'PRVC') {
+      if (tidalVolume <= 0) missing.push('Volume Corrente Alvo (Vt)');
+      if (respiratoryRate <= 0) missing.push('Frequência Respiratória (FR)');
+      if (inspiratoryTimePCV <= 0) missing.push('Tempo Inspiratório (Tinsp)');
+      if (peep <= 0) missing.push('PEEP');
+    } else if (mode === 'PSV') {
+      if (pressureSupport <= 0) missing.push('Pressão de Suporte (ΔPS)');
+      if (respiratoryRate <= 0) missing.push('Frequência Resp. Backup (FR)');
+      if (peep <= 0) missing.push('PEEP');
+    }
+
+    if (fio2 < 21) missing.push('FiO₂ (Mínimo 21%)');
+
+    return missing;
+  };
+
+  const handleApplyDefaultPrescription = () => {
+    audioEngine.playClick(880);
+    const targetVt = Math.round(ibw * 6);
+    setTidalVolume(targetVt);
+    setRespiratoryRate(14);
+    setPeep(5);
+    setFio2(100);
+    setInspiratoryFlow(45);
+    setInspiratoryPressure(15);
+    setInspiratoryTimePCV(1.0);
+    setPressureSupport(10);
+    setTriggerSensitivity(2.0);
+    setValidationError(null);
+  };
+
   const handleConfirmAndStart = () => {
+    const missing = getMissingParameters();
+    if (missing.length > 0) {
+      audioEngine.playErrorBeep();
+      setValidationError(missing);
+      const section = document.getElementById('admission-params-section');
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
+      }
+      return;
+    }
+
+    setValidationError(null);
     audioEngine.playConfirmBeep();
     const currentCalcFactor = flowWaveform === 'decelerating' ? 0.65 : 1.0;
     const computedTi =
@@ -156,6 +213,9 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
     };
     onStartVentilation(finalSettings);
   };
+
+  const missingList = getMissingParameters();
+  const isMissingParams = missingList.length > 0;
 
   return (
     <div
@@ -207,10 +267,23 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
 
           <button
             onClick={handleConfirmAndStart}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-mono font-bold text-xs shadow-lg shadow-emerald-950/40 flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+            className={`px-5 py-2.5 rounded-xl font-mono font-bold text-xs shadow-lg flex items-center gap-2 cursor-pointer transition-all ${
+              isMissingParams
+                ? 'bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white shadow-rose-950/40 animate-pulse'
+                : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white shadow-emerald-950/40 hover:scale-105'
+            }`}
           >
-            <Play className="w-4 h-4 fill-current" />
-            <span>INICIAR VENTILAÇÃO MECÂNICA</span>
+            {isMissingParams ? (
+              <>
+                <AlertTriangle className="w-4 h-4 text-amber-200" />
+                <span>INICIAR VENTILAÇÃO ({missingList.length} PENDENTES)</span>
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-current" />
+                <span>INICIAR VENTILAÇÃO MECÂNICA</span>
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -354,21 +427,59 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
         </div>
 
         {/* Right Column: Interactive Initial Ventilator Prescription (7 cols) */}
-        <div className="lg:col-span-7 space-y-4">
+        <div id="admission-params-section" className="lg:col-span-7 space-y-4">
           <div
             className={`p-5 rounded-2xl border space-y-5 ${
               isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0f1118] border-zinc-800 shadow-lg'
             }`}
           >
-            <div className="flex items-center justify-between border-b pb-3 border-zinc-800/80">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 border-zinc-800/80">
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-emerald-400" />
                 <h2 className="font-display font-bold text-sm">
                   PROGRAMAÇÃO DA PRESCRIÇÃO INICIAL
                 </h2>
               </div>
-              <span className="text-[11px] font-mono text-zinc-400">Ajuste os dials</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleApplyDefaultPrescription}
+                  className="px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-300 hover:bg-teal-500/20 text-[11px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Preencher prescrição inicial padrão protetora (6 mL/kg, PEEP 5, FR 14)"
+                >
+                  <Flame className="w-3 h-3 text-teal-400" />
+                  <span>Sugerir Prescrição (6 mL/kg)</span>
+                </button>
+              </div>
             </div>
+
+            {/* Validation Error Warning Banner */}
+            {validationError && validationError.length > 0 && (
+              <div className="p-4 rounded-2xl bg-rose-950/95 border-2 border-rose-500 text-rose-100 space-y-2.5 animate-pulse shadow-xl shadow-rose-950/70">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
+                    <span className="font-display font-black text-xs sm:text-sm tracking-wide text-rose-200">
+                      ⛔ VENTILAÇÃO BLOQUEADA: PARÂMETROS OBRIGATÓRIOS AUSENTES
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-rose-200/90 leading-relaxed font-sans">
+                  Para a segurança do paciente recém-intubado, é <strong>estritamente obrigatório</strong> programar todos os parâmetros iniciais no ventilador antes de acionar a ventilação mecânica.
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[11px] font-mono text-rose-300 font-bold">Faltam ajustar:</span>
+                  {validationError.map((item, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-900/90 border border-rose-400/60 text-rose-100 shadow-xs"
+                    >
+                      ⚠️ {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Mode Selector Tabs */}
             <div className="space-y-1.5">
@@ -383,6 +494,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     onClick={() => {
                       audioEngine.playClick(900);
                       setMode(m);
+                      setValidationError(null);
                     }}
                     className={`py-2 px-3 rounded-xl font-mono font-bold text-xs border transition-all cursor-pointer text-center ${
                       mode === m
@@ -405,21 +517,30 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                 <div className="space-y-3.5">
                   {/* Tidal Volume with dynamic mL/kg */}
                   <div
-                    className={`p-3.5 rounded-xl border space-y-2 ${
-                      isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                    className={`p-3.5 rounded-xl border space-y-2 transition-all ${
+                      tidalVolume <= 0
+                        ? 'border-rose-500/80 bg-rose-950/20 shadow-md shadow-rose-950/40'
+                        : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
-                        <span className="text-xs font-display font-bold block">
-                          Volume Corrente ($V_t$)
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-display font-bold block">
+                            Volume Corrente ($V_t$)
+                          </span>
+                          {tidalVolume <= 0 && (
+                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono text-[10px] font-bold animate-pulse">
+                              ⚠️ OBRIGATÓRIO (Definir Vt)
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[10px] font-mono text-zinc-400">
-                          Alvo protetor: 4 a 6 mL/kg de IBW
+                          Alvo protetor: 4 a 6 mL/kg de IBW (Sugerido: {Math.round(ibw * 6)} mL)
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-mono font-bold text-cyan-400">
+                        <span className={`text-lg font-mono font-bold ${tidalVolume <= 0 ? 'text-rose-400 animate-pulse' : 'text-cyan-400'}`}>
                           {tidalVolume} <span className="text-xs text-zinc-400">mL</span>
                         </span>
                       </div>
@@ -454,12 +575,19 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                   {/* Flow, Calculated Ti & Flow Waveform in VCV */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div
-                      className={`p-3.5 rounded-2xl border space-y-2 ${
-                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                      className={`p-3.5 rounded-2xl border space-y-2 transition-all ${
+                        inspiratoryFlow <= 0 && calculatedTiVCV <= 0
+                          ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                          : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-display font-bold">Fluxo Inspiratório (VCV)</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-display font-bold">Fluxo Inspiratório (VCV)</span>
+                          {inspiratoryFlow <= 0 && (
+                            <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIGATÓRIO</span>
+                          )}
+                        </div>
                         <div className="text-right">
                           <span className="font-mono font-bold text-cyan-400 text-sm block">
                             {inspiratoryFlow} <span className="text-[10px] text-zinc-400">L/min</span>
@@ -538,12 +666,19 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                 <div className="space-y-3.5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div
-                      className={`p-3 rounded-xl border space-y-1.5 ${
-                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                      className={`p-3 rounded-xl border space-y-1.5 transition-all ${
+                        inspiratoryPressure <= 0
+                          ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                          : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-display font-bold">Pressão Insp. (Pinsp)</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-display font-bold">Pressão Insp. (Pinsp)</span>
+                          {inspiratoryPressure <= 0 && (
+                            <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIGATÓRIO</span>
+                          )}
+                        </div>
                         <span className="font-mono font-bold text-cyan-400 text-sm">
                           {inspiratoryPressure} <span className="text-[10px] text-zinc-400">cmH₂O</span>
                         </span>
@@ -560,12 +695,19 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     </div>
 
                     <div
-                      className={`p-3 rounded-xl border space-y-1.5 ${
-                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                      className={`p-3 rounded-xl border space-y-1.5 transition-all ${
+                        inspiratoryTimePCV <= 0
+                          ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                          : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-display font-bold">Tempo Inspiratório (Tinsp)</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-display font-bold">Tempo Inspiratório (Tinsp)</span>
+                          {inspiratoryTimePCV <= 0 && (
+                            <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIGATÓRIO</span>
+                          )}
+                        </div>
                         <span className="font-mono font-bold text-cyan-400 text-sm">
                           {inspiratoryTimePCV} <span className="text-[10px] text-zinc-400">s</span>
                         </span>
@@ -588,12 +730,19 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Respiratory Rate */}
                 <div
-                  className={`p-3 rounded-xl border space-y-1.5 ${
-                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                  className={`p-3 rounded-xl border space-y-1.5 transition-all ${
+                    respiratoryRate <= 0
+                      ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                      : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-display font-bold">Freq. Resp. (FR)</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-display font-bold">Freq. Resp. (FR)</span>
+                      {respiratoryRate <= 0 && (
+                        <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIG.</span>
+                      )}
+                    </div>
                     <span className="font-mono font-bold text-amber-400 text-sm">
                       {respiratoryRate} <span className="text-[10px] text-zinc-400">rpm</span>
                     </span>
@@ -614,12 +763,19 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
 
                 {/* PEEP */}
                 <div
-                  className={`p-3 rounded-xl border space-y-1.5 ${
-                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                  className={`p-3 rounded-xl border space-y-1.5 transition-all ${
+                    peep <= 0
+                      ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                      : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-display font-bold">PEEP</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-display font-bold">PEEP</span>
+                      {peep <= 0 && (
+                        <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIG.</span>
+                      )}
+                    </div>
                     <span className="font-mono font-bold text-emerald-400 text-sm">
                       {peep} <span className="text-[10px] text-zinc-400">cmH₂O</span>
                     </span>
@@ -666,9 +822,15 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
             {/* Confirmation & Launch Action */}
             <div className="pt-3 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="space-y-0.5 text-center sm:text-left">
-                <span className="text-xs font-mono font-bold text-emerald-400 block">
-                  ✓ Configuração de Admissão Pronta
-                </span>
+                {isMissingParams ? (
+                  <span className="text-xs font-mono font-bold text-rose-400 block animate-pulse">
+                    ⚠️ Parâmetros de admissão incompletos ({missingList.length} ausentes)
+                  </span>
+                ) : (
+                  <span className="text-xs font-mono font-bold text-emerald-400 block">
+                    ✓ Configuração de Admissão Pronta
+                  </span>
+                )}
                 <span className="text-[11px] text-zinc-400">
                   Modo {mode} • Vt {tidalVolume} mL • FR {respiratoryRate} rpm • PEEP {peep} cmH₂O • FiO₂ {fio2}%
                 </span>
@@ -677,10 +839,23 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
               <button
                 type="button"
                 onClick={handleConfirmAndStart}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-mono font-bold text-sm shadow-xl shadow-emerald-950/60 flex items-center justify-center gap-2.5 cursor-pointer transition-all hover:scale-[1.02]"
+                className={`w-full sm:w-auto px-8 py-3.5 rounded-2xl font-mono font-bold text-sm shadow-xl flex items-center justify-center gap-2.5 cursor-pointer transition-all ${
+                  isMissingParams
+                    ? 'bg-gradient-to-r from-amber-600 via-rose-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white shadow-rose-950/60 animate-pulse'
+                    : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white shadow-emerald-950/60 hover:scale-[1.02]'
+                }`}
               >
-                <Play className="w-5 h-5 fill-current" />
-                <span>INICIAR VENTILAÇÃO MECÂNICA</span>
+                {isMissingParams ? (
+                  <>
+                    <AlertTriangle className="w-5 h-5 text-amber-200" />
+                    <span>INICIAR VENTILAÇÃO ({missingList.length} PENDENTES)</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5 fill-current" />
+                    <span>INICIAR VENTILAÇÃO MECÂNICA</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

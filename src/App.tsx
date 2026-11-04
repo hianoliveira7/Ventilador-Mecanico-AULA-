@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, VolumeX, Play, User, Activity, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, GripVertical, Heart, SlidersHorizontal, Lock, Users } from 'lucide-react';
+import { Volume2, VolumeX, Play, User, Activity, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, GripVertical, Heart, SlidersHorizontal, Lock, Users, Maximize } from 'lucide-react';
 import {
   VentilatorSettings,
   PatientParameters,
@@ -37,6 +37,7 @@ import { AsynchronyPreset } from './data/asynchroniesData';
 import { StudentTutorialModal } from './components/StudentTutorialModal';
 import { TeacherAdminModal } from './components/TeacherAdminModal';
 import { TeacherAuthModal } from './components/TeacherAuthModal';
+import { TeacherMirrorGridModal } from './components/TeacherMirrorGridModal';
 import { InteractiveTour } from './components/InteractiveTour';
 import { DebriefingModal } from './components/DebriefingModal';
 import { FlashcardsModal } from './components/FlashcardsModal';
@@ -305,6 +306,8 @@ export default function App() {
   const [isInteractiveTourOpen, setIsInteractiveTourOpen] = useState<boolean>(false);
   const [isTeacherAdminOpen, setIsTeacherAdminOpen] = useState<boolean>(false);
   const [isTeacherAuthOpen, setIsTeacherAuthOpen] = useState<boolean>(false);
+  const [isTeacherMirrorGridOpen, setIsTeacherMirrorGridOpen] = useState<boolean>(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState<boolean>(false);
 
   // Multidisciplinary Team Role State
   const [activeTeamRole, setActiveTeamRole] = useState<TeamRole>('Fisioterapeuta Respiratório');
@@ -1785,35 +1788,48 @@ export default function App() {
           )}
 
           {/* 1. Header Bar */}
-          <TopBar
-            mode={settings.mode}
-            patient={patient}
-            activeAlarms={activeAlarms}
-            userRole={userRole}
-            simulationTimeSeconds={0}
-            blindMechanicsActive={pedagogicalSettings.blindMechanicsEnabled}
-            isVentilating={isVentilating}
-            onToggleStandby={() => setIsVentilating(false)}
-            onOpenPatientConfig={() => setIsPatientConfigOpen(true)}
-            onOpenAlarmsModal={() => setIsAlarmsModalOpen(true)}
-            onOpenAudioSettings={() => setIsAudioSettingsOpen(true)}
-            onOpenMenu={() => setIsMenuOpen(true)}
-            onOpenRolePortal={() => setIsRolePortalOpen(true)}
-            onOpenTutorial={() => setIsInteractiveTourOpen(true)}
-            onOpenTeacherAdmin={handleOpenTeacherAdmin}
-            onOpenClinicalCases={() => setCurrentPage('clinical_cases')}
-            onOpenQuiz={() => setIsQuizOpen(true)}
-            onOpenKahoot={() => setIsKahootPortalOpen(true)}
-            onOpenEducational={() => setIsEducationalOpen(true)}
-            onOpenGasometry={() => setIsGasometryOpen(true)}
-            onOpenMissions={() => setIsMissionsOpen(true)}
-            onOpenAsynchronies={() => setIsAsynchroniesOpen(true)}
-            onOpenFlashcards={() => setIsFlashcardsOpen(true)}
-            onOpenDebriefing={() => {
-              generateDebriefingReport();
-              setIsDebriefingOpen(true);
-            }}
-          />
+          {!isHeaderCollapsed ? (
+            <TopBar
+              mode={settings.mode}
+              patient={patient}
+              activeAlarms={activeAlarms}
+              userRole={userRole}
+              simulationTimeSeconds={0}
+              blindMechanicsActive={pedagogicalSettings.blindMechanicsEnabled}
+              isVentilating={isVentilating}
+              onToggleStandby={() => setIsVentilating(false)}
+              onOpenPatientConfig={() => setIsPatientConfigOpen(true)}
+              onOpenAlarmsModal={() => setIsAlarmsModalOpen(true)}
+              onOpenAudioSettings={() => setIsAudioSettingsOpen(true)}
+              onOpenMenu={() => setIsMenuOpen(true)}
+              onOpenRolePortal={() => setIsRolePortalOpen(true)}
+              onOpenTutorial={() => setIsInteractiveTourOpen(true)}
+              onOpenTeacherAdmin={handleOpenTeacherAdmin}
+              onOpenClinicalCases={() => setCurrentPage('clinical_cases')}
+              onOpenQuiz={() => setIsQuizOpen(true)}
+              onOpenKahoot={() => setIsKahootPortalOpen(true)}
+              onOpenEducational={() => setIsEducationalOpen(true)}
+              onOpenGasometry={() => setIsGasometryOpen(true)}
+              onOpenMissions={() => setIsMissionsOpen(true)}
+              onOpenAsynchronies={() => setIsAsynchroniesOpen(true)}
+              onOpenFlashcards={() => setIsFlashcardsOpen(true)}
+              onOpenDebriefing={() => {
+                generateDebriefingReport();
+                setIsDebriefingOpen(true);
+              }}
+              isHeaderCollapsed={isHeaderCollapsed}
+              onToggleHeaderCollapse={() => setIsHeaderCollapsed((prev) => !prev)}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsHeaderCollapsed(false)}
+              className="fixed top-1 left-1/2 -translate-x-1/2 z-50 p-1.5 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white rounded-full shadow-lg flex items-center justify-center opacity-85 hover:opacity-100 transition-all cursor-pointer border border-blue-400 animate-fadeIn"
+              title="Expandir Painel Superior"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </button>
+          )}
 
       {/* Audio Unlock Banner (Minimal & Dismissible if browser suspended AudioContext) */}
       {audioContextState !== 'running' && !isAudioBannerDismissed && (
@@ -2622,6 +2638,23 @@ export default function App() {
         }}
         userRole={userRole}
         onStartKahootSession={handleStartKahootSession}
+      />
+
+      <TeacherAdminModal
+        isOpen={isTeacherAdminOpen}
+        onClose={() => setIsTeacherAdminOpen(false)}
+        onOpenMirrorGrid={() => setIsTeacherMirrorGridOpen(true)}
+        onLoadCaseInSimulator={(selectedCase) => {
+          handleLoadCase(selectedCase);
+          setIsTeacherAdminOpen(false);
+          setCurrentPage('simulator');
+        }}
+        onPedagogicalSettingsChange={setPedagogicalSettings}
+      />
+
+      <TeacherMirrorGridModal
+        isOpen={isTeacherMirrorGridOpen}
+        onClose={() => setIsTeacherMirrorGridOpen(false)}
       />
 
       <KahootResultModal

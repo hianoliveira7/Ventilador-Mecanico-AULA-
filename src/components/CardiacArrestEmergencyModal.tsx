@@ -403,7 +403,11 @@ export const CardiacArrestEmergencyModal: React.FC<CardiacArrestEmergencyModalPr
               {waitingForTeam && !hasSucceeded && (
                 <div className="p-3.5 rounded-xl bg-amber-950/60 border border-amber-600 text-amber-200 text-xs font-mono flex items-center gap-2 animate-pulse">
                   <Clock className="w-4 h-4 text-amber-400 shrink-0 animate-spin" />
-                  <span>Sua conduta foi aplicada! ⚠️ Aguardando os demais membros da equipe concluírem suas tarefas para o retorno da circulação (RCE)...</span>
+                  <span>
+                    Sua conduta foi aplicada! {!pcrRolesReady.physio && '⚠️ Aguardando conduta da Fisioterapia (FiO₂ 100%, PEEP ≤ 5 cmH₂O)... '}
+                    {!pcrRolesReady.doctor && '⚠️ Aguardando conduta do Médico (Adrenalina 1mg IV ACLS)... '}
+                    {!pcrRolesReady.nurse && '⚠️ Aguardando conduta da Enfermagem (Compressões Torácicas 100-120/min)... '}
+                  </span>
                 </div>
               )}
 

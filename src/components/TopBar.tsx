@@ -56,6 +56,8 @@ interface TopBarProps {
   onOpenAsynchronies?: () => void;
   onOpenFlashcards?: () => void;
   onOpenDebriefing?: () => void;
+  isHeaderCollapsed?: boolean;
+  onToggleHeaderCollapse?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -81,6 +83,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenAsynchronies,
   onOpenFlashcards,
   onOpenDebriefing,
+  isHeaderCollapsed,
+  onToggleHeaderCollapse,
 }) => {
   const { toggleTheme, isLight } = useTheme();
   const topAlarm = activeAlarms.length > 0 ? activeAlarms[0] : null;
@@ -449,6 +453,22 @@ export const TopBar: React.FC<TopBarProps> = ({
             </div>
           )}
         </div>
+
+        {/* Immersive iPad Header Collapse Button */}
+        {onToggleHeaderCollapse && (
+          <button
+            type="button"
+            onClick={onToggleHeaderCollapse}
+            className={`p-1 sm:px-1.5 sm:py-1 rounded-lg border text-[10px] font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                : 'bg-[#10121c] hover:bg-[#181b2a] text-zinc-300 border-zinc-800'
+            }`}
+            title="Ocultar Cabeçalho (Modo Imersivo iPad - 100% de área de tela)"
+          >
+            <Minimize className="w-3.5 h-3.5 text-amber-400" />
+          </button>
+        )}
 
         {/* Fullscreen Toggle Button */}
         <button
