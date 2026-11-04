@@ -54,11 +54,8 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
 }) => {
   const { isLight } = useTheme();
 
-  const handleInspHoldDown = (e: React.PointerEvent) => {
+  const handleInspHoldDown = (e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {}
     audioEngine.playClick(1000);
     if (onStartInspHold) {
       onStartInspHold();
@@ -67,12 +64,7 @@ export const ManeuverBar: React.FC<ManeuverBarProps> = ({
     }
   };
 
-  const handleInspHoldUp = (e: React.PointerEvent) => {
-    try {
-      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-        e.currentTarget.releasePointerCapture(e.pointerId);
-      }
-    } catch {}
+  const handleInspHoldUp = () => {
     if (onEndInspHold) {
       onEndInspHold();
     } else if (onToggleInspHold && maneuverState.inspiratoryHoldActive) {
