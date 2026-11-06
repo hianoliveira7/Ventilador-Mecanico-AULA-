@@ -176,10 +176,10 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
       className={`relative flex-1 min-w-[145px] sm:min-w-[155px] md:min-w-[165px] lg:min-w-[175px] shrink-0 rounded-2xl p-2 sm:p-2.5 flex flex-col justify-between gap-1 select-none transition-all duration-150 border snap-start ${
         isChanged
           ? isLight
-            ? 'bg-amber-50/90 border-amber-500 shadow-md ring-1 ring-amber-400/60'
+            ? 'bg-amber-50/95 border-amber-500 shadow-md ring-2 ring-amber-400/50'
             : 'bg-[#1b150b] border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-500/70'
           : isLight
-          ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-xs'
+          ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-sm'
           : 'bg-[#0b0e1a] hover:bg-[#111527] border-zinc-800 shadow-inner'
       }`}
     >
@@ -192,7 +192,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
         </span>
         <span
           className={`text-[11px] sm:text-xs font-display font-bold truncate ${
-            isLight ? 'text-slate-700' : 'text-zinc-300'
+            isLight ? 'text-slate-900' : 'text-zinc-300'
           }`}
           title={title}
         >
@@ -241,7 +241,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
           <span className={`text-xl sm:text-2xl font-mono font-black tabular-nums tracking-tight ${scheme.valueText}`}>
             {step < 1 ? safeVal.toFixed(1) : Math.round(safeVal)}
           </span>
-          <span className={`text-[10px] sm:text-xs font-mono font-bold shrink-0 ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+          <span className={`text-[10px] sm:text-xs font-mono font-bold shrink-0 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
             {unit}
           </span>
         </div>
@@ -310,7 +310,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
 
       {/* 3. Touch Scrubber Slider */}
       <div className="flex items-center gap-2 mt-0.5">
-        <span className={`text-[9.5px] font-mono font-bold shrink-0 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+        <span className={`text-[9.5px] font-mono font-bold shrink-0 ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
           {min}
         </span>
         <input
@@ -327,10 +327,10 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
             if (!isNaN(val)) onUpdate(field, val);
           }}
           className={`w-full h-2 rounded-full appearance-none cursor-pointer relative z-10 transition-all ${
-            isLight ? 'bg-slate-200' : 'bg-zinc-800'
+            isLight ? 'bg-slate-200 border border-slate-300' : 'bg-zinc-800'
           } ${scheme.sliderAccent} ${isReadOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
-        <span className={`text-[9.5px] font-mono font-bold shrink-0 ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+        <span className={`text-[9.5px] font-mono font-bold shrink-0 ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
           {max}
         </span>
       </div>

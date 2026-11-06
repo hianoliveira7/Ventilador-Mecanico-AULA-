@@ -1808,6 +1808,7 @@ export default function App() {
               onOpenRolePortal={() => setIsRolePortalOpen(true)}
               onOpenTutorial={() => setIsInteractiveTourOpen(true)}
               onOpenTeacherAdmin={handleOpenTeacherAdmin}
+              onOpenMirrorGrid={() => setIsTeacherMirrorGridOpen(true)}
               onOpenClinicalCases={() => setCurrentPage('clinical_cases')}
               onOpenQuiz={() => setIsQuizOpen(true)}
               onOpenKahoot={() => setIsKahootPortalOpen(true)}
@@ -2658,6 +2659,12 @@ export default function App() {
       <TeacherMirrorGridModal
         isOpen={isTeacherMirrorGridOpen}
         onClose={() => setIsTeacherMirrorGridOpen(false)}
+        currentSimulatorData={{
+          settings,
+          monitored,
+          patient,
+          caseTitle: activeClinicalCase?.title,
+        }}
       />
 
       <KahootResultModal

@@ -212,14 +212,14 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span
                     className={`text-xl font-bold font-mono truncate ${
                       currentPeak > 35
-                        ? isLight ? 'text-rose-800 font-black' : 'text-rose-400 font-black'
-                        : isLight ? 'text-cyan-800' : 'text-cyan-300'
+                        ? isLight ? 'text-rose-700 font-black' : 'text-rose-400 font-black'
+                        : isLight ? 'text-cyan-800 font-black' : 'text-cyan-300'
                     }`}
                   >
                     {currentPeak}
                   </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Lim: &le;35</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>Lim: &le;35</span>
               </div>
 
               {/* Plateau Pressure */}
@@ -237,15 +237,15 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                     className={`text-xl font-bold font-mono truncate ${
                       monitored.isPlateauMeasured
                         ? currentPlat > 30
-                          ? isLight ? 'text-rose-800 font-black' : 'text-rose-400 font-black'
-                          : isLight ? 'text-cyan-800' : 'text-cyan-300'
-                        : isLight ? 'text-slate-400' : 'text-zinc-600'
+                          ? isLight ? 'text-rose-700 font-black' : 'text-rose-400 font-black'
+                          : isLight ? 'text-cyan-800 font-black' : 'text-cyan-300'
+                        : isLight ? 'text-slate-400 font-bold' : 'text-zinc-600'
                     }`}
                   >
                     {monitored.isPlateauMeasured ? currentPlat : '--'}
                   </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Alvo: &le;30</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>Alvo: &le;30</span>
               </div>
 
               {/* Mean Pressure */}
@@ -259,11 +259,11 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>cmH₂O</span>
                 </div>
                 <div className="flex items-baseline gap-0.5 my-0.5">
-                  <span className={`text-xl font-bold font-mono truncate ${isLight ? 'text-cyan-800' : 'text-cyan-300'}`}>
+                  <span className={`text-xl font-bold font-mono truncate ${isLight ? 'text-cyan-800 font-black' : 'text-cyan-300'}`}>
                     {currentMean}
                   </span>
                 </div>
-                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>PEEP: {currentPeep}</span>
+                <span className={`text-[8px] font-mono ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>PEEP: {currentPeep}</span>
               </div>
             </div>
 
@@ -280,11 +280,11 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>mL</span>
                 </div>
                 <div className="flex items-baseline gap-0.5 my-0.5">
-                  <span className={`text-lg font-bold font-mono truncate ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
+                  <span className={`text-lg font-bold font-mono truncate ${isLight ? 'text-amber-800 font-black' : 'text-amber-300'}`}>
                     {currentVti || currentVte}
                   </span>
                 </div>
-                <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>
                   Entregue
                 </span>
               </div>
@@ -300,11 +300,11 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>mL</span>
                 </div>
                 <div className="flex items-baseline gap-0.5 my-0.5">
-                  <span className={`text-lg font-bold font-mono truncate ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
+                  <span className={`text-lg font-bold font-mono truncate ${isLight ? 'text-amber-800 font-black' : 'text-amber-300'}`}>
                     {currentVte}
                   </span>
                 </div>
-                <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>
                   {patient.idealBodyWeight > 0 ? `${(currentVte / patient.idealBodyWeight).toFixed(1)} mL/kg` : 'mL'}
                 </span>
               </div>
@@ -320,11 +320,11 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span className={`text-[8px] font-mono ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>L/min</span>
                 </div>
                 <div className="flex items-baseline gap-0.5 my-0.5">
-                  <span className={`text-lg font-bold font-mono truncate ${isLight ? 'text-amber-800' : 'text-amber-300'}`}>
+                  <span className={`text-lg font-bold font-mono truncate ${isLight ? 'text-amber-800 font-black' : 'text-amber-300'}`}>
                     {currentVe.toFixed(1)}
                   </span>
                 </div>
-                <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>Alvo: 5–8 L</span>
+                <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>Alvo: 5–8 L</span>
               </div>
 
               {/* Total Respiratory Rate */}
@@ -341,14 +341,14 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   <span
                     className={`text-lg font-bold font-mono truncate ${
                       currentTotalRate > 30
-                        ? isLight ? 'text-rose-800 font-black' : 'text-rose-400 font-black'
-                        : isLight ? 'text-emerald-800' : 'text-emerald-300'
+                        ? isLight ? 'text-rose-700 font-black' : 'text-rose-400 font-black'
+                        : isLight ? 'text-emerald-800 font-black' : 'text-emerald-300'
                     }`}
                   >
                     {currentTotalRate}
                   </span>
                 </div>
-                <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>
                   {patient.spontaneousDrive ? 'Espontânea' : 'Controlada'}
                 </span>
               </div>
@@ -373,7 +373,7 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                       ? `${monitored.drivingPressure.toFixed(0)} cmH₂O`
                       : 'requer pausa'}
                   </span>
-                  <span className={`text-[10px] font-mono font-medium ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  <span className={`text-[10px] font-mono font-medium ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>
                     {blindMechanicsMode && !revealedBlind
                       ? 'Auto-PEEP: 🔒 Oculto em Modo Cego'
                       : `Auto-PEEP: ${currentAutoPeep.toFixed(1)} cmH₂O • PEEP Tot: ${(currentPeep + currentAutoPeep).toFixed(1)}`}

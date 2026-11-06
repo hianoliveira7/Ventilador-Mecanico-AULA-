@@ -15,17 +15,9 @@ import {
   AlertTriangle,
   Calculator,
   User,
-  Stethoscope,
-  Wind,
-  Layers,
-  Settings,
-  ShieldAlert,
-  ArrowRight,
-  Flame,
   FileText,
-  RotateCcw,
   Sliders,
-  Info,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface VentilatorAdmissionScreenProps {
@@ -43,7 +35,6 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
   initialSettings,
   onStartVentilation,
   onOpenCasesList,
-  onUpdatePatient,
 }) => {
   const { isLight } = useTheme();
 
@@ -105,22 +96,6 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
     }
   };
 
-  // Determine safety color for Vt
-  const vtStatusColor =
-    vtPerKg < 4.0
-      ? 'text-amber-400 border-amber-500/50 bg-amber-950/30'
-      : vtPerKg <= 6.5
-      ? 'text-emerald-400 border-emerald-500/50 bg-emerald-950/30'
-      : vtPerKg <= 8.0
-      ? 'text-amber-400 border-amber-500/50 bg-amber-950/30'
-      : 'text-rose-400 border-rose-500/50 bg-rose-950/30';
-
-  const handleApplyPresetVt = (targetMlPerKg: number) => {
-    audioEngine.playClick(880);
-    const newVt = Math.round(ibw * targetMlPerKg);
-    handleVtChange(newVt);
-  };
-
   const getMissingParameters = (): string[] => {
     const missing: string[] = [];
 
@@ -148,21 +123,6 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
     if (fio2 < 21) missing.push('FiO₂ (Mínimo 21%)');
 
     return missing;
-  };
-
-  const handleApplyDefaultPrescription = () => {
-    audioEngine.playClick(880);
-    const targetVt = Math.round(ibw * 6);
-    setTidalVolume(targetVt);
-    setRespiratoryRate(14);
-    setPeep(5);
-    setFio2(100);
-    setInspiratoryFlow(45);
-    setInspiratoryPressure(15);
-    setInspiratoryTimePCV(1.0);
-    setPressureSupport(10);
-    setTriggerSensitivity(2.0);
-    setValidationError(null);
   };
 
   const handleConfirmAndStart = () => {
@@ -227,24 +187,32 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
       <header
         className={`px-6 py-3.5 border-b flex flex-wrap items-center justify-between gap-4 sticky top-0 z-30 backdrop-blur-md ${
           isLight
-            ? 'bg-white/95 border-slate-200 shadow-sm'
-            : 'bg-[#0b0d13]/95 border-zinc-800 shadow-xl'
+            ? 'bg-white/95 border-slate-200 shadow-sm text-slate-900'
+            : 'bg-[#0b0d13]/95 border-zinc-800 shadow-xl text-zinc-100'
         }`}
       >
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 animate-pulse">
+          <div className={`p-2.5 rounded-xl border animate-pulse ${
+            isLight
+              ? 'bg-amber-100 border-amber-300 text-amber-800 font-bold'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+          }`}>
             <Activity className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-display font-black text-sm tracking-wide">
+              <span className={`font-display font-black text-sm tracking-wide ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
                 ADMISSÃO & CONFIGURAÇÃO DO VENTILADOR MECÂNICO
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${
+                isLight
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              }`}>
                 ⏸️ STANDBY
               </span>
             </div>
-            <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+            <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-zinc-400'}`}>
               Paciente recém-intubado. Programe os parâmetros iniciais antes de acionar a ventilação.
             </p>
           </div>
@@ -256,7 +224,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
               onClick={onOpenCasesList}
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-colors cursor-pointer flex items-center gap-1.5 ${
                 isLight
-                  ? 'bg-slate-50 border-slate-300 hover:bg-slate-200 text-slate-700'
+                  ? 'bg-white border-slate-300 hover:bg-slate-200 text-slate-800 shadow-xs'
                   : 'bg-zinc-800/80 border-zinc-700 hover:bg-zinc-700 text-zinc-300'
               }`}
             >
@@ -269,13 +237,15 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
             onClick={handleConfirmAndStart}
             className={`px-5 py-2.5 rounded-xl font-mono font-bold text-xs shadow-lg flex items-center gap-2 cursor-pointer transition-all ${
               isMissingParams
-                ? 'bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white shadow-rose-950/40 animate-pulse'
+                ? isLight
+                  ? 'bg-rose-700 hover:bg-rose-800 text-white shadow-rose-200 animate-pulse'
+                  : 'bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white shadow-rose-950/40 animate-pulse'
                 : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white shadow-emerald-950/40 hover:scale-105'
             }`}
           >
             {isMissingParams ? (
               <>
-                <AlertTriangle className="w-4 h-4 text-amber-200" />
+                <AlertTriangle className={`w-4 h-4 ${isLight ? 'text-white' : 'text-amber-200'}`} />
                 <span>INICIAR VENTILAÇÃO ({missingList.length} PENDENTES)</span>
               </>
             ) : (
@@ -295,17 +265,19 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
           {/* Patient Card & Clinical History */}
           <div
             className={`p-5 rounded-3xl border space-y-4 ${
-              isLight ? 'bg-white border-slate-200 shadow-md' : 'bg-[#0f1118] border-zinc-800 shadow-xl'
+              isLight ? 'bg-white border-slate-300 shadow-md text-slate-900' : 'bg-[#0f1118] border-zinc-800 shadow-xl text-zinc-100'
             }`}
           >
-            <div className="flex items-center justify-between border-b pb-3 border-zinc-800/80">
+            <div className={`flex items-center justify-between border-b pb-3 ${isLight ? 'border-slate-200' : 'border-zinc-800/80'}`}>
               <div className="flex items-center gap-2.5">
-                <User className="w-5 h-5 text-cyan-400" />
-                <h2 className="font-display font-black text-base">
+                <User className={`w-5 h-5 ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`} />
+                <h2 className={`font-display font-black text-base ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
                   {currentCase?.patientProfile.name || patient.name}
                 </h2>
               </div>
-              <span className="text-xs font-mono px-2.5 py-1 rounded-lg bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-bold">
+              <span className={`text-xs font-mono px-2.5 py-1 rounded-lg border font-bold ${
+                isLight ? 'bg-cyan-100 border-cyan-300 text-cyan-900' : 'bg-cyan-950/60 border-cyan-800/60 text-cyan-300'
+              }`}>
                 LEITO 04 - UTI ADULTO
               </span>
             </div>
@@ -314,60 +286,64 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div
                 className={`p-2.5 rounded-xl border ${
-                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                  isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                 }`}
               >
-                <span className="text-[10px] font-mono text-zinc-400 block">Gênero / Idade</span>
-                <span className="font-bold text-xs">
+                <span className={`text-[10px] font-mono block ${isLight ? 'text-slate-600 font-bold' : 'text-zinc-400'}`}>Gênero / Idade</span>
+                <span className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
                   {patient.gender === 'male' ? 'Masc' : 'Fem'} • {patient.age} anos
                 </span>
               </div>
               <div
                 className={`p-2.5 rounded-xl border ${
-                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                  isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                 }`}
               >
-                <span className="text-[10px] font-mono text-zinc-400 block">Altura</span>
-                <span className="font-bold text-xs font-mono text-cyan-400">{patient.heightCm} cm</span>
+                <span className={`text-[10px] font-mono block ${isLight ? 'text-slate-600 font-bold' : 'text-zinc-400'}`}>Altura</span>
+                <span className={`font-bold text-xs font-mono ${isLight ? 'text-cyan-800 font-black' : 'text-cyan-400'}`}>{patient.heightCm} cm</span>
               </div>
               <div
                 className={`p-2.5 rounded-xl border ${
-                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                  isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                 }`}
               >
-                <span className="text-[10px] font-mono text-zinc-400 block">Peso Real na Balança</span>
-                <span className="font-bold text-xs font-mono text-amber-400">{patient.actualWeightKg} kg</span>
+                <span className={`text-[10px] font-mono block ${isLight ? 'text-slate-600 font-bold' : 'text-zinc-400'}`}>Peso Real</span>
+                <span className={`font-bold text-xs font-mono ${isLight ? 'text-amber-800 font-black' : 'text-amber-400'}`}>{patient.actualWeightKg} kg</span>
               </div>
             </div>
 
             {/* Clinical Guidance: Student IBW Calculation Challenge */}
             <div className={`p-3.5 rounded-xl border space-y-2.5 ${
-              isLight ? 'bg-indigo-50/80 border-indigo-200' : 'bg-gradient-to-br from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/40'
+              isLight ? 'bg-indigo-50 border-indigo-300 text-indigo-950 shadow-xs' : 'bg-gradient-to-br from-indigo-950/60 via-purple-950/40 to-slate-900 border border-indigo-500/40 text-indigo-200'
             }`}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-indigo-300">
-                  <Calculator className="w-4 h-4 text-indigo-400" />
+                <div className={`flex items-center gap-1.5 ${isLight ? 'text-indigo-950 font-black' : 'text-indigo-300'}`}>
+                  <Calculator className={`w-4 h-4 ${isLight ? 'text-indigo-700' : 'text-indigo-400'}`} />
                   <span className="text-xs font-display font-bold">
                     DESAFIO: CÁLCULO DO PESO PREDITO (IBW)
                   </span>
                 </div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-900/60 text-indigo-200 border border-indigo-500/30">
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                  isLight ? 'bg-indigo-200/80 text-indigo-950 border-indigo-400 font-bold' : 'bg-indigo-900/60 text-indigo-200 border-indigo-500/30'
+                }`}>
                   Cálculo Obrigatório do Aluno
                 </span>
               </div>
               
-              <p className="text-[11.5px] leading-relaxed font-sans text-indigo-200/90">
+              <p className={`text-[11.5px] leading-relaxed font-sans ${isLight ? 'text-indigo-950 font-medium' : 'text-indigo-200/90'}`}>
                 ⚠️ <strong>Atenção do Estudante:</strong> O ventilador não calculará o Peso Predito por você. Utilize os dados de antropometria do paciente para calcular o <strong>IBW</strong> e programe o Volume Corrente ($V_t$) de <strong>4 a 8 mL/kg</strong> de Peso Predito:
               </p>
 
-              <div className="p-2.5 rounded-lg bg-black/40 border border-indigo-500/30 text-[10.5px] font-mono text-indigo-200 space-y-1">
-                <div className="flex justify-between border-b border-indigo-500/20 pb-1">
-                  <span>MASCULINO:</span>
-                  <span className="text-indigo-300 font-bold">50 + 0.91 × (Altura em cm - 152.4)</span>
+              <div className={`p-2.5 rounded-lg border text-[10.5px] font-mono space-y-1 ${
+                isLight ? 'bg-white border-indigo-200 text-indigo-950 shadow-xs' : 'bg-black/40 border-indigo-500/30 text-indigo-200'
+              }`}>
+                <div className={`flex justify-between border-b pb-1 ${isLight ? 'border-indigo-200 font-semibold' : 'border-indigo-500/20'}`}>
+                  <span className="font-bold">MASCULINO:</span>
+                  <span className={`font-bold ${isLight ? 'text-indigo-800' : 'text-indigo-300'}`}>50 + 0.91 × (Altura em cm - 152.4)</span>
                 </div>
                 <div className="flex justify-between pt-0.5">
-                  <span>FEMININO:</span>
-                  <span className="text-indigo-300 font-bold">45.5 + 0.91 × (Altura em cm - 152.4)</span>
+                  <span className="font-bold">FEMININO:</span>
+                  <span className={`font-bold ${isLight ? 'text-indigo-800' : 'text-indigo-300'}`}>45.5 + 0.91 × (Altura em cm - 152.4)</span>
                 </div>
               </div>
             </div>
@@ -376,17 +352,17 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
             {currentCase && (
               <div
                 className={`p-3 rounded-xl border space-y-1.5 text-xs ${
-                  isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/40 border-zinc-800'
+                  isLight ? 'bg-slate-50 border-slate-300 shadow-xs text-slate-900' : 'bg-zinc-900/40 border-zinc-800 text-zinc-100'
                 }`}
               >
-                <span className="font-display font-bold text-[11px] text-cyan-400 block">
+                <span className={`font-display font-bold text-[11px] block ${isLight ? 'text-cyan-800 font-black' : 'text-cyan-400'}`}>
                   História Clínica & Exame de Admissão
                 </span>
-                <p className={`text-[11px] leading-relaxed ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
+                <p className={`text-[11px] leading-relaxed ${isLight ? 'text-slate-900 font-medium' : 'text-zinc-300'}`}>
                   {currentCase.clinicalHistory || currentCase.description}
                 </p>
                 {currentCase.physicalExam && (
-                  <p className={`text-[10px] italic border-t pt-1 ${isLight ? 'text-slate-500 border-slate-200' : 'text-zinc-400 border-zinc-800'}`}>
+                  <p className={`text-[10px] italic border-t pt-1 ${isLight ? 'text-slate-700 border-slate-300 font-semibold' : 'text-zinc-400 border-zinc-800'}`}>
                     🩺 {currentCase.physicalExam}
                   </p>
                 )}
@@ -396,26 +372,26 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
             {/* Pre-Use Checklist / Circuit Tests */}
             <div
               className={`p-3 rounded-xl border space-y-2 ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/40 border-zinc-800'
+                isLight ? 'bg-slate-50 border-slate-300 shadow-xs text-slate-900' : 'bg-zinc-900/40 border-zinc-800 text-zinc-100'
               }`}
             >
-              <span className="font-display font-bold text-[11px] text-zinc-300 block">
+              <span className={`font-display font-bold text-[11px] block ${isLight ? 'text-slate-900 font-black' : 'text-zinc-300'}`}>
                 Auto-Teste do Ventilador & Circuito
               </span>
               <div className="space-y-1.5 text-[11px] font-mono">
-                <div className="flex items-center justify-between text-emerald-400">
+                <div className={`flex items-center justify-between ${isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400'}`}>
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Circuito Duplo + Sensor de Fluxo
                   </span>
                   <span className="text-[10px] font-bold">CALIBRADO</span>
                 </div>
-                <div className="flex items-center justify-between text-emerald-400">
+                <div className={`flex items-center justify-between ${isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400'}`}>
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Teste de Estanqueidade / Fuga
                   </span>
                   <span className="text-[10px] font-bold">0.0 mL/min (OK)</span>
                 </div>
-                <div className="flex items-center justify-between text-emerald-400">
+                <div className={`flex items-center justify-between ${isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400'}`}>
                   <span className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Filtro Barreira HME / Traqueias
                   </span>
@@ -430,13 +406,13 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
         <div id="admission-params-section" className="lg:col-span-7 space-y-4">
           <div
             className={`p-5 rounded-2xl border space-y-5 ${
-              isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#0f1118] border-zinc-800 shadow-lg'
+              isLight ? 'bg-white border-slate-300 shadow-sm text-slate-900' : 'bg-[#0f1118] border-zinc-800 shadow-lg text-zinc-100'
             }`}
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3 border-zinc-800/80">
+            <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-3 ${isLight ? 'border-slate-200' : 'border-zinc-800/80'}`}>
               <div className="flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-emerald-400" />
-                <h2 className="font-display font-bold text-sm">
+                <Sliders className={`w-4 h-4 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
+                <h2 className={`font-display font-bold text-sm ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
                   PROGRAMAÇÃO DA PRESCRIÇÃO INICIAL
                 </h2>
               </div>
@@ -444,24 +420,32 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
 
             {/* Validation Error Warning Banner */}
             {validationError && validationError.length > 0 && (
-              <div className="p-4 rounded-2xl bg-rose-950/95 border-2 border-rose-500 text-rose-100 space-y-2.5 animate-pulse shadow-xl shadow-rose-950/70">
+              <div className={`p-4 rounded-2xl border-2 space-y-2.5 animate-pulse shadow-xl ${
+                isLight
+                  ? 'bg-rose-50 border-rose-500 text-rose-950 shadow-rose-100'
+                  : 'bg-rose-950/95 border-2 border-rose-500 text-rose-100 shadow-rose-950/70'
+              }`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0" />
-                    <span className="font-display font-black text-xs sm:text-sm tracking-wide text-rose-200">
+                    <ShieldAlert className={`w-5 h-5 shrink-0 ${isLight ? 'text-rose-700' : 'text-rose-400'}`} />
+                    <span className={`font-display font-black text-xs sm:text-sm tracking-wide ${isLight ? 'text-rose-950' : 'text-rose-200'}`}>
                       ⛔ VENTILAÇÃO BLOQUEADA: PARÂMETROS OBRIGATÓRIOS AUSENTES
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-rose-200/90 leading-relaxed font-sans">
+                <p className={`text-xs leading-relaxed font-sans ${isLight ? 'text-rose-900 font-medium' : 'text-rose-200/90'}`}>
                   Para a segurança do paciente recém-intubado, é <strong>estritamente obrigatório</strong> programar todos os parâmetros iniciais no ventilador antes de acionar a ventilação mecânica.
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[11px] font-mono text-rose-300 font-bold">Faltam ajustar:</span>
+                  <span className={`text-[11px] font-mono font-bold ${isLight ? 'text-rose-900' : 'text-rose-300'}`}>Faltam ajustar:</span>
                   {validationError.map((item, idx) => (
                     <span
                       key={idx}
-                      className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-rose-900/90 border border-rose-400/60 text-rose-100 shadow-xs"
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold border shadow-xs ${
+                        isLight
+                          ? 'bg-rose-200 border-rose-400 text-rose-950'
+                          : 'bg-rose-900/90 border-rose-400/60 text-rose-100'
+                      }`}
                     >
                       ⚠️ {item}
                     </span>
@@ -472,7 +456,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
 
             {/* Mode Selector Tabs */}
             <div className="space-y-1.5">
-              <label className="text-xs font-display font-bold text-zinc-300 block">
+              <label className={`text-xs font-display font-bold block ${isLight ? 'text-slate-800' : 'text-zinc-300'}`}>
                 1. Selecione o Modo Ventilatório Inicial
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -489,7 +473,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                       mode === m
                         ? 'bg-cyan-600 border-cyan-400 text-white shadow-md shadow-cyan-950/50 scale-[1.02]'
                         : isLight
-                        ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                        ? 'bg-slate-100 border-slate-300 text-slate-800 hover:bg-slate-200 shadow-xs'
                         : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
@@ -508,29 +492,37 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                   <div
                     className={`p-3.5 rounded-xl border space-y-2 transition-all ${
                       tidalVolume <= 0
-                        ? 'border-rose-500/80 bg-rose-950/20 shadow-md shadow-rose-950/40'
-                        : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                        ? isLight
+                          ? 'border-rose-400 bg-rose-50 shadow-md'
+                          : 'border-rose-500/80 bg-rose-950/20 shadow-md shadow-rose-950/40'
+                        : isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-display font-bold block">
+                          <span className={`text-xs font-display font-bold block ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
                             Volume Corrente ($V_t$)
                           </span>
                           {tidalVolume <= 0 && (
-                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono text-[10px] font-bold animate-pulse">
+                            <span className={`px-2 py-0.5 rounded border font-mono text-[10px] font-bold animate-pulse ${
+                              isLight ? 'bg-rose-200 text-rose-950 border-rose-400' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                            }`}>
                               ⚠️ OBRIGATÓRIO (Definir Vt)
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] font-mono text-zinc-400">
+                        <span className={`text-[10px] font-mono ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-400'}`}>
                           Faixa protetora recomendada: 4 a 8 mL/kg de IBW
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-lg font-mono font-bold ${tidalVolume <= 0 ? 'text-rose-400 animate-pulse' : 'text-cyan-400'}`}>
-                          {tidalVolume} <span className="text-xs text-zinc-400">mL</span>
+                        <span className={`text-lg font-mono font-bold ${
+                          tidalVolume <= 0
+                            ? isLight ? 'text-rose-700 animate-pulse font-black' : 'text-rose-400 animate-pulse'
+                            : isLight ? 'text-cyan-800 font-black' : 'text-cyan-400'
+                        }`}>
+                          {tidalVolume} <span className={`text-xs ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-400'}`}>mL</span>
                         </span>
                       </div>
                     </div>
@@ -538,7 +530,9 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                       <button
                         type="button"
                         onClick={() => handleVtChange(Math.max(0, tidalVolume - 10))}
-                        className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-mono font-bold text-xs flex items-center justify-center cursor-pointer"
+                        className={`w-7 h-7 rounded-lg font-mono font-bold text-xs flex items-center justify-center cursor-pointer ${
+                          isLight ? 'bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300' : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                        }`}
                       >
                         -
                       </button>
@@ -549,12 +543,14 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         step={10}
                         value={tidalVolume}
                         onChange={(e) => handleVtChange(Number(e.target.value))}
-                        className="flex-1 accent-cyan-400 h-2 bg-zinc-800 rounded-none cursor-pointer"
+                        className={`flex-1 accent-cyan-600 h-2 cursor-pointer ${isLight ? 'bg-slate-300' : 'bg-zinc-800'}`}
                       />
                       <button
                         type="button"
                         onClick={() => handleVtChange(Math.min(800, tidalVolume + 10))}
-                        className="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-mono font-bold text-xs flex items-center justify-center cursor-pointer"
+                        className={`w-7 h-7 rounded-lg font-mono font-bold text-xs flex items-center justify-center cursor-pointer ${
+                          isLight ? 'bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300' : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                        }`}
                       >
                         +
                       </button>
@@ -566,22 +562,24 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     <div
                       className={`p-3.5 rounded-2xl border space-y-2 transition-all ${
                         inspiratoryFlow <= 0 && calculatedTiVCV <= 0
-                          ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
-                          : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                          ? isLight
+                            ? 'border-rose-400 bg-rose-50 shadow-md'
+                            : 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                          : isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-display font-bold">Fluxo Inspiratório (VCV)</span>
+                          <span className={`text-xs font-display font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>Fluxo Inspiratório (VCV)</span>
                           {inspiratoryFlow <= 0 && (
-                            <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIGATÓRIO</span>
+                            <span className={`text-[9px] font-mono font-bold ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>⚠️ OBRIGATÓRIO</span>
                           )}
                         </div>
                         <div className="text-right">
-                          <span className="font-mono font-bold text-cyan-400 text-sm block">
-                            {inspiratoryFlow} <span className="text-[10px] text-zinc-400">L/min</span>
+                          <span className={`font-mono font-bold text-sm block ${isLight ? 'text-cyan-800 font-black' : 'text-cyan-400'}`}>
+                            {inspiratoryFlow} <span className={`text-[10px] ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-400'}`}>L/min</span>
                           </span>
-                          <span className="text-[10px] font-mono text-emerald-400 font-semibold block">
+                          <span className={`text-[10px] font-mono font-semibold block ${isLight ? 'text-emerald-700 font-bold' : 'text-emerald-400'}`}>
                             T_i Resultante: {calculatedTiVCV > 0 ? `${calculatedTiVCV}s` : '--'}
                           </span>
                         </div>
@@ -593,23 +591,29 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         step={5}
                         value={inspiratoryFlow}
                         onChange={(e) => handleFlowChange(Number(e.target.value))}
-                        className="w-full accent-cyan-400 h-2 bg-zinc-800 cursor-pointer"
+                        className={`w-full accent-cyan-600 h-2 cursor-pointer ${isLight ? 'bg-slate-300' : 'bg-zinc-800'}`}
                       />
-                      <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 pt-1 border-t border-zinc-800/60">
+                      <div className={`flex items-center justify-between text-[10px] font-mono pt-1 border-t ${
+                        isLight ? 'text-slate-600 border-slate-200 font-medium' : 'text-zinc-400 border-zinc-800/60'
+                      }`}>
                         <span>Ajuste rápido de Ti:</span>
                         <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => handleTiChangeInVCV(Math.max(0.4, Number((calculatedTiVCV - 0.1).toFixed(2))))}
-                            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-bold cursor-pointer"
+                            className={`px-2 py-0.5 rounded font-bold cursor-pointer ${
+                              isLight ? 'bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300' : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                            }`}
                           >
                             -0.1s
                           </button>
-                          <span className="text-emerald-400 font-bold px-1">{calculatedTiVCV > 0 ? `${calculatedTiVCV}s` : '1.0s'}</span>
+                          <span className={`font-bold px-1 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>{calculatedTiVCV > 0 ? `${calculatedTiVCV}s` : '1.0s'}</span>
                           <button
                             type="button"
                             onClick={() => handleTiChangeInVCV(Math.min(3.0, Number((calculatedTiVCV + 0.1).toFixed(2))))}
-                            className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-white font-bold cursor-pointer"
+                            className={`px-2 py-0.5 rounded font-bold cursor-pointer ${
+                              isLight ? 'bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300' : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                            }`}
                           >
                             +0.1s
                           </button>
@@ -619,10 +623,10 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
 
                     <div
                       className={`p-3.5 rounded-2xl border space-y-2 ${
-                        isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                        isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
-                      <span className="text-xs font-display font-bold block">Forma de Onda de Fluxo</span>
+                      <span className={`text-xs font-display font-bold block ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>Forma de Onda de Fluxo</span>
                       <div className="grid grid-cols-2 gap-1.5 font-mono text-xs">
                         <button
                           type="button"
@@ -630,6 +634,8 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                           className={`py-1.5 rounded-xl border transition-colors cursor-pointer ${
                             flowWaveform === 'decelerating'
                               ? 'bg-cyan-600 border-cyan-400 text-white font-bold shadow-md'
+                              : isLight
+                              ? 'bg-slate-200 border-slate-300 text-slate-800 font-semibold hover:bg-slate-300'
                               : 'bg-zinc-800 border-zinc-700 text-zinc-400'
                           }`}
                         >
@@ -641,6 +647,8 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                           className={`py-1.5 rounded-xl border transition-colors cursor-pointer ${
                             flowWaveform === 'square'
                               ? 'bg-cyan-600 border-cyan-400 text-white font-bold shadow-md'
+                              : isLight
+                              ? 'bg-slate-200 border-slate-300 text-slate-800 font-semibold hover:bg-slate-300'
                               : 'bg-zinc-800 border-zinc-700 text-zinc-400'
                           }`}
                         >
@@ -657,19 +665,21 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     <div
                       className={`p-3 rounded-xl border space-y-1.5 transition-all ${
                         inspiratoryPressure <= 0
-                          ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
-                          : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                          ? isLight
+                            ? 'border-rose-400 bg-rose-50 shadow-md'
+                            : 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                          : isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-display font-bold">Pressão Insp. (Pinsp)</span>
+                          <span className={`text-xs font-display font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>Pressão Insp. (Pinsp)</span>
                           {inspiratoryPressure <= 0 && (
-                            <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIGATÓRIO</span>
+                            <span className={`text-[9px] font-mono font-bold ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>⚠️ OBRIGATÓRIO</span>
                           )}
                         </div>
-                        <span className="font-mono font-bold text-cyan-400 text-sm">
-                          {inspiratoryPressure} <span className="text-[10px] text-zinc-400">cmH₂O</span>
+                        <span className={`font-mono font-bold text-sm ${isLight ? 'text-cyan-800 font-black' : 'text-cyan-400'}`}>
+                          {inspiratoryPressure} <span className={`text-[10px] ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-400'}`}>cmH₂O</span>
                         </span>
                       </div>
                       <input
@@ -679,26 +689,28 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         step={1}
                         value={inspiratoryPressure}
                         onChange={(e) => setInspiratoryPressure(Number(e.target.value))}
-                        className="w-full accent-cyan-400 h-1.5 bg-zinc-800 cursor-pointer"
+                        className={`w-full accent-cyan-600 h-1.5 cursor-pointer ${isLight ? 'bg-slate-300' : 'bg-zinc-800'}`}
                       />
                     </div>
 
                     <div
                       className={`p-3 rounded-xl border space-y-1.5 transition-all ${
                         inspiratoryTimePCV <= 0
-                          ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
-                          : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                          ? isLight
+                            ? 'border-rose-400 bg-rose-50 shadow-md'
+                            : 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                          : isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-display font-bold">Tempo Inspiratório (Tinsp)</span>
+                          <span className={`text-xs font-display font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>Tempo Inspiratório (Tinsp)</span>
                           {inspiratoryTimePCV <= 0 && (
-                            <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIGATÓRIO</span>
+                            <span className={`text-[9px] font-mono font-bold ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>⚠️ OBRIGATÓRIO</span>
                           )}
                         </div>
-                        <span className="font-mono font-bold text-cyan-400 text-sm">
-                          {inspiratoryTimePCV} <span className="text-[10px] text-zinc-400">s</span>
+                        <span className={`font-mono font-bold text-sm ${isLight ? 'text-cyan-800 font-black' : 'text-cyan-400'}`}>
+                          {inspiratoryTimePCV} <span className={`text-[10px] ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-400'}`}>s</span>
                         </span>
                       </div>
                       <input
@@ -708,7 +720,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                         step={0.05}
                         value={inspiratoryTimePCV}
                         onChange={(e) => setInspiratoryTimePCV(Number(e.target.value))}
-                        className="w-full accent-cyan-400 h-1.5 bg-zinc-800 cursor-pointer"
+                        className={`w-full accent-cyan-600 h-1.5 cursor-pointer ${isLight ? 'bg-slate-300' : 'bg-zinc-800'}`}
                       />
                     </div>
                   </div>
@@ -721,19 +733,21 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                 <div
                   className={`p-3 rounded-xl border space-y-1.5 transition-all ${
                     respiratoryRate <= 0
-                      ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
-                      : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                      ? isLight
+                        ? 'border-rose-400 bg-rose-50 shadow-md'
+                        : 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                      : isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-display font-bold">Freq. Resp. (FR)</span>
+                      <span className={`text-xs font-display font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>Freq. Resp. (FR)</span>
                       {respiratoryRate <= 0 && (
-                        <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIG.</span>
+                        <span className={`text-[9px] font-mono font-bold ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>⚠️ OBRIG.</span>
                       )}
                     </div>
-                    <span className="font-mono font-bold text-amber-400 text-sm">
-                      {respiratoryRate} <span className="text-[10px] text-zinc-400">rpm</span>
+                    <span className={`font-mono font-bold text-sm ${isLight ? 'text-amber-800 font-black' : 'text-amber-400'}`}>
+                      {respiratoryRate} <span className={`text-[10px] ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-400'}`}>rpm</span>
                     </span>
                   </div>
                   <input
@@ -743,9 +757,9 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     step={1}
                     value={respiratoryRate}
                     onChange={(e) => setRespiratoryRate(Number(e.target.value))}
-                    className="w-full accent-amber-400 h-1.5 bg-zinc-800 cursor-pointer"
+                    className={`w-full accent-amber-500 h-1.5 cursor-pointer ${isLight ? 'bg-slate-300' : 'bg-zinc-800'}`}
                   />
-                  <span className="text-[9px] font-mono text-zinc-500 block">
+                  <span className={`text-[9px] font-mono block ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-500'}`}>
                     Ventilação Minuto: ~{((tidalVolume * respiratoryRate) / 1000).toFixed(1)} L/min
                   </span>
                 </div>
@@ -754,19 +768,21 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                 <div
                   className={`p-3 rounded-xl border space-y-1.5 transition-all ${
                     peep <= 0
-                      ? 'border-rose-500/80 bg-rose-950/20 shadow-md'
-                      : isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                      ? isLight
+                        ? 'border-rose-400 bg-rose-50 shadow-md'
+                        : 'border-rose-500/80 bg-rose-950/20 shadow-md'
+                      : isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
-                      <span className="text-xs font-display font-bold">PEEP</span>
+                      <span className={`text-xs font-display font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>PEEP</span>
                       {peep <= 0 && (
-                        <span className="text-[9px] font-mono text-rose-400 font-bold">⚠️ OBRIG.</span>
+                        <span className={`text-[9px] font-mono font-bold ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>⚠️ OBRIG.</span>
                       )}
                     </div>
-                    <span className="font-mono font-bold text-emerald-400 text-sm">
-                      {peep} <span className="text-[10px] text-zinc-400">cmH₂O</span>
+                    <span className={`font-mono font-bold text-sm ${isLight ? 'text-emerald-700 font-black' : 'text-emerald-400'}`}>
+                      {peep} <span className={`text-[10px] ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-400'}`}>cmH₂O</span>
                     </span>
                   </div>
                   <input
@@ -776,20 +792,20 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     step={1}
                     value={peep}
                     onChange={(e) => setPeep(Number(e.target.value))}
-                    className="w-full accent-emerald-400 h-1.5 bg-zinc-800 cursor-pointer"
+                    className={`w-full accent-emerald-600 h-1.5 cursor-pointer ${isLight ? 'bg-slate-300' : 'bg-zinc-800'}`}
                   />
                 </div>
 
                 {/* FiO2 */}
                 <div
                   className={`p-3 rounded-xl border space-y-1.5 ${
-                    isLight ? 'bg-slate-50 border-slate-200' : 'bg-zinc-900/60 border-zinc-800'
+                    isLight ? 'bg-slate-50 border-slate-300 shadow-xs' : 'bg-zinc-900/60 border-zinc-800'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-display font-bold">FiO₂ (Ar Ar)</span>
-                    <span className="font-mono font-bold text-rose-400 text-sm">
-                      {fio2} <span className="text-[10px] text-zinc-400">%</span>
+                    <span className={`text-xs font-display font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>FiO₂ (Ar Ar)</span>
+                    <span className={`font-mono font-bold text-sm ${isLight ? 'text-rose-700 font-black' : 'text-rose-400'}`}>
+                      {fio2} <span className={`text-[10px] ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-400'}`}>%</span>
                     </span>
                   </div>
                   <input
@@ -799,9 +815,9 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                     step={1}
                     value={fio2}
                     onChange={(e) => setFio2(Math.max(21, Number(e.target.value)))}
-                    className="w-full accent-rose-400 h-1.5 bg-zinc-800 cursor-pointer"
+                    className={`w-full accent-rose-600 h-1.5 cursor-pointer ${isLight ? 'bg-slate-300' : 'bg-zinc-800'}`}
                   />
-                  <span className="text-[9px] font-mono text-zinc-500 block">
+                  <span className={`text-[9px] font-mono block ${isLight ? 'text-slate-600 font-semibold' : 'text-zinc-500'}`}>
                     Ar ambiente mínimo: 21% FiO₂
                   </span>
                 </div>
@@ -809,18 +825,18 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
             </div>
 
             {/* Confirmation & Launch Action */}
-            <div className="pt-3 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className={`pt-3 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${isLight ? 'border-slate-200' : 'border-zinc-800'}`}>
               <div className="space-y-0.5 text-center sm:text-left">
                 {isMissingParams ? (
-                  <span className="text-xs font-mono font-bold text-rose-400 block animate-pulse">
+                  <span className={`text-xs font-mono font-bold block animate-pulse ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>
                     ⚠️ Parâmetros de admissão incompletos ({missingList.length} ausentes)
                   </span>
                 ) : (
-                  <span className="text-xs font-mono font-bold text-emerald-400 block">
+                  <span className={`text-xs font-mono font-bold block ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
                     ✓ Configuração de Admissão Pronta
                   </span>
                 )}
-                <span className="text-[11px] text-zinc-400">
+                <span className={`text-[11px] ${isLight ? 'text-slate-600 font-medium' : 'text-zinc-400'}`}>
                   Modo {mode} • Vt {tidalVolume} mL • FR {respiratoryRate} rpm • PEEP {peep} cmH₂O • FiO₂ {fio2}%
                 </span>
               </div>
@@ -830,13 +846,15 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
                 onClick={handleConfirmAndStart}
                 className={`w-full sm:w-auto px-8 py-3.5 rounded-2xl font-mono font-bold text-sm shadow-xl flex items-center justify-center gap-2.5 cursor-pointer transition-all ${
                   isMissingParams
-                    ? 'bg-gradient-to-r from-amber-600 via-rose-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white shadow-rose-950/60 animate-pulse'
+                    ? isLight
+                      ? 'bg-rose-700 hover:bg-rose-800 text-white shadow-rose-200 animate-pulse'
+                      : 'bg-gradient-to-r from-amber-600 via-rose-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white shadow-rose-950/60 animate-pulse'
                     : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white shadow-emerald-950/60 hover:scale-[1.02]'
                 }`}
               >
                 {isMissingParams ? (
                   <>
-                    <AlertTriangle className="w-5 h-5 text-amber-200" />
+                    <AlertTriangle className={`w-5 h-5 ${isLight ? 'text-white' : 'text-amber-200'}`} />
                     <span>INICIAR VENTILAÇÃO ({missingList.length} PENDENTES)</span>
                   </>
                 ) : (

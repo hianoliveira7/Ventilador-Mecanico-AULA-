@@ -186,8 +186,8 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Canvas Master Background (Deep Dark Medical Glass)
-    ctx.fillStyle = isLight ? '#f1f5f9' : '#05070b';
+    // Canvas Master Background (Crisp Medical Foundation)
+    ctx.fillStyle = isLight ? '#f8fafc' : '#05070b';
     ctx.fillRect(0, 0, width, height);
 
     // ============================================================================
@@ -205,11 +205,28 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         ctx.beginPath();
         ctx.roundRect(p1Left + 2, 2, panelW - 4, height - 4, 8);
         ctx.fill();
+        if (isLight) {
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        ctx.beginPath();
         ctx.roundRect(p2Left + 2, 2, panelW - 4, height - 4, 8);
         ctx.fill();
+        if (isLight) {
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
       } else {
         ctx.fillRect(p1Left + 2, 2, panelW - 4, height - 4);
         ctx.fillRect(p2Left + 2, 2, panelW - 4, height - 4);
+        if (isLight) {
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(p1Left + 2, 2, panelW - 4, height - 4);
+          ctx.strokeRect(p2Left + 2, 2, panelW - 4, height - 4);
+        }
       }
 
       // Draw Grid & Axes for P-V Loop (Left)
@@ -236,7 +253,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         ctx.stroke();
       }
 
-      ctx.strokeStyle = isLight ? '#94a3b8' : '#334155';
+      ctx.strokeStyle = isLight ? '#64748b' : '#334155';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(lpPadL, lpPadT);
@@ -245,7 +262,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       ctx.stroke();
 
       ctx.font = 'bold 9px monospace';
-      ctx.fillStyle = isLight ? '#64748b' : '#64748b';
+      ctx.fillStyle = isLight ? '#334155' : '#64748b';
       ctx.textAlign = 'right';
       ctx.fillText('0', lpPadL - 4, lpPadB + 3);
       ctx.fillText(`${volumeMax / 2}`, lpPadL - 4, lpPadT + lpH / 2 + 3);
@@ -281,7 +298,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         ctx.stroke();
       }
 
-      ctx.strokeStyle = isLight ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.35)';
+      ctx.strokeStyle = isLight ? 'rgba(5, 150, 105, 0.5)' : 'rgba(16, 185, 129, 0.35)';
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
       ctx.moveTo(lfPadL, lfZeroY);
@@ -289,7 +306,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       ctx.stroke();
       ctx.setLineDash([]);
 
-      ctx.strokeStyle = isLight ? '#94a3b8' : '#334155';
+      ctx.strokeStyle = isLight ? '#64748b' : '#334155';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(lfPadL, lfPadT);
@@ -299,7 +316,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       ctx.stroke();
 
       ctx.font = 'bold 9px monospace';
-      ctx.fillStyle = isLight ? '#64748b' : '#64748b';
+      ctx.fillStyle = isLight ? '#334155' : '#64748b';
       ctx.textAlign = 'right';
       ctx.fillText(`+${flowMax}`, lfPadL - 4, lfPadT + 3);
       ctx.fillText('0', lfPadL - 4, lfZeroY + 3);
@@ -312,11 +329,11 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
       // Headers
       ctx.font = 'bold 11px system-ui, sans-serif';
-      ctx.fillStyle = isLight ? '#0284c7' : '#00e5ff';
+      ctx.fillStyle = isLight ? '#0369a1' : '#00e5ff';
       ctx.textAlign = 'left';
       ctx.fillText('ALÇA PRESSÃO × VOLUME (P-V)', p1Left + 14, 22);
 
-      ctx.fillStyle = isLight ? '#059669' : '#10b981';
+      ctx.fillStyle = isLight ? '#047857' : '#10b981';
       ctx.fillText('ALÇA FLUXO × VOLUME (F-V)', p2Left + 14, 22);
 
       ctx.restore();
@@ -364,8 +381,18 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         ctx.beginPath();
         ctx.roundRect(2, top + 1, width - 4, bottom - top - 2, 8);
         ctx.fill();
+        if (isLight) {
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
       } else {
         ctx.fillRect(2, top + 1, width - 4, bottom - top - 2);
+        if (isLight) {
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(2, top + 1, width - 4, bottom - top - 2);
+        }
       }
     };
 
@@ -380,7 +407,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       ctx.save();
       const numHoriz = 4;
       const rowStep = usableH / numHoriz;
-      ctx.strokeStyle = isLight ? '#f1f5f9' : '#101522';
+      ctx.strokeStyle = isLight ? '#e2e8f0' : '#101522';
       ctx.lineWidth = 1;
 
       for (let r = 1; r <= numHoriz; r++) {
@@ -402,7 +429,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
 
       if (hasZeroLine) {
-        ctx.strokeStyle = isLight ? 'rgba(100, 116, 139, 0.4)' : 'rgba(148, 163, 184, 0.35)';
+        ctx.strokeStyle = isLight ? 'rgba(71, 85, 105, 0.45)' : 'rgba(148, 163, 184, 0.35)';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(padLeft, zeroY);
@@ -422,7 +449,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
 
     // Y Axis Numerical Scale Labels
     ctx.font = 'bold 9px monospace';
-    ctx.fillStyle = isLight ? '#64748b' : '#64748b';
+    ctx.fillStyle = isLight ? '#334155' : '#64748b';
     ctx.textAlign = 'right';
 
     ctx.fillText(`${effPMax}`, padLeft - 6, t1Top + topSafety + 5);
@@ -478,26 +505,26 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       'Paw (cmH₂O)',
       padLeft + 6,
       t1Top + 6,
-      isLight ? '#0284c7' : '#00e5ff',
-      'rgba(0, 229, 255, 0.1)',
-      'rgba(0, 229, 255, 0.3)'
+      isLight ? '#0369a1' : '#00e5ff',
+      isLight ? 'rgba(2, 132, 199, 0.1)' : 'rgba(0, 229, 255, 0.1)',
+      isLight ? 'rgba(2, 132, 199, 0.35)' : 'rgba(0, 229, 255, 0.3)'
     );
     drawBadge(
       'Fluxo (L/min)',
       padLeft + 6,
       t2Top + 6,
-      isLight ? '#059669' : '#10b981',
-      'rgba(16, 185, 129, 0.1)',
-      'rgba(16, 185, 129, 0.3)'
+      isLight ? '#047857' : '#10b981',
+      isLight ? 'rgba(5, 150, 105, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+      isLight ? 'rgba(5, 150, 105, 0.35)' : 'rgba(16, 185, 129, 0.3)'
     );
     if (!isSplit) {
       drawBadge(
         'Volume (mL)',
         padLeft + 6,
         t3Top + 6,
-        isLight ? '#d97706' : '#f59e0b',
-        'rgba(245, 158, 11, 0.1)',
-        'rgba(245, 158, 11, 0.3)'
+        isLight ? '#b45309' : '#f59e0b',
+        isLight ? 'rgba(217, 119, 6, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+        isLight ? 'rgba(217, 119, 6, 0.35)' : 'rgba(245, 158, 11, 0.3)'
       );
     }
 
@@ -743,7 +770,7 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         backCtx.fillStyle = item.color;
         backCtx.fillText(item.value, currentX, topY + 16);
 
-        backCtx.fillStyle = isLight ? '#64748b' : '#64748b';
+        backCtx.fillStyle = isLight ? '#334155' : '#64748b';
         backCtx.fillText(item.label, currentX - valWidth - 2, topY + 16);
 
         currentX -= valWidth + lblWidth + 14;
@@ -1067,26 +1094,22 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       backCtx.restore();
     }
 
-    // Sweep Erase Bar with Neon Scanner Tip
+    // Sweep Scanner Bar
     if (!isFrozen) {
       const sweepX = padLeft + (sweepIdx / maxPoints) * chartW;
-      const eraseW = 34;
-      const grad = backCtx.createLinearGradient(sweepX - eraseW, 0, sweepX + 4, 0);
-      if (isLight) {
-        grad.addColorStop(0, 'rgba(241, 245, 249, 0)');
-        grad.addColorStop(0.7, 'rgba(241, 245, 249, 0.95)');
-        grad.addColorStop(1, '#f1f5f9');
-      } else {
+
+      if (!isLight) {
+        const eraseW = 28;
+        const grad = backCtx.createLinearGradient(sweepX - eraseW, 0, sweepX + 4, 0);
         grad.addColorStop(0, 'rgba(5, 7, 11, 0)');
-        grad.addColorStop(0.7, 'rgba(5, 7, 11, 0.95)');
+        grad.addColorStop(0.7, 'rgba(5, 7, 11, 0.85)');
         grad.addColorStop(1, '#05070b');
+        backCtx.fillStyle = grad;
+        backCtx.fillRect(Math.max(padLeft, sweepX - eraseW), 0, eraseW + 4, height);
       }
 
-      backCtx.fillStyle = grad;
-      backCtx.fillRect(Math.max(padLeft, sweepX - eraseW), 0, eraseW + 4, height);
-
       backCtx.save();
-      backCtx.strokeStyle = isLight ? 'rgba(2, 132, 199, 0.9)' : 'rgba(0, 229, 255, 0.95)';
+      backCtx.strokeStyle = isLight ? '#0284c7' : 'rgba(0, 229, 255, 0.95)';
       if (!isLight) {
         backCtx.shadowColor = 'rgba(0, 229, 255, 0.9)';
         backCtx.shadowBlur = 10;
@@ -1200,17 +1223,17 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
       }
 
       backCtx.font = 'bold 10px monospace';
-      backCtx.fillStyle = isLight ? '#475569' : '#94a3b8';
+      backCtx.fillStyle = isLight ? '#1e293b' : '#94a3b8';
       backCtx.textAlign = 'left';
       backCtx.fillText(`Tempo: ${s.time.toFixed(2)} s`, tipX + 12, tipY + 20);
 
-      backCtx.fillStyle = isLight ? '#0284c7' : '#00e5ff';
+      backCtx.fillStyle = isLight ? '#0369a1' : '#00e5ff';
       backCtx.fillText(`Paw:   ${s.pressure.toFixed(1)} cmH₂O`, tipX + 12, tipY + 40);
 
-      backCtx.fillStyle = isLight ? '#059669' : '#10b981';
+      backCtx.fillStyle = isLight ? '#047857' : '#10b981';
       backCtx.fillText(`Fluxo: ${s.flow.toFixed(1)} L/min`, tipX + 12, tipY + 60);
 
-      backCtx.fillStyle = isLight ? '#d97706' : '#f59e0b';
+      backCtx.fillStyle = isLight ? '#b45309' : '#f59e0b';
       backCtx.fillText(`Vol:   ${s.volume} mL`, tipX + 12, tipY + 80);
       backCtx.restore();
     }

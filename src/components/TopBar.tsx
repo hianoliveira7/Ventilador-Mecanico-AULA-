@@ -28,6 +28,7 @@ import {
   Target,
   BookOpen,
   ShieldCheck,
+  Tv,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -48,6 +49,7 @@ interface TopBarProps {
   onOpenRolePortal?: () => void;
   onOpenTutorial?: () => void;
   onOpenTeacherAdmin?: () => void;
+  onOpenMirrorGrid?: () => void;
   onOpenClinicalCases?: () => void;
   onOpenQuiz?: () => void;
   onOpenKahoot?: () => void;
@@ -76,6 +78,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenRolePortal,
   onOpenTutorial,
   onOpenTeacherAdmin,
+  onOpenMirrorGrid,
   onOpenClinicalCases,
   onOpenQuiz,
   onOpenKahoot,
@@ -202,7 +205,9 @@ export const TopBar: React.FC<TopBarProps> = ({
                   : 'bg-[#0e1222] border-blue-700/80 text-zinc-100 shadow-2xl shadow-blue-950/80'
               }`}
             >
-              <div className="px-2.5 py-1 text-[10px] font-mono font-black uppercase text-blue-400 border-b border-blue-500/20 mb-1">
+              <div className={`px-2.5 py-1 text-[10px] font-mono font-black uppercase border-b mb-1 ${
+                isLight ? 'text-blue-800 border-slate-200' : 'text-blue-400 border-blue-500/20'
+              }`}>
                 Portal de Estudos & Configurações
               </div>
 
@@ -213,26 +218,29 @@ export const TopBar: React.FC<TopBarProps> = ({
                     setIsEstudosOpen(false);
                     onOpenKahoot();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-blue-500/20 text-left transition-colors cursor-pointer"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                    isLight ? 'hover:bg-blue-50 text-blue-900 font-bold' : 'hover:bg-blue-500/20 text-blue-400 font-bold'
+                  }`}
                 >
-                  <Trophy className="w-4 h-4 text-blue-400 shrink-0" />
+                  <Trophy className={`w-4 h-4 shrink-0 ${isLight ? 'text-blue-700' : 'text-blue-400'}`} />
                   <div>
-                    <span className="font-bold block text-blue-400">Desafios Kahoot</span>
+                    <span className="block">Desafios Kahoot</span>
                   </div>
                 </button>
               )}
-              {/* Add Alarm and Audio here later */}
               <button
                 type="button"
                 onClick={() => {
                   setIsEstudosOpen(false);
                   onOpenAlarmsModal();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-blue-500/20 text-left transition-colors cursor-pointer"
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                  isLight ? 'hover:bg-blue-50 text-blue-900 font-bold' : 'hover:bg-blue-500/20 text-blue-400 font-bold'
+                }`}
               >
-                <Bell className="w-4 h-4 text-blue-400 shrink-0" />
+                <Bell className={`w-4 h-4 shrink-0 ${isLight ? 'text-blue-700' : 'text-blue-400'}`} />
                 <div>
-                  <span className="font-bold block text-blue-400">Configuração de Alarmes</span>
+                  <span className="block">Configuração de Alarmes</span>
                 </div>
               </button>
               <button
@@ -241,11 +249,13 @@ export const TopBar: React.FC<TopBarProps> = ({
                   setIsEstudosOpen(false);
                   onOpenAudioSettings();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-blue-500/20 text-left transition-colors cursor-pointer"
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                  isLight ? 'hover:bg-blue-50 text-blue-900 font-bold' : 'hover:bg-blue-500/20 text-blue-400 font-bold'
+                }`}
               >
-                <Volume2 className="w-4 h-4 text-blue-400 shrink-0" />
+                <Volume2 className={`w-4 h-4 shrink-0 ${isLight ? 'text-blue-700' : 'text-blue-400'}`} />
                 <div>
-                  <span className="font-bold block text-blue-400">Configuração de Áudio</span>
+                  <span className="block">Configuração de Áudio</span>
                 </div>
               </button>
             </div>
@@ -285,24 +295,46 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Context Button based on Role */}
         {userRole === 'teacher' ? (
-          onOpenTeacherAdmin && (
-            <button
-              onClick={() => {
-                audioEngine.playClick(950);
-                onOpenTeacherAdmin();
-              }}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-md shrink-0 ${
-                isLight
-                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-500 ring-2 ring-amber-500/20'
-                  : 'bg-amber-400 hover:bg-amber-300 text-slate-950 border-amber-300 ring-2 ring-amber-400/30'
-              }`}
-              title="Acessar Painel Administrativo do Docente (ADM, Kahoot, Turmas e Quizes)"
-            >
-              <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
-              <span className="font-display font-black hidden xl:inline">Painel ADM</span>
-              <span className="font-display font-black xl:hidden">ADM</span>
-            </button>
-          )
+          <div className="flex items-center gap-1.5">
+            {onOpenMirrorGrid && (
+              <button
+                type="button"
+                onClick={() => {
+                  audioEngine.playClick(950);
+                  onOpenMirrorGrid();
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-md shrink-0 ${
+                  isLight
+                    ? 'bg-cyan-600 hover:bg-cyan-500 text-white border-cyan-500'
+                    : 'bg-cyan-600/90 hover:bg-cyan-500 text-white border-cyan-400'
+                }`}
+                title="Modo Espelho / Projetor TV da Sala de Aula"
+              >
+                <Tv className="w-4 h-4 fill-current" />
+                <span className="font-display font-black hidden xl:inline">Projetor / TV</span>
+                <span className="font-display font-black xl:hidden">Projetor</span>
+              </button>
+            )}
+
+            {onOpenTeacherAdmin && (
+              <button
+                onClick={() => {
+                  audioEngine.playClick(950);
+                  onOpenTeacherAdmin();
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-md shrink-0 ${
+                  isLight
+                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-500 ring-2 ring-amber-500/20'
+                    : 'bg-amber-400 hover:bg-amber-300 text-slate-950 border-amber-300 ring-2 ring-amber-400/30'
+                }`}
+                title="Acessar Painel Administrativo do Docente (ADM, Kahoot, Turmas e Quizes)"
+              >
+                <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
+                <span className="font-display font-black hidden xl:inline">Painel ADM</span>
+                <span className="font-display font-black xl:hidden">ADM</span>
+              </button>
+            )}
+          </div>
         ) : (
           onOpenTutorial && (
             <button
@@ -323,14 +355,24 @@ export const TopBar: React.FC<TopBarProps> = ({
         {/* Theme Toggle (Light / Dark) */}
         <button
           onClick={handleToggleTheme}
-          className={`p-1 sm:p-1.5 rounded-lg border transition-all cursor-pointer shadow-xs shrink-0 hidden sm:flex ${
+          className={`px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 flex items-center gap-1.5 ${
             isLight
-              ? 'bg-slate-100 hover:bg-slate-200 text-amber-700 border-slate-300'
-              : 'bg-[#10121c] hover:bg-[#181b2a] text-amber-300 border-zinc-800'
+              ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-300'
+              : 'bg-zinc-800 hover:bg-zinc-700 text-amber-300 border-zinc-700'
           }`}
           title={isLight ? 'Mudar para Modo Escuro' : 'Mudar para Modo Claro'}
         >
-          {isLight ? <Moon className="w-3.5 h-3.5 text-indigo-700" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
+          {isLight ? (
+            <>
+              <Moon className="w-3.5 h-3.5 text-indigo-700" />
+              <span>Modo Escuro</span>
+            </>
+          ) : (
+            <>
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <span>Modo Claro</span>
+            </>
+          )}
         </button>
 
         {/* Hamburger Menu */}

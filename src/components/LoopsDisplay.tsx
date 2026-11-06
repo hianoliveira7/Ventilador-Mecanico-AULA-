@@ -189,7 +189,7 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
       ctx.beginPath();
       ctx.roundRect(4, 4, width - 8, height - 8, 12);
       ctx.fill();
-      ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.04)';
+      ctx.strokeStyle = isLight ? '#cbd5e1' : 'rgba(255, 255, 255, 0.04)';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -206,7 +206,7 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     const pStep = pMax >= 80 ? 20 : 10;
     const vStep = vMax >= 1000 ? 250 : 200;
 
-    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.04)';
+    ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1;
 
     // Vertical P grid
@@ -217,8 +217,8 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
       ctx.lineTo(x, height - padBottom);
       ctx.stroke();
 
-      ctx.font = '9px monospace';
-      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillStyle = isLight ? '#334155' : '#64748b';
       ctx.fillText(`${p}`, x - 5, height - padBottom + 16);
     }
 
@@ -230,13 +230,13 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
       ctx.lineTo(width - padRight, y);
       ctx.stroke();
 
-      ctx.font = '9px monospace';
-      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillStyle = isLight ? '#334155' : '#64748b';
       ctx.fillText(`${v}`, 10, y + 3);
     }
 
     // Axes
-    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.22)' : 'rgba(255, 255, 255, 0.14)';
+    ctx.strokeStyle = isLight ? '#64748b' : 'rgba(255, 255, 255, 0.14)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padLeft, padTop);
@@ -245,13 +245,13 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     ctx.stroke();
 
     // Axis Labels
-    ctx.font = 'bold 9px monospace';
-    ctx.fillStyle = isLight ? '#0284c7' : '#00e5ff';
+    ctx.font = 'bold 9.5px monospace';
+    ctx.fillStyle = isLight ? '#0369a1' : '#00e5ff';
     ctx.fillText('Pressão (Paw - cmH₂O) →', width - padRight - 130, height - 10);
     ctx.save();
     ctx.translate(14, padTop + 70);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = isLight ? '#d97706' : '#f59e0b';
+    ctx.fillStyle = isLight ? '#b45309' : '#f59e0b';
     ctx.fillText('Volume (mL) →', 0, 0);
     ctx.restore();
 
@@ -467,7 +467,7 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
       ctx.beginPath();
       ctx.roundRect(4, 4, width - 8, height - 8, 12);
       ctx.fill();
-      ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.04)';
+      ctx.strokeStyle = isLight ? '#cbd5e1' : 'rgba(255, 255, 255, 0.04)';
       ctx.lineWidth = 1;
       ctx.stroke();
     }
@@ -484,7 +484,7 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     const vStep = vMax >= 1000 ? 250 : 200;
     const zeroY = padTop + graphH / 2;
 
-    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.04)';
+    ctx.strokeStyle = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1;
 
     // Volume X grid
@@ -495,8 +495,8 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
       ctx.lineTo(x, height - padBottom);
       ctx.stroke();
 
-      ctx.font = '9px monospace';
-      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillStyle = isLight ? '#334155' : '#64748b';
       ctx.fillText(`${v}`, x - 5, height - padBottom + 16);
     }
 
@@ -509,13 +509,13 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
       ctx.lineTo(width - padRight, y);
       ctx.stroke();
 
-      ctx.font = '9px monospace';
-      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 9px monospace';
+      ctx.fillStyle = isLight ? '#334155' : '#64748b';
       ctx.fillText(`${f}`, 10, y + 3);
     });
 
     // Zero Flow Center Axis
-    ctx.strokeStyle = isLight ? 'rgba(5, 150, 105, 0.45)' : 'rgba(16, 185, 129, 0.35)';
+    ctx.strokeStyle = isLight ? 'rgba(5, 150, 105, 0.55)' : 'rgba(16, 185, 129, 0.35)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(padLeft, zeroY);
@@ -523,13 +523,13 @@ export const LoopsDisplay: React.FC<LoopsDisplayProps> = ({
     ctx.stroke();
 
     // Axis Labels
-    ctx.font = 'bold 9px monospace';
-    ctx.fillStyle = isLight ? '#d97706' : '#f59e0b';
+    ctx.font = 'bold 9.5px monospace';
+    ctx.fillStyle = isLight ? '#b45309' : '#f59e0b';
     ctx.fillText('Volume (mL) →', width - padRight - 85, height - 10);
     ctx.save();
     ctx.translate(14, padTop + 70);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = isLight ? '#059669' : '#10b981';
+    ctx.fillStyle = isLight ? '#047857' : '#10b981';
     ctx.fillText('Fluxo (L/min) →', 0, 0);
     ctx.restore();
 

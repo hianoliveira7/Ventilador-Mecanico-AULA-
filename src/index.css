@@ -25,7 +25,7 @@
 }
 
 .light-theme ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -34,7 +34,7 @@
 }
 
 .light-theme ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #94a3b8;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -42,7 +42,15 @@
 }
 
 .light-theme ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #64748b;
+}
+
+.light-theme {
+  color-scheme: light;
+}
+
+.light-theme input[type="range"] {
+  accent-color: #0284c7;
 }
 
 html, body, #root {

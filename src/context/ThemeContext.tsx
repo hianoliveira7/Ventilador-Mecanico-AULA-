@@ -10,10 +10,10 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'dark',
+  theme: 'light',
   setTheme: () => {},
   toggleTheme: () => {},
-  isLight: false,
+  isLight: true,
 });
 
 export const useTheme = () => useContext(ThemeContext);
@@ -22,9 +22,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       const saved = localStorage.getItem('vm_fisio_theme');
-      return saved === 'light' ? 'light' : 'dark';
+      return saved === 'dark' ? 'dark' : 'light';
     } catch {
-      return 'dark';
+      return 'light';
     }
   });
 

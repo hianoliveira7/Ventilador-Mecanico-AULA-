@@ -20,6 +20,8 @@ import {
   Layers,
   ArrowLeft,
   Stethoscope,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
@@ -58,7 +60,7 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
   onOpenAsynchronies,
   onOpenFlashcards,
 }) => {
-  const { isLight } = useTheme();
+  const { isLight, toggleTheme } = useTheme();
   const [isTeacherAuthOpen, setIsTeacherAuthOpen] = useState(false);
   const [pendingTeacherAction, setPendingTeacherAction] = useState<(() => void) | null>(null);
 
@@ -106,21 +108,49 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
             : 'bg-gradient-to-b from-[#0d111d] to-[#070913] border-zinc-700 text-zinc-100'
         }`}
       >
-        {/* Top Close Button if onClose is available */}
-        {onClose && (
+        {/* Top Theme Toggle & Close Buttons */}
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
           <button
             type="button"
-            onClick={onClose}
-            className={`absolute top-4 right-4 z-20 p-2 rounded-full border transition-all cursor-pointer ${
+            onClick={() => {
+              audioEngine.playClick(1100);
+              toggleTheme();
+            }}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md ${
               isLight
-                ? 'bg-white/80 hover:bg-white text-slate-700 border-slate-200 shadow-sm'
-                : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border-zinc-700'
+                ? 'bg-white hover:bg-slate-100 text-slate-900 border-slate-300'
+                : 'bg-zinc-900 hover:bg-zinc-800 text-amber-300 border-zinc-700'
             }`}
-            title="Fechar Portal"
+            title={isLight ? 'Mudar para Modo Escuro' : 'Mudar para Modo Claro'}
           >
-            <X className="w-5 h-5" />
+            {isLight ? (
+              <>
+                <Moon className="w-4 h-4 text-indigo-700" />
+                <span>Modo Escuro</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span>Modo Claro</span>
+              </>
+            )}
           </button>
-        )}
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                isLight
+                  ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
+                  : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-zinc-700'
+              }`}
+              title="Fechar Portal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
 
         {/* Top Hero Banner */}
         <div
@@ -145,183 +175,159 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
         {/* STEP 1: PERFIL SELECTION */}
         {viewStep === 'profile' && (
           <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-            {/* PROFILE 1: ALUNO / ESTUDANTE */}
-            <div
-              className={`rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl ${
-                isLight
-                  ? 'bg-white border-cyan-300 shadow-md ring-2 ring-cyan-500/20'
-                  : 'bg-[#101526] border-cyan-800/80 hover:border-cyan-600'
-              }`}
-            >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                        isLight ? 'bg-cyan-100 text-cyan-800' : 'bg-cyan-950/90 text-cyan-300 border border-cyan-700/60'
-                      }`}
-                    >
-                      <GraduationCap className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-500 block">
-                        Perfil Estudante
-                      </span>
-                      <h2 className="text-xl font-display font-black">Ambiente do Aluno</h2>
-                    </div>
-                  </div>
-                  <span
-                    className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
-                      currentRole === 'student'
-                        ? isLight
-                          ? 'bg-cyan-600 text-white border-cyan-600'
-                          : 'bg-cyan-500 text-slate-950 font-black border-cyan-400'
-                        : isLight
-                        ? 'bg-cyan-50 text-cyan-900 border-cyan-300'
-                        : 'bg-cyan-950/60 text-cyan-300 border-cyan-800'
-                    }`}
-                  >
-                    {currentRole === 'student' ? 'Perfil Ativo' : 'Acesso Livre'}
-                  </span>
-                </div>
-
-                <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
-                  Acesse casos clínicos, Kahoot e simulações.
-                </p>
-
-                {/* Student Identification Input */}
-                <div className={`p-3.5 rounded-2xl border space-y-2 ${
-                  isLight ? 'bg-cyan-50/60 border-cyan-200' : 'bg-[#090d18] border-cyan-900/60'
-                }`}>
-                  <label className="text-xs font-mono font-bold uppercase text-cyan-400 block">
-                    Sua Identificação (Nome ou Apelido):
-                  </label>
-                  <input
-                    type="text"
-                    value={studentName}
-                    onChange={(e) => {
-                      setStudentName(e.target.value);
-                      localStorage.setItem('simulador_student_name', e.target.value);
-                    }}
-                    placeholder="Ex: Dra. Mariana Alencar"
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono transition-all outline-none ${
-                      isLight
-                        ? 'bg-white border-slate-300 text-slate-900 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20'
-                        : 'bg-[#121627] border-zinc-700 text-white focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20'
-                    }`}
-                  />
-                  <span className="text-[10px] font-mono text-cyan-500/80 block">
-                    ✓ Seu nome será gravado nos relatórios de desempenho e ranking.
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleConfirmStudentProfile}
-                className="mt-6 w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 cursor-pointer transition-all active:scale-[0.99]"
+              {/* PROFILE 1: ALUNO / ESTUDANTE */}
+              <div
+                className={`rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl ${
+                  isLight
+                    ? 'bg-white border-cyan-300 shadow-md ring-2 ring-cyan-500/20'
+                    : 'bg-[#101526] border-cyan-800/80 hover:border-cyan-600'
+                }`}
               >
-                <span>CONFIRMAR & ESCOLHER AMBIENTE</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* PROFILE 2: PROFESSOR / DOCENTE */}
-            <div
-              className={`rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl relative ${
-                isLight
-                  ? 'bg-white border-indigo-300 shadow-md ring-2 ring-indigo-500/20'
-                  : 'bg-[#101526] border-indigo-800/80 hover:border-indigo-600'
-              }`}
-            >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                        isLight ? 'bg-indigo-100 text-indigo-800' : 'bg-indigo-950/90 text-indigo-300 border border-indigo-700/60'
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                          isLight ? 'bg-cyan-100 text-cyan-800' : 'bg-cyan-950/90 text-cyan-300 border border-cyan-700/60'
+                        }`}
+                      >
+                        <GraduationCap className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-500 block">
+                          Perfil Estudante
+                        </span>
+                        <h2 className="text-xl font-display font-black">Ambiente do Aluno</h2>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
+                        currentRole === 'student'
+                          ? isLight
+                            ? 'bg-cyan-600 text-white border-cyan-600'
+                            : 'bg-cyan-500 text-slate-950 font-black border-cyan-400'
+                          : isLight
+                          ? 'bg-cyan-50 text-cyan-900 border-cyan-300'
+                          : 'bg-cyan-950/60 text-cyan-300 border-cyan-800'
                       }`}
                     >
-                      <UserCheck className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-indigo-500 block">
-                          Perfil Docente
-                        </span>
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                          <Lock className="w-2.5 h-2.5" /> Requer Senha
-                        </span>
-                      </div>
-                      <h2 className="text-xl font-display font-black">Ambiente do Professor</h2>
-                    </div>
+                      {currentRole === 'student' ? 'Perfil Ativo' : 'Acesso Livre'}
+                    </span>
                   </div>
-                  <span
-                    className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
-                      currentRole === 'teacher'
-                        ? isLight
-                          ? 'bg-indigo-600 text-white border-indigo-600'
-                          : 'bg-indigo-500 text-slate-950 font-black border-indigo-400'
-                        : isLight
-                        ? 'bg-indigo-50 text-indigo-900 border-indigo-300'
-                        : 'bg-indigo-950/60 text-indigo-300 border-indigo-800'
-                    }`}
-                  >
-                    {currentRole === 'teacher' ? 'Perfil Ativo' : 'Painel Protegido'}
-                  </span>
+
+                  <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
+                    Acesse casos clínicos, Kahoot e simulações.
+                  </p>
+
+                  {/* Student Identification Input */}
+                  <div className={`p-3.5 rounded-2xl border space-y-2 ${
+                    isLight ? 'bg-cyan-50/60 border-cyan-200' : 'bg-[#090d18] border-cyan-900/60'
+                  }`}>
+                    <label className="text-xs font-mono font-bold uppercase text-cyan-400 block">
+                      Sua Identificação (Nome ou Apelido):
+                    </label>
+                    <input
+                      type="text"
+                      value={studentName}
+                      onChange={(e) => {
+                        setStudentName(e.target.value);
+                        localStorage.setItem('simulador_student_name', e.target.value);
+                      }}
+                      placeholder="Ex: Dra. Mariana Alencar"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono transition-all outline-none ${
+                        isLight
+                          ? 'bg-white border-slate-300 text-slate-900 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20'
+                          : 'bg-[#121627] border-zinc-700 text-white focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20'
+                      }`}
+                    />
+                    <span className="text-[10px] font-mono text-cyan-500/80 block">
+                      ✓ Seu nome será gravado nos relatórios de desempenho e ranking.
+                    </span>
+                  </div>
                 </div>
 
-                <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
-                  Gestão pedagógica, Kahoot e Casos Clínicos.
-                </p>
-
-                <div className={`p-4 rounded-2xl border space-y-2 text-xs font-mono ${
-                  isLight ? 'bg-indigo-50/60 border-indigo-200 text-indigo-950' : 'bg-[#090d18] border-indigo-900/60 text-indigo-200'
-                }`}>
-                  <span className="font-bold block text-indigo-400">Recursos de Gestão Docente:</span>
-                  <ul className="space-y-1 text-[11px] opacity-90">
-                    <li>• Criação de Salas de Desafio Kahoot</li>
-                    <li>• Cadastro de Questões e Casos Clínicos</li>
-                    <li>• Monitoramento de Notas em Tempo Real</li>
-                  </ul>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleConfirmStudentProfile}
+                  className="mt-6 w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 cursor-pointer transition-all active:scale-[0.99]"
+                >
+                  <span>CONFIRMAR & ESCOLHER AMBIENTE</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
 
-              <div className="mt-6 space-y-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleRequestTeacher(() => {
-                      if (onOpenTeacherAdmin) {
-                        onOpenTeacherAdmin();
-                      } else if (onClose) {
-                        onClose();
-                      }
-                    })
-                  }
-                  className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all active:scale-[0.99]"
-                >
-                  <ShieldCheck className="w-4 h-4 text-amber-300" />
-                  <span>1. ACESSAR PAINEL ADM (KAHOOT & ALUNOS)</span>
-                  <ChevronRight className="w-4 h-4 ml-auto" />
-                </button>
+              {/* PROFILE 2: PROFESSOR / DOCENTE */}
+              <div
+                className={`rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl relative ${
+                  isLight
+                    ? 'bg-white border-indigo-300 shadow-md ring-2 ring-indigo-500/20'
+                    : 'bg-[#101526] border-indigo-800/80 hover:border-indigo-600'
+                }`}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                          isLight ? 'bg-indigo-100 text-indigo-800' : 'bg-indigo-950/90 text-indigo-300 border border-indigo-700/60'
+                        }`}
+                      >
+                        <UserCheck className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-display font-black">Ambiente do Professor</h2>
+                      </div>
+                    </div>
+                    {currentRole === 'teacher' && (
+                      <span
+                        className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
+                          isLight
+                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            : 'bg-indigo-500 text-slate-950 font-black border-indigo-400'
+                        }`}
+                      >
+                        Perfil Ativo
+                      </span>
+                    )}
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleRequestTeacher(() => handleNavigateDestination(onEnterSimulatorDirectly))}
-                  className={`w-full py-2.5 px-4 rounded-xl border font-mono font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    isLight
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                      : 'bg-[#15192b] hover:bg-[#1f253e] text-zinc-300 border-zinc-700'
-                  }`}
-                >
-                  <Activity className="w-4 h-4 text-cyan-400" />
-                  <span>2. IR DIRETO PARA A SIMULAÇÃO</span>
-                  <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-70" />
-                </button>
+                  <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
+                    Gestão pedagógica, Kahoot e Casos Clínicos.
+                  </p>
+
+                  <div className={`p-4 rounded-2xl border space-y-2 text-xs font-mono ${
+                    isLight ? 'bg-indigo-50/60 border-indigo-200 text-indigo-950' : 'bg-[#090d18] border-indigo-900/60 text-indigo-200'
+                  }`}>
+                    <span className="font-bold block text-indigo-400">Recursos de Gestão Docente:</span>
+                    <ul className="space-y-1 text-[11px] opacity-90">
+                      <li>• Criação de Salas de Desafio Kahoot</li>
+                      <li>• Cadastro de Questões e Casos Clínicos</li>
+                      <li>• Monitoramento de Notas em Tempo Real</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleRequestTeacher(() => {
+                        if (onOpenTeacherAdmin) {
+                          onOpenTeacherAdmin();
+                        } else if (onClose) {
+                          onClose();
+                        }
+                      })
+                    }
+                    className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all active:scale-[0.99]"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-amber-300" />
+                    <span>ACESSAR PAINEL ADM (KAHOOT & ALUNOS)</span>
+                    <ChevronRight className="w-4 h-4 ml-auto" />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
         )}
 
         {/* STEP 2: STUDENT HUB (OPÇÃO DE ESCOLHA PARA O ALUNO) */}

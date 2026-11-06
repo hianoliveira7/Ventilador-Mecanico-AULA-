@@ -141,19 +141,20 @@ export const MenuModal: React.FC<MenuModalProps> = ({
           {/* Role Portal / Change Profile */}
           {onOpenRolePortal && (
             <button
+              type="button"
               onClick={() => {
                 onClose();
                 onOpenRolePortal();
               }}
               className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
                 isLight
-                  ? 'bg-cyan-50/80 hover:bg-cyan-100/90 border-cyan-300 text-cyan-950 shadow-sm'
-                  : 'bg-[#10172e] hover:bg-[#182347] border-cyan-700/60 text-white'
+                  ? 'bg-blue-50/80 hover:bg-blue-100/90 border-blue-300 text-slate-900 shadow-sm'
+                  : 'bg-blue-950/20 hover:bg-blue-900/40 border-blue-800/60 text-blue-100'
               }`}
             >
               <div
                 className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-cyan-600 text-white' : 'bg-cyan-500/20 text-cyan-300'
+                  isLight ? 'bg-blue-600 text-white' : 'bg-blue-900/80 text-blue-300'
                 }`}
               >
                 <GraduationCap className="w-5 h-5" />
@@ -161,11 +162,11 @@ export const MenuModal: React.FC<MenuModalProps> = ({
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="block text-sm font-display font-bold">Portal de Acesso (Aluno / Professor)</span>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold border border-cyan-500/30">
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold border border-blue-500/30">
                     Mudar Perfil
                   </span>
                 </div>
-                <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-blue-300/70'}`}>
                   Alternar entre modo estudante (desafios) e modo docente (gestão)
                 </span>
               </div>
@@ -181,20 +182,20 @@ export const MenuModal: React.FC<MenuModalProps> = ({
               }}
               className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
                 isLight
-                  ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                  : 'bg-[#151722] hover:bg-[#1d2133] border-zinc-800 text-white'
+                  ? 'bg-blue-50/50 hover:bg-blue-100/80 border-blue-200 text-slate-900'
+                  : 'bg-blue-950/20 hover:bg-blue-900/40 border-blue-800/60 text-blue-100'
               }`}
             >
               <div
                 className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-cyan-100 text-cyan-700' : 'bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20'
+                  isLight ? 'bg-blue-600 text-white' : 'bg-blue-900/80 text-blue-300'
                 }`}
               >
                 <GraduationCap className="w-5 h-5" />
               </div>
               <div>
                 <span className="block text-sm font-display font-bold">Guia Interativo & Tour do Aluno</span>
-                <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+                <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-blue-300/70'}`}>
                   Passo a passo das curvas, parâmetros e manobras do ventilador
                 </span>
               </div>
@@ -210,214 +211,26 @@ export const MenuModal: React.FC<MenuModalProps> = ({
               }}
               className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
                 isLight
-                  ? 'bg-indigo-50/70 hover:bg-indigo-100/80 border-indigo-200 text-slate-900'
-                  : 'bg-[#18152b] hover:bg-[#231e3d] border-indigo-800/80 text-white'
+                  ? 'bg-blue-50/70 hover:bg-blue-100/90 border-blue-300 text-slate-900'
+                  : 'bg-blue-950/20 hover:bg-blue-900/40 border-blue-800/60 text-blue-100'
               }`}
             >
               <div
                 className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20'
+                  isLight ? 'bg-blue-600 text-white' : 'bg-blue-900/80 text-blue-300'
                 }`}
               >
                 <Sliders className="w-5 h-5" />
               </div>
               <div>
                 <span className="block text-sm font-display font-bold">Painel Administrativo do Docente</span>
-                <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+                <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-blue-300/70'}`}>
                   Cadastre novos casos fisiopatológicos e gerencie o banco de questões
                 </span>
               </div>
             </button>
           )}
 
-
-          {onOpenKahoot && (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenKahoot();
-              }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer bg-amber-400 hover:bg-amber-300 text-slate-950 border-amber-300 shadow-md group"
-            >
-              <div className="p-2.5 rounded-lg bg-slate-950 text-amber-400">
-                <Trophy className="w-5 h-5 animate-bounce" />
-              </div>
-              <div>
-                <span className="block text-sm font-display font-black text-slate-950">Desafios Kahoot Gamificados</span>
-                <span className="text-xs text-slate-900 font-mono font-semibold">
-                  Salas de alunos, timer regressivo e relatório detalhado de erros
-                </span>
-              </div>
-            </button>
-          )}
-
-          {onOpenAsynchronies && (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenAsynchronies();
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-                isLight
-                  ? 'bg-amber-50/70 hover:bg-amber-100/90 border-amber-300 text-amber-950'
-                  : 'bg-amber-950/40 hover:bg-amber-900/50 border-amber-800/80 text-amber-200'
-              }`}
-            >
-              <div
-                className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-amber-200 text-amber-800' : 'bg-amber-500/20 text-amber-300 group-hover:bg-amber-500/30'
-                }`}
-              >
-                <Zap className="w-5 h-5 animate-pulse" />
-              </div>
-              <div>
-                <span className="block text-sm font-display font-bold">Banco de Dados de Assincronias</span>
-                <span className={`text-xs ${isLight ? 'text-amber-800/80' : 'text-amber-300/80'}`}>
-                  Catálogo interativo com 7 tipos de assincronias para simular e resolver
-                </span>
-              </div>
-            </button>
-          )}
-
-          {onOpenFlashcards && (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenFlashcards();
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-                isLight
-                  ? 'bg-emerald-50/70 hover:bg-emerald-100/90 border-emerald-300 text-emerald-950'
-                  : 'bg-emerald-950/40 hover:bg-emerald-900/50 border-emerald-800/80 text-emerald-200'
-              }`}
-            >
-              <div
-                className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-emerald-200 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300 group-hover:bg-emerald-500/30'
-                }`}
-              >
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="block text-sm font-display font-bold">Treino Rápido de Curvas (Flashcards)</span>
-                <span className={`text-xs ${isLight ? 'text-emerald-800/80' : 'text-emerald-300/80'}`}>
-                  Reconhecimento de assincronias em traçados com setas e justificativas
-                </span>
-              </div>
-            </button>
-          )}
-
-
-
-          {onOpenMissions && (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenMissions();
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-                isLight
-                  ? 'bg-amber-50/60 hover:bg-amber-100/80 border-amber-200 text-slate-900'
-                  : 'bg-[#1d1810] hover:bg-[#282116] border-amber-800/80 text-white'
-              }`}
-            >
-              <div
-                className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20'
-                }`}
-              >
-                <Target className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="block text-sm font-display font-bold">Missões Clínicas & Metas (Janela Flutuante)</span>
-                <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                  Objetivos e metas de ventilação protetora do caso
-                </span>
-              </div>
-            </button>
-          )}
-
-          <button
-            onClick={() => {
-              onClose();
-              onOpenClinicalCases();
-            }}
-            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-              isLight
-                ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                : 'bg-[#151722] hover:bg-[#1d2133] border-zinc-800 text-white'
-            }`}
-          >
-            <div
-              className={`p-2.5 rounded-lg ${
-                isLight ? 'bg-cyan-100 text-cyan-700' : 'bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20'
-              }`}
-            >
-              <Stethoscope className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="block text-sm font-display font-bold">Casos Clínicos & Quiz de Avaliação</span>
-              <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                Estudos de casos reais, metas de ventilação protetora e banco de questões
-              </span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => {
-              onClose();
-              onOpenEducational();
-            }}
-            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-              isLight
-                ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                : 'bg-[#151722] hover:bg-[#1d2133] border-zinc-800 text-white'
-            }`}
-          >
-            <div
-              className={`p-2.5 rounded-lg ${
-                isLight ? 'bg-purple-100 text-purple-700' : 'bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20'
-              }`}
-            >
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="block text-sm font-display font-bold">Guia Educacional & Biblioteca</span>
-              <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                Conceitos de ventilação mecânica e gasometria
-              </span>
-            </div>
-          </button>
-
-          {onOpenQuiz && (
-            <button
-              onClick={() => {
-                onClose();
-                onOpenQuiz();
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-                isLight
-                  ? 'bg-emerald-50/60 hover:bg-emerald-100/80 border-emerald-300 text-slate-900'
-                  : 'bg-[#101c18] hover:bg-[#162720] border-emerald-800/80 text-white'
-              }`}
-            >
-              <div
-                className={`p-2.5 rounded-lg ${
-                  isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300'
-                }`}
-              >
-                <GraduationCap className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="block text-sm font-display font-bold text-emerald-700 dark:text-emerald-300">
-                  Quiz Avaliativo de VM
-                </span>
-                <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
-                  Avaliação prática para estudantes de Fisioterapia e Medicina
-                </span>
-              </div>
-            </button>
-          )}
 
           <button
             onClick={() => {
@@ -426,50 +239,25 @@ export const MenuModal: React.FC<MenuModalProps> = ({
             }}
             className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
               isLight
-                ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                : 'bg-[#151722] hover:bg-[#1d2133] border-zinc-800 text-white'
+                ? 'bg-blue-50/50 hover:bg-blue-100/80 border-blue-200 text-slate-900'
+                : 'bg-blue-950/20 hover:bg-blue-900/40 border-blue-800/60 text-blue-100'
             }`}
           >
             <div
               className={`p-2.5 rounded-lg ${
-                isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20'
+                isLight ? 'bg-blue-600 text-white' : 'bg-blue-900/80 text-blue-300'
               }`}
             >
               <Calculator className="w-5 h-5" />
             </div>
             <div>
               <span className="block text-sm font-display font-bold">Calculadora de Peso Ideal & VT</span>
-              <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+              <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-blue-300/70'}`}>
                 Cálculo baseado na altura e gênero (mL/kg)
               </span>
             </div>
           </button>
 
-          <button
-            onClick={() => {
-              onClose();
-              onOpenAlarms();
-            }}
-            className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-              isLight
-                ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                : 'bg-[#151722] hover:bg-[#1d2133] border-zinc-800 text-white'
-            }`}
-          >
-            <div
-              className={`p-2.5 rounded-lg ${
-                isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20'
-              }`}
-            >
-              <Bell className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="block text-sm font-display font-bold">Gerenciador de Alarmes</span>
-              <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
-                Limites de pressão, volume minuto e apneia
-              </span>
-            </div>
-          </button>
 
           <button
             onClick={() => {
@@ -478,20 +266,20 @@ export const MenuModal: React.FC<MenuModalProps> = ({
             }}
             className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
               isLight
-                ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-900'
-                : 'bg-[#151722] hover:bg-[#1d2133] border-zinc-800 text-white'
+                ? 'bg-blue-50/50 hover:bg-blue-100/80 border-blue-200 text-slate-900'
+                : 'bg-blue-950/20 hover:bg-blue-900/40 border-blue-800/60 text-blue-100'
             }`}
           >
             <div
               className={`p-2.5 rounded-lg ${
-                isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20'
+                isLight ? 'bg-blue-600 text-white' : 'bg-blue-900/80 text-blue-300'
               }`}
             >
               <Shield className="w-5 h-5" />
             </div>
             <div>
               <span className="block text-sm font-display font-bold">Perfil do Paciente & Mecânica</span>
-              <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-zinc-400'}`}>
+              <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-blue-300/70'}`}>
                 Complacência, resistência e drive respiratório
               </span>
             </div>
