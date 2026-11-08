@@ -67,7 +67,7 @@ export const EducationalMissionsPanel: React.FC<EducationalMissionsPanelProps> =
     <div
       className={`rounded-xl border shadow-xl overflow-hidden mt-2 transition-all ${
         allCompleted
-          ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+          ? 'border-emerald-500 shadow-md'
           : isLight
           ? 'bg-white border-slate-200'
           : 'bg-[#0a0a0e] border-zinc-800/90'

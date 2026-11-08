@@ -102,10 +102,10 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-fade-in">
       <div
-        className={`w-full max-w-4xl rounded-3xl border shadow-2xl overflow-hidden my-auto transition-all relative ${
+        className={`w-full max-w-4xl rounded-2xl border shadow-xl overflow-hidden my-auto transition-all relative ${
           isLight
-            ? 'bg-gradient-to-b from-white to-slate-50 border-slate-300 text-slate-900'
-            : 'bg-gradient-to-b from-[#0d111d] to-[#070913] border-zinc-700 text-zinc-100'
+            ? 'bg-white border-slate-200 text-slate-900'
+            : 'bg-[#0c0e15] border-slate-800 text-slate-100'
         }`}
       >
         {/* Top Theme Toggle & Close Buttons */}
@@ -116,21 +116,21 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
               audioEngine.playClick(1100);
               toggleTheme();
             }}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md ${
+            className={`px-2.5 py-1.5 rounded-lg border text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
               isLight
-                ? 'bg-white hover:bg-slate-100 text-slate-900 border-slate-300'
-                : 'bg-zinc-900 hover:bg-zinc-800 text-amber-300 border-zinc-700'
+                ? 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-300'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
             }`}
             title={isLight ? 'Mudar para Modo Escuro' : 'Mudar para Modo Claro'}
           >
             {isLight ? (
               <>
-                <Moon className="w-4 h-4 text-indigo-700" />
+                <Moon className="w-3.5 h-3.5" />
                 <span>Modo Escuro</span>
               </>
             ) : (
               <>
-                <Sun className="w-4 h-4 text-amber-400" />
+                <Sun className="w-3.5 h-3.5" />
                 <span>Modo Claro</span>
               </>
             )}
@@ -152,423 +152,461 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
           )}
         </div>
 
-        {/* Top Hero Banner */}
+        {/* Top Hero Banner - Clinical Editorial Minimalist Style */}
         <div
-          className={`p-5 sm:p-6 border-b text-center relative overflow-hidden ${
+          className={`p-6 sm:p-7 border-b relative overflow-hidden ${
             isLight
-              ? 'bg-gradient-to-r from-cyan-600 via-sky-600 to-indigo-700 text-white'
-              : 'bg-gradient-to-r from-cyan-950/80 via-slate-900 to-indigo-950/80 border-zinc-800'
+              ? 'bg-white border-slate-200 text-slate-900'
+              : 'bg-[#0b0e17] border-zinc-800 text-zinc-100'
           }`}
         >
-          <div className="relative z-10 max-w-2xl mx-auto space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-xs font-mono font-bold tracking-wider uppercase">
-              <Activity className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+          <div className="max-w-2xl mx-auto space-y-2.5 text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-xs font-mono font-bold tracking-wider uppercase">
+              <Activity className="w-3.5 h-3.5 animate-pulse" />
               <span>Simulador de Ventilação Mecânica em UTI</span>
             </div>
-            <div className="text-xl sm:text-2xl md:text-3xl font-display font-black tracking-tight leading-tight">
-              {viewStep === 'student_hub' ? 'Central do Aluno' : 'Portal de Acesso'}
-            </div>
-            
+            <h1 className="text-2xl sm:text-3xl font-display font-black tracking-tight leading-tight">
+              {viewStep === 'student_hub' ? 'Central do Aluno' : 'Portal de Acesso Clínico'}
+            </h1>
+            <p className={`text-xs sm:text-sm ${isLight ? 'text-slate-600 font-medium' : 'text-zinc-400'}`}>
+              Selecione seu perfil de acesso para iniciar a simulação ou treinamento.
+            </p>
           </div>
         </div>
 
         {/* STEP 1: PERFIL SELECTION */}
         {viewStep === 'profile' && (
           <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-              {/* PROFILE 1: ALUNO / ESTUDANTE */}
-              <div
-                className={`rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl ${
-                  isLight
-                    ? 'bg-white border-cyan-300 shadow-md ring-2 ring-cyan-500/20'
-                    : 'bg-[#101526] border-cyan-800/80 hover:border-cyan-600'
-                }`}
-              >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                          isLight ? 'bg-cyan-100 text-cyan-800' : 'bg-cyan-950/90 text-cyan-300 border border-cyan-700/60'
-                        }`}
-                      >
-                        <GraduationCap className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-500 block">
-                          Perfil Estudante
-                        </span>
-                        <h2 className="text-xl font-display font-black">Ambiente do Aluno</h2>
-                      </div>
-                    </div>
-                    <span
-                      className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
-                        currentRole === 'student'
-                          ? isLight
-                            ? 'bg-cyan-600 text-white border-cyan-600'
-                            : 'bg-cyan-500 text-slate-950 font-black border-cyan-400'
-                          : isLight
-                          ? 'bg-cyan-50 text-cyan-900 border-cyan-300'
-                          : 'bg-cyan-950/60 text-cyan-300 border-cyan-800'
+            {/* PROFILE 1: ALUNO / ESTUDANTE */}
+            <div
+              className={`rounded-2xl border p-5 sm:p-6 flex flex-col justify-between transition-all hover:border-slate-400 dark:hover:border-slate-600 ${
+                isLight
+                  ? 'bg-slate-50/60 border-slate-200 shadow-sm'
+                  : 'bg-[#10131c] border-slate-800/90'
+              }`}
+            >
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center border ${
+                        isLight
+                          ? 'bg-white border-slate-200 text-slate-700 shadow-xs'
+                          : 'bg-slate-800/80 border-slate-700 text-slate-200'
                       }`}
                     >
-                      {currentRole === 'student' ? 'Perfil Ativo' : 'Acesso Livre'}
-                    </span>
-                  </div>
-
-                  <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
-                    Acesse casos clínicos, Kahoot e simulações.
-                  </p>
-
-                  {/* Student Identification Input */}
-                  <div className={`p-3.5 rounded-2xl border space-y-2 ${
-                    isLight ? 'bg-cyan-50/60 border-cyan-200' : 'bg-[#090d18] border-cyan-900/60'
-                  }`}>
-                    <label className="text-xs font-mono font-bold uppercase text-cyan-400 block">
-                      Sua Identificação (Nome ou Apelido):
-                    </label>
-                    <input
-                      type="text"
-                      value={studentName}
-                      onChange={(e) => {
-                        setStudentName(e.target.value);
-                        localStorage.setItem('simulador_student_name', e.target.value);
-                      }}
-                      placeholder="Ex: Dra. Mariana Alencar"
-                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono transition-all outline-none ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-slate-900 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20'
-                          : 'bg-[#121627] border-zinc-700 text-white focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20'
-                      }`}
-                    />
-                    <span className="text-[10px] font-mono text-cyan-500/80 block">
-                      ✓ Seu nome será gravado nos relatórios de desempenho e ranking.
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleConfirmStudentProfile}
-                  className="mt-6 w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-600/20 cursor-pointer transition-all active:scale-[0.99]"
-                >
-                  <span>CONFIRMAR & ESCOLHER AMBIENTE</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* PROFILE 2: PROFESSOR / DOCENTE */}
-              <div
-                className={`rounded-3xl border p-5 sm:p-6 flex flex-col justify-between transition-all hover:scale-[1.01] hover:shadow-xl relative ${
-                  isLight
-                    ? 'bg-white border-indigo-300 shadow-md ring-2 ring-indigo-500/20'
-                    : 'bg-[#101526] border-indigo-800/80 hover:border-indigo-600'
-                }`}
-              >
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
-                          isLight ? 'bg-indigo-100 text-indigo-800' : 'bg-indigo-950/90 text-indigo-300 border border-indigo-700/60'
-                        }`}
-                      >
-                        <UserCheck className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-display font-black">Ambiente do Professor</h2>
-                      </div>
+                      <GraduationCap className="w-5 h-5" />
                     </div>
-                    {currentRole === 'teacher' && (
-                      <span
-                        className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded-full border ${
-                          isLight
-                            ? 'bg-indigo-600 text-white border-indigo-600'
-                            : 'bg-indigo-500 text-slate-950 font-black border-indigo-400'
-                        }`}
-                      >
-                        Perfil Ativo
+                    <div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                        Modo Aprendizado
                       </span>
-                    )}
+                      <h2 className="text-lg font-display font-bold text-slate-900 dark:text-white">Ambiente do Aluno</h2>
+                    </div>
                   </div>
-
-                  <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-zinc-100'}`}>
-                    Gestão pedagógica, Kahoot e Casos Clínicos.
-                  </p>
-
-                  <div className={`p-4 rounded-2xl border space-y-2 text-xs font-mono ${
-                    isLight ? 'bg-indigo-50/60 border-indigo-200 text-indigo-950' : 'bg-[#090d18] border-indigo-900/60 text-indigo-200'
-                  }`}>
-                    <span className="font-bold block text-indigo-400">Recursos de Gestão Docente:</span>
-                    <ul className="space-y-1 text-[11px] opacity-90">
-                      <li>• Criação de Salas de Desafio Kahoot</li>
-                      <li>• Cadastro de Questões e Casos Clínicos</li>
-                      <li>• Monitoramento de Notas em Tempo Real</li>
-                    </ul>
-                  </div>
+                  <span
+                    className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md border ${
+                      currentRole === 'student'
+                        ? isLight
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-slate-100 text-slate-900 border-slate-100 font-bold'
+                        : isLight
+                        ? 'bg-white text-slate-600 border-slate-200'
+                        : 'bg-slate-800/60 text-slate-300 border-slate-700'
+                    }`}
+                  >
+                    {currentRole === 'student' ? 'Perfil Ativo' : 'Acesso Livre'}
+                  </span>
                 </div>
 
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleRequestTeacher(() => {
-                        if (onOpenTeacherAdmin) {
-                          onOpenTeacherAdmin();
-                        } else if (onClose) {
-                          onClose();
-                        }
-                      })
-                    }
-                    className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer transition-all active:scale-[0.99]"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-amber-300" />
-                    <span>ACESSAR PAINEL ADM (KAHOOT & ALUNOS)</span>
-                    <ChevronRight className="w-4 h-4 ml-auto" />
-                  </button>
+                <p className={`text-xs ${isLight ? 'text-slate-600 font-normal' : 'text-slate-400'}`}>
+                  Treinamento interativo com simulações no leito, casos clínicos de UTI, Kahoot e banco de assincronias.
+                </p>
+
+                {/* Student Identification Input */}
+                <div className={`p-3.5 rounded-xl border space-y-2 ${
+                  isLight ? 'bg-white border-slate-200' : 'bg-[#0b0d14] border-slate-800'
+                }`}>
+                  <label className="text-[11px] font-mono font-semibold uppercase text-slate-600 dark:text-slate-400 block">
+                    Sua Identificação (Nome ou Apelido):
+                  </label>
+                  <input
+                    type="text"
+                    value={studentName}
+                    onChange={(e) => {
+                      setStudentName(e.target.value);
+                      localStorage.setItem('simulador_student_name', e.target.value);
+                    }}
+                    placeholder="Ex: Dra. Mariana Alencar"
+                    className={`w-full px-3 py-2 rounded-lg border text-xs font-mono transition-all outline-none ${
+                      isLight
+                        ? 'bg-slate-50 border-slate-300 text-slate-900 focus:border-blue-600 focus:bg-white'
+                        : 'bg-[#131622] border-slate-700 text-slate-100 focus:border-blue-500 focus:bg-[#161a29]'
+                    }`}
+                  />
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
+                    Gravado para relatórios e pontuação em desafios.
+                  </span>
                 </div>
               </div>
-            </div>
-        )}
 
-        {/* STEP 2: STUDENT HUB (OPÇÃO DE ESCOLHA PARA O ALUNO) */}
-        {viewStep === 'student_hub' && (
-          <div className="p-5 sm:p-6 space-y-5 animate-fadeIn">
-            {/* Return / Change Profile Header Bar */}
-            <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setViewStep('profile')}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                  isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
-                }`}
+                onClick={handleConfirmStudentProfile}
+                className="mt-6 w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99] shadow-sm"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Alternar Perfil / Trocar Nome</span>
+                <span>CONFIRMAR & ESCOLHER MÓDULO</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-cyan-400 font-bold">
-                  Aluno: {studentName.trim() || 'Estudante Venti'}
-                </span>
-              </div>
             </div>
 
-            {/* Destination Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Option 1: Kahoot Venti */}
-              <div
-                onClick={() => handleNavigateDestination(onOpenKahoot)}
-                className={`p-5 rounded-3xl border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl flex flex-col justify-between gap-3 ${
-                  isLight
-                    ? 'bg-gradient-to-br from-amber-50 to-amber-100/60 border-amber-300 hover:border-amber-500'
-                    : 'bg-gradient-to-br from-[#1a1408] to-[#120f06] border-amber-900/60 hover:border-amber-500'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-2xl bg-amber-400 text-slate-950 font-black shadow-md">
-                      <Trophy className="w-5 h-5 animate-bounce" />
+            {/* PROFILE 2: PROFESSOR / DOCENTE */}
+            <div
+              className={`rounded-2xl border p-5 sm:p-6 flex flex-col justify-between transition-all hover:border-slate-400 dark:hover:border-slate-600 relative ${
+                isLight
+                  ? 'bg-slate-50/60 border-slate-200 shadow-sm'
+                  : 'bg-[#10131c] border-slate-800/90'
+              }`}
+            >
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center border ${
+                        isLight
+                          ? 'bg-white border-slate-200 text-slate-700 shadow-xs'
+                          : 'bg-slate-800/80 border-slate-700 text-slate-200'
+                      }`}
+                    >
+                      <UserCheck className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-bold border border-amber-500/40">
-                      Modo Desafio
-                    </span>
+                    <div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                        Modo Instrução
+                      </span>
+                      <h2 className="text-lg font-display font-bold text-slate-900 dark:text-white">Ambiente do Professor</h2>
+                    </div>
                   </div>
-                  <h3 className="text-base font-display font-black text-amber-400">
-                    🏆 Simulador Kahoot Venti
-                  </h3>
-                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
-                    Entre em salas ativas com PIN de professor ou dispute o pódio do ranking de ventilação mecânica.
-                  </p>
+                  {currentRole === 'teacher' && (
+                    <span
+                      className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md border ${
+                        isLight
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-slate-100 text-slate-900 border-slate-100 font-bold'
+                      }`}
+                    >
+                      Perfil Ativo
+                    </span>
+                  )}
                 </div>
 
-                <button
-                  type="button"
-                  className="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all"
-                >
-                  <span>Entrar no Kahoot</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+                <p className={`text-xs ${isLight ? 'text-slate-600 font-normal' : 'text-slate-400'}`}>
+                  Ferramentas pedagógicas para condução de aulas práticas, projeção em sala e gestão de turmas.
+                </p>
+
+                <div className={`p-3.5 rounded-xl border space-y-2 text-xs font-mono ${
+                  isLight ? 'bg-white border-slate-200 text-slate-700' : 'bg-[#0b0d14] border-slate-800 text-slate-300'
+                }`}>
+                  <span className="font-semibold block text-slate-900 dark:text-slate-200">Recursos de Gestão:</span>
+                  <ul className="space-y-1 text-[11px] text-slate-600 dark:text-slate-400">
+                    <li>• Criação de Salas de Desafio Kahoot</li>
+                    <li>• Cadastro de Casos Clínicos e Questões</li>
+                    <li>• Modo Espelho / Projetor TV para sala de aula</li>
+                  </ul>
+                </div>
               </div>
 
-              {/* Option 2: Casos Clínicos */}
-              <div
-                onClick={() => handleNavigateDestination(onOpenCases)}
-                className={`p-5 rounded-3xl border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl flex flex-col justify-between gap-3 ${
-                  isLight
-                    ? 'bg-gradient-to-br from-indigo-50 to-indigo-100/60 border-indigo-300 hover:border-indigo-500'
-                    : 'bg-gradient-to-br from-[#101428] to-[#0c0f20] border-indigo-900/60 hover:border-indigo-500'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-2xl bg-indigo-500 text-white font-black shadow-md">
-                      <BookOpen className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-500/40">
-                      Biblioteca Real
-                    </span>
-                  </div>
-                  <h3 className="text-base font-display font-black text-indigo-400">
-                    📚 Casos Clínicos de UTI
-                  </h3>
-                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
-                    Escolha casos reais de SDRA, DPOC, Asma, Pneumotórax e Desmame Ventilatório.
-                  </p>
-                </div>
-
+              <div className="mt-6">
                 <button
                   type="button"
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all"
+                  onClick={() =>
+                    handleRequestTeacher(() => {
+                      if (onOpenTeacherAdmin) {
+                        onOpenTeacherAdmin();
+                      } else if (onClose) {
+                        onClose();
+                      }
+                    })
+                  }
+                  className={`w-full py-3 px-4 rounded-xl border font-mono font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.99] shadow-sm ${
+                    isLight
+                      ? 'bg-slate-900 hover:bg-slate-800 text-white border-slate-900'
+                      : 'bg-slate-100 hover:bg-white text-slate-900 border-slate-100'
+                  }`}
                 >
-                  <span>Ver Casos Clínicos</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Option 3: Banco de Quiz */}
-              <div
-                onClick={() => handleNavigateDestination(onOpenQuiz)}
-                className={`p-5 rounded-3xl border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl flex flex-col justify-between gap-3 ${
-                  isLight
-                    ? 'bg-gradient-to-br from-purple-50 to-purple-100/60 border-purple-300 hover:border-purple-500'
-                    : 'bg-gradient-to-br from-[#181126] to-[#120c1e] border-purple-900/60 hover:border-purple-500'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-2xl bg-purple-500 text-white font-black shadow-md">
-                      <HelpCircle className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold border border-purple-500/40">
-                      Gabarito Comentado
-                    </span>
-                  </div>
-                  <h3 className="text-base font-display font-black text-purple-400">
-                    ❓ Banco de Quiz & Questões
-                  </h3>
-                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
-                    Testes práticos de múltipla escolha com justificativas pedagógicas detalhadas.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all"
-                >
-                  <span>Abrir Banco de Quiz</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Option 4: Banco de Assincronias */}
-              <div
-                onClick={() => handleNavigateDestination(onOpenAsynchronies)}
-                className={`p-5 rounded-3xl border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl flex flex-col justify-between gap-3 ${
-                  isLight
-                    ? 'bg-gradient-to-br from-cyan-50 to-cyan-100/60 border-cyan-300 hover:border-cyan-500'
-                    : 'bg-gradient-to-br from-[#0c1825] to-[#08121e] border-cyan-900/60 hover:border-cyan-500'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-2xl bg-cyan-500 text-slate-950 font-black shadow-md">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40">
-                      Curvas de Vias Aéreas
-                    </span>
-                  </div>
-                  <h3 className="text-base font-display font-black text-cyan-400">
-                    ⚡ Banco de Assincronias
-                  </h3>
-                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
-                    Treine identificação e correção de duplo disparo, auto-disparo, ciclagem e fome de fluxo.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all"
-                >
-                  <span>Treinar Assincronias</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Option 5: Flashcards */}
-              <div
-                onClick={() => handleNavigateDestination(onOpenFlashcards)}
-                className={`p-5 rounded-3xl border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl flex flex-col justify-between gap-3 ${
-                  isLight
-                    ? 'bg-gradient-to-br from-emerald-50 to-emerald-100/60 border-emerald-300 hover:border-emerald-500'
-                    : 'bg-gradient-to-br from-[#0b1c16] to-[#07130e] border-emerald-900/60 hover:border-emerald-500'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-2xl bg-emerald-500 text-slate-950 font-black shadow-md">
-                      <Layers className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
-                      Revisão Ativa
-                    </span>
-                  </div>
-                  <h3 className="text-base font-display font-black text-emerald-400">
-                    🎴 Flashcards de Ventilação
-                  </h3>
-                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
-                    Cards de memorização prática e aplicação direta de presets no simulador.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all"
-                >
-                  <span>Estudar Flashcards</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Option 6: Simulação e Admissão Direta */}
-              <div
-                onClick={() => handleNavigateDestination(onEnterSimulatorDirectly)}
-                className={`p-5 rounded-3xl border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl flex flex-col justify-between gap-3 ${
-                  isLight
-                    ? 'bg-gradient-to-br from-sky-50 to-sky-100/60 border-sky-300 hover:border-sky-500'
-                    : 'bg-gradient-to-br from-[#0d1829] to-[#09101c] border-sky-900/60 hover:border-sky-500'
-                }`}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-2xl bg-sky-500 text-white font-black shadow-md">
-                      <Stethoscope className="w-5 h-5" />
-                    </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 font-bold border border-sky-500/40">
-                      Leito de UTI
-                    </span>
-                  </div>
-                  <h3 className="text-base font-display font-black text-sky-400">
-                    🫁 Admissão & Simulador no Leito
-                  </h3>
-                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-700' : 'text-zinc-300'}`}>
-                    Vá para a tela de admissão para titular $V_t$, PEEP, $FiO_2$ e parâmetros no leito de UTI.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all"
-                >
-                  <span>Ir para o Leito de UTI</span>
-                  <ChevronRight className="w-4 h-4" />
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>ACESSAR PAINEL DOCENTE</span>
+                  <ChevronRight className="w-4 h-4 ml-auto" />
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Footer removed */}
+        {/* STEP 2: STUDENT HUB (OPÇÃO DE ESCOLHA PARA O ALUNO) */}
+        {viewStep === 'student_hub' && (
+          <div className="p-5 sm:p-6 space-y-5 animate-fadeIn">
+            {/* Return / Change Profile Header Bar */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setViewStep('profile')}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isLight ? 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-xs' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                }`}
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Alternar Perfil</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
+                  Estudante: <strong className="text-slate-900 dark:text-white font-bold">{studentName.trim() || 'Estudante'}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Destination Grid - Sober, Clean Clinical Bento Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {/* Option 1: Admissão & Leito de UTI (Primary) */}
+              <div
+                onClick={() => handleNavigateDestination(onEnterSimulatorDirectly)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-blue-500 hover:shadow-md flex flex-col justify-between gap-3 ${
+                  isLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-[#10131c] border-slate-800'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60">
+                      <Stethoscope className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-800/60">
+                      Simulação Prática
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-display font-bold text-slate-900 dark:text-white">
+                    Admissão & Simulador no Leito
+                  </h3>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Titule Vt, PEEP, FiO₂ e parâmetros respiratórios no leito de UTI com curvas em tempo real.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-mono font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                >
+                  <span>Iniciar no Leito</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Option 2: Casos Clínicos */}
+              <div
+                onClick={() => handleNavigateDestination(onOpenCases)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md flex flex-col justify-between gap-3 ${
+                  isLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-[#10131c] border-slate-800'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      <BookOpen className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700">
+                      Casos Reais
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-display font-bold text-slate-900 dark:text-white">
+                    Casos Clínicos de UTI
+                  </h3>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Casos de SDRA, DPOC exacerbado, Asma grave, Pneumotórax e protocolo de desmame.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`w-full py-2 rounded-lg border font-mono font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+                      : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  <span>Abrir Casos</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Option 3: Kahoot Venti */}
+              <div
+                onClick={() => handleNavigateDestination(onOpenKahoot)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md flex flex-col justify-between gap-3 ${
+                  isLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-[#10131c] border-slate-800'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      <Trophy className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700">
+                      Interativo
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-display font-bold text-slate-900 dark:text-white">
+                    Simulador Kahoot Venti
+                  </h3>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Entre em salas ativas com PIN de professor ou dispute desafios de ventilação mecânica.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`w-full py-2 rounded-lg border font-mono font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+                      : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  <span>Acessar Kahoot</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Option 4: Banco de Assincronias */}
+              <div
+                onClick={() => handleNavigateDestination(onOpenAsynchronies)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md flex flex-col justify-between gap-3 ${
+                  isLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-[#10131c] border-slate-800'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700">
+                      Gráficos
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-display font-bold text-slate-900 dark:text-white">
+                    Banco de Assincronias
+                  </h3>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Identificação e correção de duplo disparo, auto-disparo, ciclagem prematura e fome de fluxo.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`w-full py-2 rounded-lg border font-mono font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+                      : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  <span>Treinar Curvas</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Option 5: Banco de Quiz */}
+              <div
+                onClick={() => handleNavigateDestination(onOpenQuiz)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md flex flex-col justify-between gap-3 ${
+                  isLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-[#10131c] border-slate-800'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      <HelpCircle className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700">
+                      Avaliativo
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-display font-bold text-slate-900 dark:text-white">
+                    Banco de Quiz & Questões
+                  </h3>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Questões de múltipla escolha com gabarito comentado e justificativas fisiológicas.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`w-full py-2 rounded-lg border font-mono font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+                      : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  <span>Abrir Quiz</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Option 6: Flashcards */}
+              <div
+                onClick={() => handleNavigateDestination(onOpenFlashcards)}
+                className={`p-4 rounded-xl border cursor-pointer transition-all hover:border-slate-400 dark:hover:border-slate-600 hover:shadow-md flex flex-col justify-between gap-3 ${
+                  isLight
+                    ? 'bg-white border-slate-200'
+                    : 'bg-[#10131c] border-slate-800'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700">
+                      Memorização
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-display font-bold text-slate-900 dark:text-white">
+                    Flashcards de Ventilação
+                  </h3>
+                  <p className={`text-xs leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Cards de fixação rápida com conceitos-chave, fórmulas de ventilação mecânica e presets.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`w-full py-2 rounded-lg border font-mono font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                    isLight
+                      ? 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-300'
+                      : 'bg-slate-800/80 hover:bg-slate-800 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  <span>Ver Cards</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Discreet Author Footer */}
+        <div className={`px-5 py-2 text-center text-[11px] font-mono border-t ${
+          isLight ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-[#080a10] border-zinc-800 text-zinc-500'
+        }`}>
+          App desenvolvido por <span className={isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400 font-semibold'}>Hian Oliveira</span>
+        </div>
       </div>
 
       {/* Teacher Password Validation Modal */}

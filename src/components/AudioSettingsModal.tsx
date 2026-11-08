@@ -157,7 +157,7 @@ export const AudioSettingsModal: React.FC<AudioSettingsModalProps> = ({
               <div
                 className={`w-2.5 h-2.5 rounded-full ${
                   contextState === 'running' && !isMuted && audioSettings.soundEnabled
-                    ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+                    ? 'bg-emerald-500'
                     : 'bg-amber-400'
                 }`}
               />

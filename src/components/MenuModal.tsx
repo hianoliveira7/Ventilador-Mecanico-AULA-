@@ -285,6 +285,13 @@ export const MenuModal: React.FC<MenuModalProps> = ({
             </div>
           </button>
         </div>
+
+          {/* Discreet Author Footer */}
+          <div className={`px-4 py-2 text-center text-[11px] font-mono border-t ${
+            isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#090b10] border-zinc-800 text-zinc-500'
+          }`}>
+            App desenvolvido por <span className={isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400 font-semibold'}>Hian Oliveira</span>
+          </div>
       </div>
     </div>
   );

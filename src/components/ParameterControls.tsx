@@ -133,37 +133,37 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
     }
   };
 
-  // Color schemes for categories
+  // Color schemes for categories - calm, clinical medical styling
   const colorMap = {
     cyan: {
-      badgeBg: isLight ? 'bg-cyan-100 text-cyan-900 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-      valueText: isLight ? 'text-cyan-950 font-black' : 'text-cyan-300 font-black',
-      sliderAccent: 'accent-cyan-500',
+      badgeBg: isLight ? 'bg-sky-50 text-sky-800 border-sky-200' : 'bg-sky-950/50 text-sky-300 border-sky-800/60',
+      valueText: isLight ? 'text-slate-900 font-bold' : 'text-slate-100 font-bold',
+      sliderAccent: 'accent-blue-600',
     },
     emerald: {
-      badgeBg: isLight ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      valueText: isLight ? 'text-emerald-950 font-black' : 'text-emerald-300 font-black',
-      sliderAccent: 'accent-emerald-500',
+      badgeBg: isLight ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60',
+      valueText: isLight ? 'text-slate-900 font-bold' : 'text-slate-100 font-bold',
+      sliderAccent: 'accent-blue-600',
     },
     amber: {
-      badgeBg: isLight ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-      valueText: isLight ? 'text-amber-950 font-black' : 'text-amber-300 font-black',
-      sliderAccent: 'accent-amber-500',
+      badgeBg: isLight ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-amber-950/50 text-amber-300 border-amber-800/60',
+      valueText: isLight ? 'text-slate-900 font-bold' : 'text-slate-100 font-bold',
+      sliderAccent: 'accent-blue-600',
     },
     purple: {
-      badgeBg: isLight ? 'bg-purple-100 text-purple-900 border-purple-300' : 'bg-purple-500/20 text-purple-300 border-purple-500/40',
-      valueText: isLight ? 'text-purple-950 font-black' : 'text-purple-300 font-black',
-      sliderAccent: 'accent-purple-500',
+      badgeBg: isLight ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 'bg-indigo-950/50 text-indigo-300 border-indigo-800/60',
+      valueText: isLight ? 'text-slate-900 font-bold' : 'text-slate-100 font-bold',
+      sliderAccent: 'accent-blue-600',
     },
     blue: {
-      badgeBg: isLight ? 'bg-blue-100 text-blue-900 border-blue-300' : 'bg-blue-500/20 text-blue-300 border-blue-500/40',
-      valueText: isLight ? 'text-blue-950 font-black' : 'text-blue-300 font-black',
-      sliderAccent: 'accent-blue-500',
+      badgeBg: isLight ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-blue-950/50 text-blue-300 border-blue-800/60',
+      valueText: isLight ? 'text-slate-900 font-bold' : 'text-slate-100 font-bold',
+      sliderAccent: 'accent-blue-600',
     },
     teal: {
-      badgeBg: isLight ? 'bg-teal-100 text-teal-900 border-teal-300' : 'bg-teal-500/20 text-teal-300 border-teal-500/40',
-      valueText: isLight ? 'text-teal-950 font-black' : 'text-teal-300 font-black',
-      sliderAccent: 'accent-teal-500',
+      badgeBg: isLight ? 'bg-teal-50 text-teal-800 border-teal-200' : 'bg-teal-950/50 text-teal-300 border-teal-800/60',
+      valueText: isLight ? 'text-slate-900 font-bold' : 'text-slate-100 font-bold',
+      sliderAccent: 'accent-blue-600',
     },
   };
 
@@ -176,11 +176,11 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
       className={`relative flex-1 min-w-[145px] sm:min-w-[155px] md:min-w-[165px] lg:min-w-[175px] shrink-0 rounded-2xl p-2 sm:p-2.5 flex flex-col justify-between gap-1 select-none transition-all duration-150 border snap-start ${
         isChanged
           ? isLight
-            ? 'bg-amber-50/95 border-amber-500 shadow-md ring-2 ring-amber-400/50'
-            : 'bg-[#1b150b] border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-500/70'
+            ? 'bg-amber-50/95 border-amber-500 shadow-sm ring-1 ring-amber-400/50'
+            : 'bg-amber-950/30 border-amber-500/80 ring-1 ring-amber-500/50'
           : isLight
-          ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-sm'
-          : 'bg-[#0b0e1a] hover:bg-[#111527] border-zinc-800 shadow-inner'
+          ? 'bg-white hover:bg-slate-50 border-slate-300 shadow-xs'
+          : 'bg-[#0c0e18] hover:bg-[#121624] border-zinc-800'
       }`}
     >
       {/* 1. Header Row: Acronym Badge + Title */}
@@ -293,9 +293,7 @@ const TouchParamTile: React.FC<TouchParamTileProps> = ({
                 }}
                 className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg cursor-pointer transition-all border ${
                   safeVal === preset
-                    ? isLight
-                      ? 'bg-cyan-700 text-white border-cyan-700 font-black'
-                      : 'bg-cyan-500 text-black border-cyan-400 font-black shadow-md'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                     : isLight
                     ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
                     : 'bg-[#1c223a] hover:bg-[#283052] text-zinc-200 border-zinc-700'
@@ -496,11 +494,11 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                   className={`px-2 py-1 sm:px-2.5 sm:py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 shrink-0 relative ${
                     isActive
                       ? isLight
-                        ? 'bg-white text-slate-900 border border-slate-300 shadow-xs font-black ring-1 ring-cyan-500/40'
-                        : 'bg-gradient-to-r from-cyan-500 to-sky-500 text-black border border-cyan-300 font-black shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                        ? 'bg-white text-slate-900 border border-slate-300 shadow-xs font-bold'
+                        : 'bg-blue-600 text-white border border-blue-500 font-bold shadow-xs'
                       : isLight
-                      ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-bold'
-                      : 'text-zinc-300 hover:text-white hover:bg-[#1f253e] font-bold'
+                      ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-medium'
+                      : 'text-zinc-300 hover:text-white hover:bg-[#1f253e] font-medium'
                   }`}
                   title={`${m.label} - ${m.sub}`}
                 >
@@ -508,12 +506,12 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                     className={`w-1.5 h-1.5 rounded-full ${
                       isActive
                         ? isLight
-                          ? 'bg-cyan-600'
-                          : 'bg-black'
+                          ? 'bg-blue-600'
+                          : 'bg-white'
                         : 'bg-zinc-500/50'
                     }`}
                   />
-                  <span className="text-[11px] sm:text-xs font-mono font-black">{m.label}</span>
+                  <span className="text-[11px] sm:text-xs font-mono font-bold">{m.label}</span>
                 </button>
               );
             })}
@@ -532,15 +530,15 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
               showAdvanced
                 ? isLight
-                  ? 'bg-cyan-50 text-cyan-900 border-cyan-400 ring-1 ring-cyan-400'
-                  : 'bg-cyan-950/80 text-cyan-300 border-cyan-500/80'
+                  ? 'bg-slate-200 text-slate-900 border-slate-400'
+                  : 'bg-zinc-800 text-white border-zinc-600'
                 : isLight
-                ? 'bg-white hover:bg-slate-200 text-slate-800 border-slate-300'
+                ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
                 : 'bg-[#15192b] hover:bg-[#1f253d] text-zinc-300 border-zinc-700'
             }`}
             title="Exibir ou ocultar parâmetros avançados"
           >
-            <Settings2 className="w-3.5 h-3.5 text-cyan-400" />
+            <Settings2 className="w-3.5 h-3.5 text-slate-400" />
             <span className="hidden sm:inline">Avançados</span>
           </button>
 
@@ -576,15 +574,13 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
             }}
             className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-mono font-bold transition-all flex items-center gap-1 border cursor-pointer ${
               hasChanges
-                ? isLight
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-sm animate-pulse font-black'
-                  : 'bg-emerald-500 hover:bg-emerald-400 text-black border-emerald-400 shadow-[0_0_16px_rgba(16,185,129,0.7)] animate-pulse font-black'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-sm font-bold'
                 : isLight
                 ? 'bg-slate-100 text-slate-500 border-slate-300 cursor-default font-semibold'
                 : 'bg-[#121422] text-zinc-500 border-zinc-800 cursor-default opacity-70'
             }`}
           >
-            <Check className={`w-3.5 h-3.5 stroke-[3] ${hasChanges ? 'animate-bounce' : ''}`} />
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
             <span>{hasChanges ? 'CONFIRMAR' : 'ATIVOS'}</span>
           </button>
         </div>
@@ -594,26 +590,26 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
       {hasChanges && (
         <div className="absolute right-3 top-11 z-50 pointer-events-none animate-in fade-in slide-in-from-top-2 duration-150">
           <div
-            className={`px-3 py-1.5 rounded-xl border shadow-2xl flex items-center gap-2 font-mono text-[11px] sm:text-xs ${
+            className={`px-3 py-1.5 rounded-xl border shadow-lg flex items-center gap-2 font-mono text-[11px] sm:text-xs ${
               isLight
-                ? 'bg-slate-900 text-white border-slate-700 shadow-slate-900/40'
-                : 'bg-[#0f1426] text-white border-cyan-400/80 shadow-[0_4px_24px_rgba(6,182,212,0.45)] ring-1 ring-cyan-400/50'
+                ? 'bg-slate-900 text-white border-slate-700 shadow-slate-900/30'
+                : 'bg-slate-900 text-slate-100 border-slate-700 shadow-black/60'
             }`}
           >
-            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <div className="w-2 h-2 rounded-full bg-blue-400" />
             <div className="flex flex-wrap items-center gap-2 font-bold">
               {mode !== 'APRV' && (
                 <span>
-                  I:E <strong className="text-cyan-300 font-mono">1:{calculatedIeRatio}</strong>
+                  I:E <strong className="text-blue-300 font-mono">1:{calculatedIeRatio}</strong>
                 </span>
               )}
               <span className="text-zinc-500">•</span>
               <span>
-                T_i: <strong className="text-emerald-300 font-mono">{effectiveTi.toFixed(2)}s</strong>
+                T_i: <strong className="text-slate-200 font-mono">{effectiveTi.toFixed(2)}s</strong>
               </span>
               <span className="text-zinc-500">•</span>
               <span>
-                T_e: <strong className="text-teal-300 font-mono">{calculatedTe.toFixed(2)}s</strong>
+                T_e: <strong className="text-slate-200 font-mono">{calculatedTe.toFixed(2)}s</strong>
               </span>
               {(mode === 'VCV' || mode === 'SIMV_VC') && (
                 <>
@@ -996,9 +992,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                     }}
                     className={`py-1.5 px-1 rounded-xl border flex flex-col items-center justify-center cursor-pointer transition-all ${
                       draftSettings.flowWaveform === 'square'
-                        ? isLight
-                          ? 'bg-cyan-50 border-cyan-600 text-cyan-950 ring-1 ring-cyan-600 shadow-sm'
-                          : 'bg-cyan-950/70 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
                         : isLight
                         ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
                         : 'bg-[#151928] hover:bg-[#1f253d] border-zinc-700 text-zinc-400'
@@ -1018,9 +1012,7 @@ export const ParameterControls: React.FC<ParameterControlsProps> = ({
                     }}
                     className={`py-1.5 px-1 rounded-xl border flex flex-col items-center justify-center cursor-pointer transition-all ${
                       draftSettings.flowWaveform === 'decelerating'
-                        ? isLight
-                          ? 'bg-cyan-50 border-cyan-600 text-cyan-950 ring-1 ring-cyan-600 shadow-sm'
-                          : 'bg-cyan-950/70 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-xs'
                         : isLight
                         ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
                         : 'bg-[#151928] hover:bg-[#1f253d] border-zinc-700 text-zinc-400'

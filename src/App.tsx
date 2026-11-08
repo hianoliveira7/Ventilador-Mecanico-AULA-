@@ -2046,10 +2046,10 @@ export default function App() {
               <div
                 className={`h-1 rounded-full transition-all duration-150 ${
                   isDraggingParamSplitter
-                    ? 'w-48 bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.9)] scale-y-125'
+                    ? 'w-48 bg-blue-500 scale-y-125'
                     : isLight
-                    ? 'w-28 bg-slate-300 group-hover:bg-cyan-600 group-hover:w-40'
-                    : 'w-28 bg-zinc-700/80 group-hover:bg-cyan-400 group-hover:w-40'
+                    ? 'w-28 bg-slate-300 group-hover:bg-blue-600 group-hover:w-40'
+                    : 'w-28 bg-zinc-700/80 group-hover:bg-blue-500 group-hover:w-40'
                 }`}
               />
 
@@ -2218,10 +2218,10 @@ export default function App() {
             <div
               className={`w-1 rounded-full transition-all duration-150 ${
                 isDraggingSplitter
-                  ? 'h-32 bg-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.9)] scale-x-125'
+                  ? 'h-32 bg-blue-500 scale-x-125'
                   : isLight
-                  ? 'h-20 bg-slate-300 group-hover:bg-cyan-500 group-hover:h-28'
-                  : 'h-20 bg-zinc-700/80 group-hover:bg-cyan-400 group-hover:h-28'
+                  ? 'h-20 bg-slate-300 group-hover:bg-blue-600 group-hover:h-28'
+                  : 'h-20 bg-zinc-700/80 group-hover:bg-blue-500 group-hover:h-28'
               }`}
             />
 

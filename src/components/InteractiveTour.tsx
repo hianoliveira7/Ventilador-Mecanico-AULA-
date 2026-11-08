@@ -287,7 +287,7 @@ export const InteractiveTour: React.FC<InteractiveTourProps> = ({
             width: `${targetRect.width + 12}px`,
             height: `${targetRect.height + 12}px`,
           }}
-          className="rounded-2xl border-2 border-cyan-400 pointer-events-none shadow-[0_0_25px_rgba(6,182,212,0.6)] animate-pulse"
+          className="rounded-2xl border-2 border-blue-500 pointer-events-none shadow-md ring-4 ring-blue-500/20"
         />
       )}
 
