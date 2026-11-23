@@ -100,6 +100,32 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
     }
   };
 
+  const handleCloseWindowOrTab = () => {
+    audioEngine.playClick(750);
+
+    // 1. Direct close (works natively for installed desktop PWAs in standalone mode and script-opened tabs)
+    try {
+      window.close();
+    } catch {}
+
+    // 2. Fallback trick for desktop browser tabs
+    try {
+      window.open('', '_self');
+      window.close();
+    } catch {}
+
+    // 3. If the browser still blocked closing the tab after 120ms, exit to about:blank or close modal
+    setTimeout(() => {
+      if (!window.closed) {
+        try {
+          window.location.replace('about:blank');
+        } catch {
+          if (onClose) onClose();
+        }
+      }
+    }, 120);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-fade-in">
       <div
@@ -137,20 +163,18 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
             )}
           </button>
 
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                isLight
-                  ? 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300 shadow-sm'
-                  : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border-zinc-700'
-              }`}
-              title="Fechar Portal"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleCloseWindowOrTab}
+            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+              isLight
+                ? 'bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 border-slate-300 hover:border-rose-300 shadow-sm'
+                : 'bg-zinc-900 hover:bg-rose-950/50 text-zinc-300 hover:text-rose-400 border-zinc-700 hover:border-rose-800'
+            }`}
+            title="Fechar Aplicativo / Aba"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Top Hero Banner - Clinical Editorial Minimalist Style */}

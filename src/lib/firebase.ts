@@ -1,18 +1,24 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, initializeFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, doc, getDocFromServer, setLogLevel } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+
+// Silence internal @firebase/firestore WebChannel timeout/offline console.error spam
+// when operating in PWA offline mode or behind proxy/iframe environments
+try {
+  setLogLevel('silent');
+} catch {}
 
 // Singleton Firebase App initialization
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 const databaseId = firebaseConfig.firestoreDatabaseId;
 
-// Safely initialize Firestore instance once with custom options, or fallback to existing instance
+// Safely initialize Firestore instance once with long-polling enabled to avoid 10s WebChannel streaming timeouts
 let firestoreDb;
 try {
   firestoreDb = initializeFirestore(app, {
-    experimentalAutoDetectLongPolling: true,
+    experimentalForceLongPolling: true,
   }, databaseId);
 } catch {
   firestoreDb = getFirestore(app, databaseId);
@@ -77,6 +83,9 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 // Connection test on boot
 export async function testConnection() {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return;
+  }
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
