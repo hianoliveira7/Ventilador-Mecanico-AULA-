@@ -88,9 +88,6 @@ export const MenuModal: React.FC<MenuModalProps> = ({
 
         {/* Menu Items */}
         <div className="p-4 space-y-2 max-h-[80vh] overflow-y-auto">
-          {/* Instalar App (PWA) */}
-          <PWAInstallButton variant="menu" />
-
           {/* Reiniciar Simulação / Admissão */}
           {onResetSimulation && (
             <button
@@ -291,10 +288,14 @@ export const MenuModal: React.FC<MenuModalProps> = ({
         </div>
 
           {/* Discreet Author Footer */}
-          <div className={`px-4 py-2 text-center text-[11px] font-mono border-t ${
+          <div className={`px-4 py-2 text-center text-[11px] font-mono border-t flex items-center justify-center gap-2 flex-wrap ${
             isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-[#090b10] border-zinc-800 text-zinc-500'
           }`}>
-            App desenvolvido por <span className={isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400 font-semibold'}>Hian Oliveira</span>
+            <span>
+              App desenvolvido por <span className={isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400 font-semibold'}>Hian Oliveira</span>
+            </span>
+            <span className="opacity-40">•</span>
+            <PWAInstallButton />
           </div>
       </div>
     </div>

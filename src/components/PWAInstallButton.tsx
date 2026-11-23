@@ -4,16 +4,11 @@ import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 
-interface PWAInstallButtonProps {
-  variant?: 'topbar' | 'menu' | 'portal';
-}
-
-export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 'topbar' }) => {
+export const PWAInstallButton: React.FC = () => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const { isLight } = useTheme();
   const [showGuideModal, setShowGuideModal] = useState(false);
 
-  // If already running as an installed standalone PWA, hide the install button
   if (isInstalled) {
     return null;
   }
@@ -29,72 +24,20 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ variant = 't
 
   return (
     <>
-      {variant === 'menu' ? (
-        <button
-          type="button"
-          onClick={handleInstallClick}
-          className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer group ${
-            isLight
-              ? 'bg-cyan-50/90 hover:bg-cyan-100 border-cyan-300 text-slate-900 shadow-xs'
-              : 'bg-cyan-950/30 hover:bg-cyan-900/40 border-cyan-500/40 text-cyan-100'
-          }`}
-        >
-          <div
-            className={`p-2.5 rounded-lg ${
-              isLight ? 'bg-cyan-600 text-white' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-            }`}
-          >
-            <Download className="w-5 h-5" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <span className="block text-sm font-display font-bold">
-                {isIOS ? 'Instalar no iPhone / iPad (PWA)' : 'Instalar Aplicativo (PWA)'}
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold border border-cyan-500/30">
-                Offline
-              </span>
-            </div>
-            <span className={`text-xs ${isLight ? 'text-slate-600' : 'text-cyan-300/75'}`}>
-              Instale na tela inicial para usar em tela cheia e sem internet
-            </span>
-          </div>
-        </button>
-      ) : variant === 'portal' ? (
-        <button
-          type="button"
-          onClick={handleInstallClick}
-          className={`px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95 ${
-            isLight
-              ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-cyan-600'
-              : 'bg-cyan-600/90 hover:bg-cyan-500 text-white border-cyan-400/60'
-          }`}
-          title="Instalar Simulador como Aplicativo (PWA)"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>{isIOS ? 'Instalar no iOS' : 'Instalar App'}</span>
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={handleInstallClick}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-xs shrink-0 active:scale-95 ${
-            isLight
-              ? 'bg-cyan-600 hover:bg-cyan-700 text-white border-cyan-600'
-              : 'bg-cyan-600/90 hover:bg-cyan-500 text-white border-cyan-400/60'
-          }`}
-          title="Instalar Simulador VM-FISIO como Aplicativo (PWA)"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span className="font-display font-black hidden sm:inline">
-            {isIOS ? 'Instalar iOS' : 'Instalar App'}
-          </span>
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={handleInstallClick}
+        className={`inline-flex items-center gap-1 text-[10px] font-mono underline decoration-dotted underline-offset-2 transition-opacity opacity-70 hover:opacity-100 cursor-pointer ${
+          isLight ? 'text-slate-500 hover:text-cyan-700' : 'text-zinc-500 hover:text-cyan-400'
+        }`}
+        title="Instalar versão offline (PWA)"
+      >
+        <span>{isIOS ? 'Instalar no iOS' : 'Instalar versão offline'}</span>
+      </button>
 
       {showGuideModal && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn text-left"
           onClick={() => setShowGuideModal(false)}
         >
           <div

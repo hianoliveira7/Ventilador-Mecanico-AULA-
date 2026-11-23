@@ -109,9 +109,8 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
             : 'bg-[#0c0e15] border-slate-800 text-slate-100'
         }`}
       >
-        {/* Top Theme Toggle, PWA Install & Close Buttons */}
+        {/* Top Theme Toggle & Close Buttons */}
         <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-          <PWAInstallButton variant="portal" />
           <button
             type="button"
             onClick={() => {
@@ -604,10 +603,14 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
         )}
 
         {/* Discreet Author Footer */}
-        <div className={`px-5 py-2 text-center text-[11px] font-mono border-t ${
+        <div className={`px-5 py-2 text-center text-[11px] font-mono border-t flex items-center justify-center gap-2 flex-wrap ${
           isLight ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-[#080a10] border-zinc-800 text-zinc-500'
         }`}>
-          App desenvolvido por <span className={isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400 font-semibold'}>Hian Oliveira</span>
+          <span>
+            App desenvolvido por <span className={isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400 font-semibold'}>Hian Oliveira</span>
+          </span>
+          <span className="opacity-40">•</span>
+          <PWAInstallButton />
         </div>
       </div>
 
