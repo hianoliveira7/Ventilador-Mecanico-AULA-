@@ -969,6 +969,114 @@ class VentilatorAudioEngine {
       // Guard
     }
   }
+
+  /**
+   * Procedural Pulmonary Auscultation Synthesizer
+   * Produces realistic breath sounds: Vesicular, Wheezing (Sibilos), Crackles (Estertores crepitantes), Diminished
+   */
+  public playAuscultationSound(type: 'vesicular' | 'wheezing' | 'crackles' | 'diminished' = 'vesicular', durationSec: number = 3.5) {
+    if (!this.settings.soundEnabled || this.isMuted) return;
+    try {
+      const ctx = this.getOrCreateContext();
+      if (!ctx || ctx.state !== 'running' || !this.masterGain) return;
+
+      const now = ctx.currentTime;
+      const bufferSize = Math.floor(ctx.sampleRate * durationSec);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      // Generate noise buffer
+      let lastOut = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        // Pink noise filter approximation
+        lastOut = (lastOut + 0.02 * white) / 1.02;
+        data[i] = lastOut * 3.5;
+      }
+
+      const noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = buffer;
+
+      // Filter based on sound type
+      const filter = ctx.createBiquadFilter();
+      if (type === 'vesicular') {
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, now);
+      } else if (type === 'wheezing') {
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(420, now);
+        filter.Q.setValueAtTime(3.5, now);
+      } else if (type === 'crackles') {
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(800, now);
+        filter.Q.setValueAtTime(1.5, now);
+      } else {
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(250, now);
+      }
+
+      // Gain Envelope (Inspiratory rise and expiratory fall)
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, now);
+      // Inspiration (0 to 1.5s)
+      gain.gain.linearRampToValueAtTime(type === 'diminished' ? 0.05 : 0.22, now + 1.2);
+      gain.gain.linearRampToValueAtTime(0.001, now + 1.6);
+      // Expiration (1.8s to 3.2s)
+      gain.gain.linearRampToValueAtTime(type === 'diminished' ? 0.03 : 0.14, now + 2.4);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + durationSec);
+
+      noiseSource.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      noiseSource.start(now);
+      noiseSource.stop(now + durationSec);
+
+      // If Wheezing, add harmonic whistle during expiration
+      if (type === 'wheezing') {
+        const whistleOsc = ctx.createOscillator();
+        const whistleGain = ctx.createGain();
+        whistleOsc.type = 'sine';
+        whistleOsc.frequency.setValueAtTime(380, now + 1.8);
+        whistleOsc.frequency.linearRampToValueAtTime(460, now + 2.5);
+        whistleOsc.frequency.linearRampToValueAtTime(360, now + 3.1);
+
+        whistleGain.gain.setValueAtTime(0.0001, now);
+        whistleGain.gain.setValueAtTime(0.0001, now + 1.7);
+        whistleGain.gain.linearRampToValueAtTime(0.12, now + 2.2);
+        whistleGain.gain.exponentialRampToValueAtTime(0.001, now + 3.2);
+
+        whistleOsc.connect(whistleGain);
+        whistleGain.connect(this.masterGain);
+
+        whistleOsc.start(now + 1.7);
+        whistleOsc.stop(now + 3.2);
+      }
+
+      // If Crackles, add micro-burst pop clicks during mid-to-late inspiration
+      if (type === 'crackles') {
+        for (let c = 0; c < 12; c++) {
+          const clickTime = now + 0.5 + Math.random() * 0.9;
+          const clickOsc = ctx.createOscillator();
+          const clickGain = ctx.createGain();
+          clickOsc.type = 'triangle';
+          clickOsc.frequency.setValueAtTime(600 + Math.random() * 400, clickTime);
+
+          clickGain.gain.setValueAtTime(0.0001, clickTime);
+          clickGain.gain.linearRampToValueAtTime(0.08, clickTime + 0.003);
+          clickGain.gain.exponentialRampToValueAtTime(0.0001, clickTime + 0.025);
+
+          clickOsc.connect(clickGain);
+          clickGain.connect(this.masterGain);
+
+          clickOsc.start(clickTime);
+          clickOsc.stop(clickTime + 0.03);
+        }
+      }
+    } catch {
+      // Guard
+    }
+  }
 }
 
 export const audioEngine = new VentilatorAudioEngine();

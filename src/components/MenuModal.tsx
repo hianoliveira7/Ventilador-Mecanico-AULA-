@@ -2,6 +2,7 @@ import React from 'react';
 import { X, BookOpen, Stethoscope, Calculator, Bell, Sliders, Shield, Sun, Moon, GraduationCap, FileText, Target, Zap, Sparkles, Award, Trophy, RotateCcw, Volume2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface MenuModalProps {
   isOpen: boolean;
@@ -87,6 +88,9 @@ export const MenuModal: React.FC<MenuModalProps> = ({
 
         {/* Menu Items */}
         <div className="p-4 space-y-2 max-h-[80vh] overflow-y-auto">
+          {/* Instalar App (PWA) */}
+          <PWAInstallButton variant="menu" />
+
           {/* Reiniciar Simulação / Admissão */}
           {onResetSimulation && (
             <button

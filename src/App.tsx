@@ -56,6 +56,7 @@ import {
   FormulaOverlayType,
 } from './types/ventilation';
 import { useTheme } from './context/ThemeContext';
+import { OfflineIndicator } from './components/OfflineIndicator';
 
 export default function App() {
   const { isLight } = useTheme();
@@ -2676,6 +2677,8 @@ export default function App() {
           setIsKahootPortalOpen(true);
         }}
       />
+
+      <OfflineIndicator />
     </div>
   );
 }

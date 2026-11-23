@@ -26,6 +26,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 import { TeacherAuthModal } from './TeacherAuthModal';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface RoleSelectionPortalProps {
   isOpen?: boolean;
@@ -108,8 +109,9 @@ export const RoleSelectionPortal: React.FC<RoleSelectionPortalProps> = ({
             : 'bg-[#0c0e15] border-slate-800 text-slate-100'
         }`}
       >
-        {/* Top Theme Toggle & Close Buttons */}
+        {/* Top Theme Toggle, PWA Install & Close Buttons */}
         <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+          <PWAInstallButton variant="portal" />
           <button
             type="button"
             onClick={() => {

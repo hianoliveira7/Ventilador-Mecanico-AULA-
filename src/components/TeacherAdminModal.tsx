@@ -156,7 +156,7 @@ export const TeacherAdminModal: React.FC<TeacherAdminModalProps> = ({
   const [spontaneousDutyCycle, setSpontaneousDutyCycle] = useState(0.33);
 
   // Airway & Asynchrony triggers
-  const [secretionsSeverity, setSecretionsSeverity] = useState<'none' | 'mild' | 'severe'>('none');
+  const [secretionsSeverity, setSecretionsSeverity] = useState<'none' | 'mild' | 'moderate' | 'severe'>('none');
   const [circuitLeakPercent, setCircuitLeakPercent] = useState(0);
   const [endotrachealTubeSize, setEndotrachealTubeSize] = useState(8.0);
 

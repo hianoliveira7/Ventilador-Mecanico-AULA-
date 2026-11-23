@@ -634,10 +634,10 @@ export const WaveformDisplay: React.FC<WaveformDisplayProps> = ({
         backCtx.arc(lastPv.x, lastPv.y, 4, 0, Math.PI * 2);
         backCtx.fill();
 
-        if (monitored?.plateauPressure && monitored?.tidalVolume) {
+        if (monitored?.plateauPressure && monitored?.vte) {
           const peepX = lpPadL + (peepSet / pressureMax) * lpW;
           const platX = lpPadL + (monitored.plateauPressure / pressureMax) * lpW;
-          const vtY = lpPadB - (monitored.tidalVolume / volumeMax) * lpH;
+          const vtY = lpPadB - (monitored.vte / volumeMax) * lpH;
           backCtx.strokeStyle = isLight ? 'rgba(217, 119, 6, 0.7)' : 'rgba(251, 191, 36, 0.6)';
           backCtx.lineWidth = 1.5;
           backCtx.setLineDash([4, 4]);

@@ -305,7 +305,7 @@ export const MonitorPanel: React.FC<MonitorPanelProps> = ({
                   </span>
                 </div>
                 <span className={`text-[7.5px] font-mono ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-400'}`}>
-                  {patient.idealBodyWeight > 0 ? `${(currentVte / patient.idealBodyWeight).toFixed(1)} mL/kg` : 'mL'}
+                  {patient.idealBodyWeightKg > 0 ? `${(currentVte / patient.idealBodyWeightKg).toFixed(1)} mL/kg` : 'mL'}
                 </span>
               </div>
 

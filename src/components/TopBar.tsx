@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface TopBarProps {
   mode: VentilationMode;
@@ -351,6 +352,9 @@ export const TopBar: React.FC<TopBarProps> = ({
           )
         )}
 
+
+        {/* In-App PWA Install Button */}
+        <PWAInstallButton variant="topbar" />
 
         {/* Theme Toggle (Light / Dark) */}
         <button

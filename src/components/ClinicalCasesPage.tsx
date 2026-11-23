@@ -307,9 +307,9 @@ export const ClinicalCasesPage: React.FC<ClinicalCasesPageProps> = ({
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
                           <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg border ${
-                            c.difficulty === 'Fácil'
+                            c.difficulty === 'Iniciante'
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                              : c.difficulty === 'Médio'
+                              : c.difficulty === 'Intermediário'
                               ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                               : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
                           }`}>
@@ -388,7 +388,7 @@ export const ClinicalCasesPage: React.FC<ClinicalCasesPageProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] text-zinc-500 uppercase block">Altura / Peso</span>
-                  <strong>{currentCase.patientProfile.heightCm} cm</strong> / <strong>{currentCase.patientProfile.weightKg} kg</strong>
+                  <strong>{currentCase.patientProfile.heightCm} cm</strong> / <strong>{currentCase.patientProfile.actualWeightKg} kg</strong>
                 </div>
                 <div>
                   <span className="text-[10px] text-zinc-500 uppercase block">Mecânica Pulmonar</span>
@@ -396,7 +396,7 @@ export const ClinicalCasesPage: React.FC<ClinicalCasesPageProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] text-zinc-500 uppercase block">Vias Aéreas</span>
-                  <span>Tubo TOT <strong>{currentCase.patientProfile.tubeDiameter}mm</strong></span>
+                  <span>Tubo TOT <strong>{currentCase.patientProfile.endotrachealTubeSize || 7.5}mm</strong></span>
                 </div>
               </div>
 
@@ -425,7 +425,7 @@ export const ClinicalCasesPage: React.FC<ClinicalCasesPageProps> = ({
               {/* Initial Gasometry & Therapeutic Goals */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Initial Gasometry */}
-                {currentCase.initialGasometry && (
+                {currentCase.initialABG && (
                   <div className={`p-4 rounded-xl border space-y-2 ${
                     isLight ? 'bg-rose-50/50 border-rose-200' : 'bg-[#150e18] border-rose-900/40'
                   }`}>
@@ -436,27 +436,27 @@ export const ClinicalCasesPage: React.FC<ClinicalCasesPageProps> = ({
                     <div className="grid grid-cols-3 gap-2 text-xs font-mono">
                       <div>
                         <span className="text-[10px] text-zinc-500 block">pH</span>
-                        <strong className="text-rose-400">{currentCase.initialGasometry.pH.toFixed(2)}</strong>
+                        <strong className="text-rose-400">{currentCase.initialABG.ph}</strong>
                       </div>
                       <div>
                         <span className="text-[10px] text-zinc-500 block">PaCO₂</span>
-                        <strong className="text-rose-400">{currentCase.initialGasometry.paco2} mmHg</strong>
+                        <strong className="text-rose-400">{currentCase.initialABG.paco2} mmHg</strong>
                       </div>
                       <div>
                         <span className="text-[10px] text-zinc-500 block">PaO₂</span>
-                        <strong className="text-rose-400">{currentCase.initialGasometry.pao2} mmHg</strong>
+                        <strong className="text-rose-400">{currentCase.initialABG.pao2} mmHg</strong>
                       </div>
                       <div>
                         <span className="text-[10px] text-zinc-500 block">HCO₃⁻</span>
-                        <strong className="text-rose-400">{currentCase.initialGasometry.hco3} mEq/L</strong>
+                        <strong className="text-rose-400">{currentCase.initialABG.hco3} mEq/L</strong>
                       </div>
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">SatO₂</span>
-                        <strong className="text-rose-400">{currentCase.initialGasometry.sato2}%</strong>
+                        <span className="text-[10px] text-zinc-500 block">FiO₂</span>
+                        <strong className="text-rose-400">{currentCase.initialABG.fio2}%</strong>
                       </div>
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">PaO₂/FiO₂</span>
-                        <strong className="text-rose-400">{currentCase.initialGasometry.pao2Fio2Ratio}</strong>
+                        <span className="text-[10px] text-zinc-500 block">SpO₂</span>
+                        <strong className="text-rose-400">{currentCase.initialABG.spo2}%</strong>
                       </div>
                     </div>
                   </div>
@@ -501,8 +501,8 @@ export const ClinicalCasesPage: React.FC<ClinicalCasesPageProps> = ({
                 </div>
               </div>
 
-              {/* Key Learning Points */}
-              {currentCase.keyLearningPoints && currentCase.keyLearningPoints.length > 0 && (
+              {/* Teaching Points */}
+              {currentCase.teachingPoints && currentCase.teachingPoints.length > 0 && (
                 <div className={`p-4 rounded-xl border space-y-2 ${
                   isLight ? 'bg-cyan-50/50 border-cyan-200' : 'bg-[#0c121e] border-cyan-900/40'
                 }`}>
@@ -511,7 +511,7 @@ export const ClinicalCasesPage: React.FC<ClinicalCasesPageProps> = ({
                     <span>Pontos-Chave de Aprendizado</span>
                   </h4>
                   <ul className="space-y-1 text-xs list-disc list-inside text-zinc-300 dark:text-zinc-300">
-                    {currentCase.keyLearningPoints.map((pt, idx) => (
+                    {currentCase.teachingPoints.map((pt, idx) => (
                       <li key={idx} className={isLight ? 'text-slate-700' : 'text-zinc-300'}>
                         {pt}
                       </li>

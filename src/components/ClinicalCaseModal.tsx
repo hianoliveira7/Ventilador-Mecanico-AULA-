@@ -219,7 +219,7 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
             </div>
 
             {/* Initial Blood Gas Report */}
-            {currentCase.initialGasometry && (
+            {currentCase.initialABG && (
               <div className={`p-3 rounded-xl border space-y-2 ${
                 isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0e0f14] border-zinc-800/80'
               }`}>
@@ -233,37 +233,37 @@ export const ClinicalCaseModal: React.FC<ClinicalCaseModalProps> = ({
                     isLight ? 'bg-white border-slate-200' : 'bg-[#070709] border-zinc-800'
                   }`}>
                     <span className={`text-[10px] block ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>pH</span>
-                    <span className="font-bold text-rose-500">{currentCase.initialGasometry.ph}</span>
+                    <span className="font-bold text-rose-500">{currentCase.initialABG.ph}</span>
                   </div>
                   <div className={`p-1.5 rounded-lg border ${
                     isLight ? 'bg-white border-slate-200' : 'bg-[#070709] border-zinc-800'
                   }`}>
                     <span className={`text-[10px] block ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>PaCO₂</span>
-                    <span className="font-bold text-cyan-600">{currentCase.initialGasometry.paco2}</span>
+                    <span className="font-bold text-cyan-600">{currentCase.initialABG.paco2}</span>
                   </div>
                   <div className={`p-1.5 rounded-lg border ${
                     isLight ? 'bg-white border-slate-200' : 'bg-[#070709] border-zinc-800'
                   }`}>
                     <span className={`text-[10px] block ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>PaO₂</span>
-                    <span className="font-bold text-amber-600">{currentCase.initialGasometry.pao2}</span>
+                    <span className="font-bold text-amber-600">{currentCase.initialABG.pao2}</span>
                   </div>
                   <div className={`p-1.5 rounded-lg border ${
                     isLight ? 'bg-white border-slate-200' : 'bg-[#070709] border-zinc-800'
                   }`}>
                     <span className={`text-[10px] block ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>HCO₃⁻</span>
-                    <span className="font-bold text-emerald-600">{currentCase.initialGasometry.hco3}</span>
+                    <span className="font-bold text-emerald-600">{currentCase.initialABG.hco3}</span>
                   </div>
                   <div className={`p-1.5 rounded-lg border ${
                     isLight ? 'bg-white border-slate-200' : 'bg-[#070709] border-zinc-800'
                   }`}>
-                    <span className={`text-[10px] block ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>BE</span>
-                    <span className="font-bold text-purple-600">{currentCase.initialGasometry.be}</span>
+                    <span className={`text-[10px] block ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>FiO₂</span>
+                    <span className="font-bold text-purple-600">{currentCase.initialABG.fio2}%</span>
                   </div>
                   <div className={`p-1.5 rounded-lg border ${
                     isLight ? 'bg-white border-slate-200' : 'bg-[#070709] border-zinc-800'
                   }`}>
                     <span className={`text-[10px] block ${isLight ? 'text-slate-500' : 'text-zinc-500'}`}>SpO₂</span>
-                    <span className="font-bold text-indigo-600">{currentCase.initialGasometry.sao2}%</span>
+                    <span className="font-bold text-indigo-600">{currentCase.initialABG.spo2}%</span>
                   </div>
                 </div>
               </div>

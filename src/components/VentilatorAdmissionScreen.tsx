@@ -19,6 +19,7 @@ import {
   Sliders,
   ShieldAlert,
 } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface VentilatorAdmissionScreenProps {
   currentCase: ClinicalCase | null;
@@ -219,6 +220,7 @@ export const VentilatorAdmissionScreen: React.FC<VentilatorAdmissionScreenProps>
         </div>
 
         <div className="flex items-center gap-3">
+          <PWAInstallButton variant="portal" />
           {onOpenCasesList && (
             <button
               onClick={onOpenCasesList}

@@ -63,7 +63,9 @@ export const TeacherMirrorGridModal: React.FC<TeacherMirrorGridModalProps> = ({
       }
     });
 
-    return () => unsubRooms();
+    return () => {
+      if (typeof unsubRooms === 'function') unsubRooms();
+    };
   }, [isOpen]);
 
   // Subscribe to live states of all active rooms (both room-level and team subcollections)
